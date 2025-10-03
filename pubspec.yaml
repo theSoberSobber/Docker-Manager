@@ -47,6 +47,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  # flutter_launcher_icons: ^0.14.1  # Comment out after generating icons
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -89,3 +90,24 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Flutter Launcher Icons configuration
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "docker-manager-logo.png"
+  windows:
+    generate: true
+    image_path: "docker-manager-logo.png"
+  macos:
+    generate: true
+    image_path: "docker-manager-logo.png"
+  linux:
+    generate: true
+    image_path: "docker-manager-logo.png"
+  image_path: "docker-manager-logo.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "docker-manager-logo.png"
