@@ -37,14 +37,24 @@ android {
         create("release") {
             val keystorePropertiesFile = rootProject.file("keystore.properties")
             if (keystorePropertiesFile.exists()) {
+                println("✅ Found keystore.properties file")
                 val keystoreProperties = Properties().apply {
                     load(FileInputStream(keystorePropertiesFile))
                 }
 
-                storeFile = file(keystoreProperties["storeFile"] as String)
+                val storeFilePath = keystoreProperties["storeFile"] as String
+                val storeFileObj = file(storeFilePath)
+                println("🔍 Looking for keystore at: ${storeFileObj.absolutePath}")
+                println("🔍 Keystore exists: ${storeFileObj.exists()}")
+                
+                storeFile = storeFileObj
                 storePassword = keystoreProperties["storePassword"] as String
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
+                
+                println("✅ Release signing config created successfully")
+            } else {
+                println("❌ keystore.properties file not found")
             }
         }
     }
@@ -52,9 +62,17 @@ android {
     buildTypes {
         release {
             // Use release keystore if available, otherwise fall back to debug
-            signingConfig = if (rootProject.file("keystore.properties").exists()) {
+            val keystorePropertiesFile = rootProject.file("keystore.properties")
+            println("🔍 Looking for keystore.properties at: ${keystorePropertiesFile.absolutePath}")
+            println("🔍 Root project directory: ${rootProject.projectDir.absolutePath}")
+            val keystoreExists = keystorePropertiesFile.exists()
+            println("🔍 Keystore properties exists: $keystoreExists")
+            
+            signingConfig = if (keystoreExists) {
+                println("✅ Using release signing config")
                 signingConfigs.getByName("release")
             } else {
+                println("⚠️ Falling back to debug signing config")
                 signingConfigs.getByName("debug")
             }
         }
