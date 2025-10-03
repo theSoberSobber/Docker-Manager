@@ -55,7 +55,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.4'  # Use your Flutter version
+          flutter-version: '3.35.5'  # Updated to match local development version
           channel: 'stable'
           cache: true
       
