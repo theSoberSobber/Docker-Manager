@@ -4,7 +4,9 @@ import '../../domain/repositories/server_repository.dart';
 import '../../data/repositories/server_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../widgets/theme_manager.dart';
+import '../widgets/system_info_dialog.dart';
 import 'server_list_screen.dart';
+import 'shell_screen.dart';
 import 'containers_screen.dart';
 import 'images_screen.dart';
 import 'volumes_screen.dart';
@@ -139,6 +141,51 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Docker Manager'),
         actions: [
+          // System Info button
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () {
+              if (_sshService.isConnected) {
+                showDialog(
+                  context: context,
+                  builder: (context) => const SystemInfoDialog(),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please connect to a server first'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+            },
+            tooltip: 'System Information',
+          ),
+          // Host Shell button
+          IconButton(
+            icon: const Icon(Icons.terminal),
+            onPressed: () {
+              if (_sshService.isConnected) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const ShellScreen(
+                      title: 'Host Shell',
+                      isInteractive: true,
+                    ),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please connect to a server first'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+            },
+            tooltip: 'Host Shell',
+          ),
+          // Theme toggle button
           IconButton(
             icon: Icon(ThemeManager().themeIcon),
             onPressed: () {
@@ -146,6 +193,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             },
             tooltip: ThemeManager().themeLabel,
           ),
+          // Server selection button
           IconButton(
             icon: const Icon(Icons.dns),
             onPressed: () async {
