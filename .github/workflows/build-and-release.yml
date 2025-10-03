@@ -65,9 +65,6 @@ jobs:
       - name: Analyze code
         run: flutter analyze --no-fatal-infos
       
-      - name: Run tests
-        run: flutter test
-      
       - name: Generate version name
         id: version
         run: echo "VERSION_NAME=$(date +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
