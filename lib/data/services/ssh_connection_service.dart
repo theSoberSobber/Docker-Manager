@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:dartssh2/dartssh2.dart';
 import '../../domain/models/server.dart';
 
@@ -36,6 +35,7 @@ class SSHConnectionService {
   Server? get currentServer => _currentServer;
   bool get isConnected => _status == ConnectionStatus.connected;
   bool get isConnecting => _status == ConnectionStatus.connecting;
+  SSHClient? get currentConnection => _currentConnection;
 
   /// Connect to a server
   Future<SSHConnectionResult> connect(Server server) async {
