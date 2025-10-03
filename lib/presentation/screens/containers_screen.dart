@@ -4,6 +4,8 @@ import '../../domain/repositories/docker_repository.dart';
 import '../../data/repositories/docker_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../domain/models/server.dart';
+import '../widgets/docker_resource_actions.dart';
+import 'shell_screen.dart';
 
 class ContainersScreen extends StatefulWidget {
   const ContainersScreen({super.key});
@@ -143,6 +145,240 @@ class _ContainersScreenState extends State<ContainersScreen>
   Future<void> _refreshContainers() async {
     _hasTriedLoading = false; // Reset the flag to allow reload
     await _checkConnectionAndLoad();
+  }
+
+  Future<void> _handleContainerAction(DockerAction action, DockerContainer container) async {
+    try {
+      String command;
+      
+      // Build the complete Docker command based on the action
+      switch (action.command) {
+        case 'docker logs':
+          command = 'docker logs ${container.id}';
+          // Navigate to shell screen for logs
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ShellScreen(
+                title: 'Logs - ${container.names}',
+                command: command,
+              ),
+            ),
+          );
+          return;
+          
+        case 'docker inspect':
+          command = 'docker inspect ${container.id}';
+          // Navigate to shell screen for inspect
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ShellScreen(
+                title: 'Inspect - ${container.names}',
+                command: command,
+              ),
+            ),
+          );
+          return;
+          
+        case 'docker exec -it':
+          // Show dialog to choose shell executable
+          _showShellExecutableDialog(container);
+          return;
+          
+        case 'docker stop':
+          command = 'docker stop ${container.id}';
+          break;
+        case 'docker start':
+          command = 'docker start ${container.id}';
+          break;
+        case 'docker restart':
+          command = 'docker restart ${container.id}';
+          break;
+        case 'docker rm':
+          command = 'docker rm ${container.id}';
+          break;
+        default:
+          command = '${action.command} ${container.id}';
+      }
+
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 12),
+                Text('${action.label}...'),
+              ],
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+
+      // Execute the command
+      final result = await _sshService.executeCommand(command);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        
+        if (result != null && result.isNotEmpty) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  const SizedBox(width: 12),
+                  Text('${action.label} completed successfully'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          
+          // Refresh container list for state-changing operations
+          if (action.command.contains('stop') || 
+              action.command.contains('start') || 
+              action.command.contains('restart') ||
+              action.command.contains('rm')) {
+            await _refreshContainers();
+          }
+        } else {
+          // Command executed but no output
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${action.label} completed'),
+              backgroundColor: Colors.blue,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(child: Text('${action.label} failed: $e')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showShellExecutableDialog(DockerContainer container) {
+    final TextEditingController executableController = TextEditingController(text: '/bin/bash');
+    
+    final commonExecutables = [
+      '/bin/bash',
+      '/bin/sh',
+      '/bin/ash',
+      '/bin/zsh',
+      '/bin/fish',
+      'redis-cli',
+      'mysql',
+      'psql',
+      'mongo',
+      'python',
+      'node',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Choose Shell - ${container.names}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: executableController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Executable',
+                  hintText: 'Enter executable path or command',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (value) {
+                  if (value.trim().isNotEmpty) {
+                    Navigator.of(context).pop();
+                    _openInteractiveShell(container, value.trim());
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Common executables:',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 150,
+                child: SingleChildScrollView(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: commonExecutables.map((executable) {
+                      return ActionChip(
+                        label: Text(executable),
+                        onPressed: () {
+                          executableController.text = executable;
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final executable = executableController.text.trim();
+                if (executable.isNotEmpty) {
+                  Navigator.of(context).pop();
+                  _openInteractiveShell(container, executable);
+                }
+              },
+              child: const Text('Connect'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _openInteractiveShell(DockerContainer container, String executable) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ShellScreen(
+          title: 'Shell - ${container.names}',
+          isInteractive: true,
+          containerInfo: {
+            'containerId': container.id,
+            'executable': executable,
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -295,43 +531,56 @@ class _ContainersScreenState extends State<ContainersScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with name and status
+            // Header with name, status, and actions
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    container.names,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: statusColor.withOpacity(0.3)),
-                  ),
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        isRunning ? Icons.play_circle : Icons.pause_circle,
-                        size: 16,
-                        color: statusColor,
+                      Expanded(
+                        child: Text(
+                          container.names,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        isRunning ? 'Running' : 'Stopped',
-                        style: TextStyle(
-                          color: statusColor,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 12,
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: statusColor.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isRunning ? Icons.play_circle : Icons.pause_circle,
+                              size: 16,
+                              color: statusColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              isRunning ? 'Running' : 'Stopped',
+                              style: TextStyle(
+                                color: statusColor,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
+                ),
+                // Action menu
+                DockerResourceActions(
+                  actions: ContainerActions.getActions(isRunning),
+                  onActionSelected: (action) => _handleContainerAction(action, container),
+                  resourceName: container.names,
                 ),
               ],
             ),
