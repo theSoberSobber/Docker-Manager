@@ -399,17 +399,27 @@ class _ShellScreenState extends State<ShellScreen> {
           Expanded(
             child: Container(
               width: double.infinity,
-              color: Colors.black,
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? const Color(0xFF0D1117) // GitHub dark terminal color
+                  : Colors.black,
               child: _isLoading
-                  ? const Center(
+                  ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          CircularProgressIndicator(color: Colors.grey),
-                          SizedBox(height: 16),
+                          CircularProgressIndicator(
+                            color: Theme.of(context).brightness == Brightness.dark 
+                                ? const Color(0xFFE6EDF3)
+                                : Colors.grey,
+                          ),
+                          const SizedBox(height: 16),
                           Text(
                             'Initializing shell...',
-                            style: TextStyle(color: Colors.grey),
+                            style: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark 
+                                  ? const Color(0xFFE6EDF3)
+                                  : Colors.grey,
+                            ),
                           ),
                         ],
                       ),
@@ -421,10 +431,12 @@ class _ShellScreenState extends State<ShellScreen> {
                         width: double.infinity,
                         child: SelectableText(
                           _output.join('\n'),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 14,
-                            color: Colors.grey,
+                            color: Theme.of(context).brightness == Brightness.dark 
+                                ? const Color(0xFFE6EDF3) // GitHub dark text color
+                                : Colors.grey[300],
                           ),
                         ),
                       ),

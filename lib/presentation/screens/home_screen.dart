@@ -3,6 +3,7 @@ import '../../domain/models/server.dart';
 import '../../domain/repositories/server_repository.dart';
 import '../../data/repositories/server_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
+import '../widgets/theme_manager.dart';
 import 'server_list_screen.dart';
 import 'containers_screen.dart';
 import 'images_screen.dart';
@@ -139,6 +140,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         title: const Text('Docker Manager'),
         actions: [
           IconButton(
+            icon: Icon(ThemeManager().themeIcon),
+            onPressed: () {
+              ThemeManager().toggleTheme();
+            },
+            tooltip: ThemeManager().themeLabel,
+          ),
+          IconButton(
             icon: const Icon(Icons.dns),
             onPressed: () async {
               final result = await Navigator.push(
@@ -169,19 +177,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         },
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.view_list),
+            icon: Icon(Icons.inventory_2_outlined),
             label: 'Containers',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.image),
+            icon: Icon(Icons.layers_outlined),
             label: 'Images',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.storage),
+            icon: Icon(Icons.dns_outlined),
             label: 'Volumes',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.hub),
+            icon: Icon(Icons.account_tree_outlined),
             label: 'Networks',
           ),
         ],
