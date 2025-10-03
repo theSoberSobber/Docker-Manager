@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "docker" "\0"
+            VALUE "CompanyName", "com.pavit" "\0"
+            VALUE "FileDescription", "Docker Manager" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "docker" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
+            VALUE "InternalName", "Docker Manager" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 com.pavit. All rights reserved." "\0"
             VALUE "OriginalFilename", "docker.exe" "\0"
-            VALUE "ProductName", "docker" "\0"
+            VALUE "ProductName", "Docker Manager" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

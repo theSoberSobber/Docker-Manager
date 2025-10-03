@@ -1,0 +1,17 @@
+# .github/CD.yml for Docker Manager Flutter App
+#
+# Used by .github/workflows/build-and-release.yml
+# Configuration for environment variable and file management
+#
+
+# List of environment variables this app needs from the envs repo's env_vars/ directory
+# These will be read from envs repo and made available to the workflow
+required_env_vars:
+  - APK_MANAGER_SECRET_KEY
+  # Add any other environment variables your Flutter app needs here
+  
+# Environment folder in the envs repo that contains files for this project
+env_subpath: docker_manager_app  # Points to the docker_manager_app folder in envs repo
+
+# This CD.yml is specifically for the Flutter Android app build process
+# The docker_manager_app/copy.sh script will handle copying any necessary files

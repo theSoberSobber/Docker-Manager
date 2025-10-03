@@ -1,11 +1,11 @@
 {
-    "name": "docker",
-    "short_name": "docker",
+    "name": "Docker Manager",
+    "short_name": "Docker Manager",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Docker Manager - A comprehensive Docker container management application.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

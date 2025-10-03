@@ -45,4 +45,4 @@ app.*.map.json
 /android/app/release
 
 # Reference
-ref
+ref*
