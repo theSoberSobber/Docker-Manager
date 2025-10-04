@@ -51,3 +51,6 @@ ref*
 **/*.jks
 **/*.keystore
 **/keystore.properties
+
+# Ignore local.properties
+local.properties

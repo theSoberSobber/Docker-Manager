@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for SSH connections and network operations -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    
     <application
         android:label="Docker Manager"
         android:name="${applicationName}"
