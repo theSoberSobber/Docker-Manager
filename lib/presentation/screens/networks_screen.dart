@@ -5,6 +5,7 @@ import '../../data/repositories/docker_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
+import '../widgets/search_bar.dart';
 import 'shell_screen.dart';
 
 class NetworksScreen extends StatefulWidget {
@@ -19,10 +20,12 @@ class _NetworksScreenState extends State<NetworksScreen>
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
   List<DockerNetwork> _networks = [];
+  List<DockerNetwork> _filteredNetworks = [];
   bool _isLoading = false;
   String? _error;
   bool _hasTriedLoading = false;
   Server? _lastKnownServer;
+  String _searchQuery = '';
 
   @override
   bool get wantKeepAlive => true;
@@ -89,6 +92,7 @@ class _NetworksScreenState extends State<NetworksScreen>
       if (mounted) {
         setState(() {
           _networks = networks;
+          _filteredNetworks = _filterNetworks(networks, _searchQuery);
           _isLoading = false;
         });
       }
@@ -100,6 +104,24 @@ class _NetworksScreenState extends State<NetworksScreen>
         });
       }
     }
+  }
+
+  List<DockerNetwork> _filterNetworks(List<DockerNetwork> networks, String query) {
+    if (query.isEmpty) return networks;
+    
+    final lowercaseQuery = query.toLowerCase();
+    return networks.where((network) {
+      return network.name.toLowerCase().contains(lowercaseQuery) ||
+             network.driver.toLowerCase().contains(lowercaseQuery) ||
+             network.networkId.toLowerCase().contains(lowercaseQuery);
+    }).toList();
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+      _filteredNetworks = _filterNetworks(_networks, query);
+    });
   }
 
   Future<void> _handleNetworkAction(DockerAction action, DockerNetwork network) async {
@@ -292,13 +314,61 @@ class _NetworksScreenState extends State<NetworksScreen>
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _networks.length,
-      itemBuilder: (context, index) {
-        final network = _networks[index];
-        return _buildNetworkCard(network);
-      },
+    if (_filteredNetworks.isEmpty && _searchQuery.isNotEmpty) {
+      return Column(
+        children: [
+          CustomSearchBar(
+            hintText: 'Search networks by name, driver, or ID...',
+            onSearchChanged: _onSearchChanged,
+          ),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.search_off,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No networks match your search',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Try a different search term',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        CustomSearchBar(
+          hintText: 'Search networks by name, driver, or ID...',
+          onSearchChanged: _onSearchChanged,
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _filteredNetworks.length,
+            itemBuilder: (context, index) {
+              final network = _filteredNetworks[index];
+              return _buildNetworkCard(network);
+            },
+          ),
+        ),
+      ],
     );
   }
 

@@ -5,6 +5,7 @@ import '../../data/repositories/docker_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
+import '../widgets/search_bar.dart';
 import 'shell_screen.dart';
 
 class VolumesScreen extends StatefulWidget {
@@ -19,10 +20,12 @@ class _VolumesScreenState extends State<VolumesScreen>
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
   List<DockerVolume> _volumes = [];
+  List<DockerVolume> _filteredVolumes = [];
   bool _isLoading = false;
   String? _error;
   bool _hasTriedLoading = false;
   Server? _lastKnownServer;
+  String _searchQuery = '';
 
   @override
   bool get wantKeepAlive => true;
@@ -89,6 +92,7 @@ class _VolumesScreenState extends State<VolumesScreen>
       if (mounted) {
         setState(() {
           _volumes = volumes;
+          _filteredVolumes = _filterVolumes(volumes, _searchQuery);
           _isLoading = false;
         });
       }
@@ -100,6 +104,23 @@ class _VolumesScreenState extends State<VolumesScreen>
         });
       }
     }
+  }
+
+  List<DockerVolume> _filterVolumes(List<DockerVolume> volumes, String query) {
+    if (query.isEmpty) return volumes;
+    
+    final lowercaseQuery = query.toLowerCase();
+    return volumes.where((volume) {
+      return volume.volumeName.toLowerCase().contains(lowercaseQuery) ||
+             volume.driver.toLowerCase().contains(lowercaseQuery);
+    }).toList();
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+      _filteredVolumes = _filterVolumes(_volumes, query);
+    });
   }
 
   Future<void> _handleVolumeAction(DockerAction action, DockerVolume volume) async {
@@ -281,13 +302,61 @@ class _VolumesScreenState extends State<VolumesScreen>
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _volumes.length,
-      itemBuilder: (context, index) {
-        final volume = _volumes[index];
-        return _buildVolumeCard(volume);
-      },
+    if (_filteredVolumes.isEmpty && _searchQuery.isNotEmpty) {
+      return Column(
+        children: [
+          CustomSearchBar(
+            hintText: 'Search volumes by name or driver...',
+            onSearchChanged: _onSearchChanged,
+          ),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.search_off,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No volumes match your search',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Try a different search term',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        CustomSearchBar(
+          hintText: 'Search volumes by name or driver...',
+          onSearchChanged: _onSearchChanged,
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _filteredVolumes.length,
+            itemBuilder: (context, index) {
+              final volume = _filteredVolumes[index];
+              return _buildVolumeCard(volume);
+            },
+          ),
+        ),
+      ],
     );
   }
 

@@ -5,6 +5,7 @@ import '../../data/repositories/docker_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
+import '../widgets/search_bar.dart';
 import 'shell_screen.dart';
 
 class ImagesScreen extends StatefulWidget {
@@ -19,10 +20,12 @@ class _ImagesScreenState extends State<ImagesScreen>
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
   List<DockerImage> _images = [];
+  List<DockerImage> _filteredImages = [];
   bool _isLoading = false;
   String? _error;
   bool _hasTriedLoading = false;
   Server? _lastKnownServer;
+  String _searchQuery = '';
 
   @override
   bool get wantKeepAlive => true;
@@ -89,6 +92,7 @@ class _ImagesScreenState extends State<ImagesScreen>
       if (mounted) {
         setState(() {
           _images = images;
+          _filteredImages = _filterImages(images, _searchQuery);
           _isLoading = false;
         });
       }
@@ -100,6 +104,25 @@ class _ImagesScreenState extends State<ImagesScreen>
         });
       }
     }
+  }
+
+  List<DockerImage> _filterImages(List<DockerImage> images, String query) {
+    if (query.isEmpty) return images;
+    
+    final lowercaseQuery = query.toLowerCase();
+    return images.where((image) {
+      return image.repository.toLowerCase().contains(lowercaseQuery) ||
+             image.tag.toLowerCase().contains(lowercaseQuery) ||
+             image.imageId.toLowerCase().contains(lowercaseQuery) ||
+             image.size.toLowerCase().contains(lowercaseQuery);
+    }).toList();
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+      _filteredImages = _filterImages(_images, query);
+    });
   }
 
   Future<void> _handleImageAction(DockerAction action, DockerImage image) async {
@@ -281,13 +304,61 @@ class _ImagesScreenState extends State<ImagesScreen>
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _images.length,
-      itemBuilder: (context, index) {
-        final image = _images[index];
-        return _buildImageCard(image);
-      },
+    if (_filteredImages.isEmpty && _searchQuery.isNotEmpty) {
+      return Column(
+        children: [
+          CustomSearchBar(
+            hintText: 'Search images by repository, tag, or ID...',
+            onSearchChanged: _onSearchChanged,
+          ),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.search_off,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No images match your search',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Try a different search term',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        CustomSearchBar(
+          hintText: 'Search images by repository, tag, or ID...',
+          onSearchChanged: _onSearchChanged,
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _filteredImages.length,
+            itemBuilder: (context, index) {
+              final image = _filteredImages[index];
+              return _buildImageCard(image);
+            },
+          ),
+        ),
+      ],
     );
   }
 

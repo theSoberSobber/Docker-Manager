@@ -5,6 +5,7 @@ import '../../data/repositories/docker_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
+import '../widgets/search_bar.dart';
 import 'shell_screen.dart';
 
 class ContainersScreen extends StatefulWidget {
@@ -19,10 +20,12 @@ class _ContainersScreenState extends State<ContainersScreen>
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
   List<DockerContainer> _containers = [];
+  List<DockerContainer> _filteredContainers = [];
   bool _isLoading = false;
   String? _error;
   bool _hasTriedLoading = false;
   Server? _lastKnownServer;
+  String _searchQuery = '';
 
   @override
   bool get wantKeepAlive => true;
@@ -132,6 +135,7 @@ class _ContainersScreenState extends State<ContainersScreen>
       final containers = await _dockerRepository.getContainers();
       setState(() {
         _containers = containers;
+        _filteredContainers = _filterContainers(containers, _searchQuery);
         _isLoading = false;
       });
     } catch (e) {
@@ -145,6 +149,25 @@ class _ContainersScreenState extends State<ContainersScreen>
   Future<void> _refreshContainers() async {
     _hasTriedLoading = false; // Reset the flag to allow reload
     await _checkConnectionAndLoad();
+  }
+
+  List<DockerContainer> _filterContainers(List<DockerContainer> containers, String query) {
+    if (query.isEmpty) return containers;
+    
+    final lowercaseQuery = query.toLowerCase();
+    return containers.where((container) {
+      return container.names.toLowerCase().contains(lowercaseQuery) ||
+             container.image.toLowerCase().contains(lowercaseQuery) ||
+             container.status.toLowerCase().contains(lowercaseQuery) ||
+             container.id.toLowerCase().contains(lowercaseQuery);
+    }).toList();
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+      _filteredContainers = _filterContainers(_containers, query);
+    });
   }
 
   Future<void> _handleContainerAction(DockerAction action, DockerContainer container) async {
@@ -506,16 +529,64 @@ class _ContainersScreenState extends State<ContainersScreen>
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _refreshContainers,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _containers.length,
-        itemBuilder: (context, index) {
-          final container = _containers[index];
-          return _buildContainerCard(container);
-        },
-      ),
+    if (_filteredContainers.isEmpty && _searchQuery.isNotEmpty) {
+      return Column(
+        children: [
+          CustomSearchBar(
+            hintText: 'Search containers by name, image, status, or ID...',
+            onSearchChanged: _onSearchChanged,
+          ),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.search_off,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No containers match your search',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Try a different search term',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        CustomSearchBar(
+          hintText: 'Search containers by name, image, status, or ID...',
+          onSearchChanged: _onSearchChanged,
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _refreshContainers,
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _filteredContainers.length,
+              itemBuilder: (context, index) {
+                final container = _filteredContainers[index];
+                return _buildContainerCard(container);
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
