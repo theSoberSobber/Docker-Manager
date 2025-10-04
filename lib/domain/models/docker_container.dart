@@ -21,8 +21,20 @@ class DockerContainer {
     // Docker ps output format: CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
     final parts = line.split(RegExp(r'\s{2,}')); // Split by 2+ spaces
     
-    if (parts.length < 7) {
+    if (parts.length < 6) {
       throw FormatException('Invalid docker ps line format: $line');
+    }
+
+    // Handle cases where PORTS column might be empty (exited containers)
+    String ports = '';
+    String names = '';
+    
+    if (parts.length >= 7) {
+      ports = parts[5].trim();
+      names = parts[6].trim();
+    } else if (parts.length == 6) {
+      // No ports, names is in parts[5]
+      names = parts[5].trim();
     }
 
     return DockerContainer(
@@ -31,8 +43,8 @@ class DockerContainer {
       command: parts[2].trim(),
       created: parts[3].trim(),
       status: parts[4].trim(),
-      ports: parts[5].trim().isEmpty ? [] : [parts[5].trim()],
-      names: parts[6].trim(),
+      ports: ports.isEmpty ? [] : [ports],
+      names: names,
     );
   }
 
