@@ -46,3 +46,8 @@ app.*.map.json
 
 # Reference
 ref*
+
+# Ignore all keystore files anywhere
+**/*.jks
+**/*.keystore
+**/keystore.properties
