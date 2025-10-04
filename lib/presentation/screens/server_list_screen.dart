@@ -180,7 +180,9 @@ class _ServerListScreenState extends State<ServerListScreen> {
                             leading: Icon(
                               Icons.computer,
                               color: isSelected 
-                                  ? Theme.of(context).primaryColor 
+                                  ? Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.blue[300]  // Light blue for dark mode
+                                      : Theme.of(context).primaryColor
                                   : null,
                             ),
                             title: Text(
@@ -190,7 +192,9 @@ class _ServerListScreenState extends State<ServerListScreen> {
                                     ? FontWeight.bold 
                                     : FontWeight.normal,
                                 color: isSelected 
-                                    ? Theme.of(context).primaryColor
+                                    ? Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.blue[300]  // Light blue for dark mode
+                                        : Theme.of(context).primaryColor
                                     : null,
                               ),
                             ),
@@ -209,13 +213,17 @@ class _ServerListScreenState extends State<ServerListScreen> {
                                         vertical: 2,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).primaryColor,
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.blue[300]
+                                            : Theme.of(context).primaryColor,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: const Text(
+                                      child: Text(
                                         'CURRENT',
                                         style: TextStyle(
-                                          color: Colors.white,
+                                          color: Theme.of(context).brightness == Brightness.dark
+                                              ? Colors.black87
+                                              : Colors.white,
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
                                         ),

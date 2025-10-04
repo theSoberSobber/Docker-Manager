@@ -142,27 +142,51 @@ class _AddServerDialogState extends State<AddServerDialog> {
                       Row(
                         children: [
                           Expanded(
-                            child: RadioListTile<bool>(
-                              title: const Text('Password'),
-                              value: true,
-                              groupValue: _usePassword,
-                              onChanged: (value) {
+                            child: InkWell(
+                              onTap: () {
                                 setState(() {
-                                  _usePassword = value!;
+                                  _usePassword = true;
                                 });
                               },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Radio<bool>(
+                                    value: true,
+                                    groupValue: _usePassword,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _usePassword = value!;
+                                      });
+                                    },
+                                  ),
+                                  const Text('Password'),
+                                ],
+                              ),
                             ),
                           ),
                           Expanded(
-                            child: RadioListTile<bool>(
-                              title: const Text('Private Key'),
-                              value: false,
-                              groupValue: _usePassword,
-                              onChanged: (value) {
+                            child: InkWell(
+                              onTap: () {
                                 setState(() {
-                                  _usePassword = !value!;
+                                  _usePassword = false;
                                 });
                               },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Radio<bool>(
+                                    value: false,
+                                    groupValue: _usePassword,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _usePassword = value!;
+                                      });
+                                    },
+                                  ),
+                                  const Text('Private Key'),
+                                ],
+                              ),
                             ),
                           ),
                         ],

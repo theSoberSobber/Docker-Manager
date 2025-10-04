@@ -1,0 +1,6 @@
+- maybe instead of widget to add, use a screen?
+- image build and start from here only
+- docker ps -a has only running, what about all? `***`
+- log search
+- search in all tabs (container, images and ... all)
+- better shell handling? `***`
