@@ -5,10 +5,14 @@ import '../../data/repositories/server_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../widgets/theme_manager.dart';
 import '../widgets/system_info_dialog.dart';
+import '../widgets/speed_dial_fab.dart';
 import 'server_list_screen.dart';
 import 'shell_screen.dart';
 import 'containers_screen.dart';
+import 'containers/create_container_screen.dart';
 import 'images_screen.dart';
+import 'images/pull_image_screen.dart';
+import 'images/build_image_screen.dart';
 import 'volumes_screen.dart';
 import 'networks_screen.dart';
 
@@ -134,6 +138,97 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     const NetworksScreen(),
   ];
 
+  Widget? _buildFloatingActionButton() {
+    switch (_currentIndex) {
+      case 0: // Containers tab
+        return FloatingActionButton(
+          onPressed: () async {
+            if (!_sshService.isConnected) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Please connect to a server first'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CreateContainerScreen(),
+              ),
+            );
+            // If container was created, the result will be true
+            if (result == true) {
+              // Trigger refresh on the containers screen if needed
+              setState(() {});
+            }
+          },
+          tooltip: 'Create Container',
+          child: const Icon(Icons.add),
+        );
+      case 1: // Images tab - Speed Dial FAB
+        return SpeedDialFAB(
+          mainIcon: Icons.add,
+          mainTooltip: 'Image Actions',
+          actions: [
+            SpeedDialAction(
+              icon: Icons.search,
+              label: 'Pull Image',
+              tooltip: 'Search and pull image from registry',
+              onPressed: () async {
+                if (!_sshService.isConnected) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please connect to a server first'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PullImageScreen(),
+                  ),
+                );
+                if (result == true) {
+                  setState(() {}); // Refresh images list
+                }
+              },
+            ),
+            SpeedDialAction(
+              icon: Icons.build,
+              label: 'Build Image',
+              tooltip: 'Build image from Dockerfile',
+              onPressed: () async {
+                if (!_sshService.isConnected) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please connect to a server first'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BuildImageScreen(),
+                  ),
+                );
+                if (result == true) {
+                  setState(() {}); // Refresh images list
+                }
+              },
+            ),
+          ],
+        );
+      default:
+        return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -215,6 +310,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ],
       ),
       body: _pages[_currentIndex],
+      floatingActionButton: _buildFloatingActionButton(),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _currentIndex,
