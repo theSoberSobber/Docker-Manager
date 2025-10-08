@@ -229,10 +229,10 @@ class _PullImageScreenState extends State<PullImageScreen> {
                   controller: _registryController,
                   decoration: const InputDecoration(
                     labelText: 'Registry URL',
+                    hintText: 'hub.docker.com or custom registry',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.cloud),
                   ),
-                  readOnly: true, // For now, only support docker.io
                 ),
                 const SizedBox(height: 12),
                 // Search input
