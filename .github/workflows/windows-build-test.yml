@@ -48,7 +48,7 @@ jobs:
   
   build-windows-arm64:
     name: Build Windows ARM64
-    runs-on: windows-latest
+    runs-on: windows-11-arm
     
     steps:
       - name: Checkout code
@@ -67,17 +67,17 @@ jobs:
         run: flutter pub get
       
       - name: Build Windows ARM64 app
-        run: flutter build windows --release --target-platform windows-arm64
+        run: flutter build windows --release
       
       - name: List build output
         run: |
           echo "ARM64 Build completed! Output directory:"
-          dir build\windows\arm64\runner\Release
+          dir build\windows\x64\runner\Release
         shell: cmd
       
       - name: Upload Windows ARM64 build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-arm64-build-${{ github.sha }}
-          path: build/windows/arm64/runner/Release/
+          path: build/windows/x64/runner/Release/
           retention-days: 7
