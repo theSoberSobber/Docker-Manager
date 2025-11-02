@@ -10,7 +10,8 @@ on:
   workflow_dispatch:  # Allows manual trigger from GitHub UI
 
 jobs:
-  build-windows:
+  build-windows-x64:
+    name: Build Windows x64
     runs-on: windows-latest
     
     steps:
@@ -29,18 +30,54 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
       
-      - name: Build Windows app
+      - name: Build Windows x64 app
         run: flutter build windows --release
       
       - name: List build output
         run: |
-          echo "Build completed! Output directory:"
+          echo "x64 Build completed! Output directory:"
           dir build\windows\x64\runner\Release
         shell: cmd
       
-      - name: Upload Windows build artifacts
+      - name: Upload Windows x64 build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build-${{ github.sha }}
+          name: windows-x64-build-${{ github.sha }}
           path: build/windows/x64/runner/Release/
+          retention-days: 7
+  
+  build-windows-arm64:
+    name: Build Windows ARM64
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      
+      - name: Flutter doctor
+        run: flutter doctor -v
+      
+      - name: Get dependencies
+        run: flutter pub get
+      
+      - name: Build Windows ARM64 app
+        run: flutter build windows --release --target-platform windows-arm64
+      
+      - name: List build output
+        run: |
+          echo "ARM64 Build completed! Output directory:"
+          dir build\windows\arm64\runner\Release
+        shell: cmd
+      
+      - name: Upload Windows ARM64 build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-arm64-build-${{ github.sha }}
+          path: build/windows/arm64/runner/Release/
           retention-days: 7
