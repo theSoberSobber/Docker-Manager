@@ -1,0 +1,46 @@
+name: Test Windows Build
+
+on:
+  push:
+    branches:
+      - try-windows-build
+  pull_request:
+    branches:
+      - try-windows-build
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      
+      - name: Flutter doctor
+        run: flutter doctor -v
+      
+      - name: Get dependencies
+        run: flutter pub get
+      
+      - name: Build Windows app
+        run: flutter build windows --release
+      
+      - name: List build output
+        run: |
+          echo "Build completed! Output directory:"
+          dir build\windows\x64\runner\Release
+        shell: cmd
+      
+      - name: Upload Windows build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-${{ github.sha }}
+          path: build/windows/x64/runner/Release/
+          retention-days: 7
