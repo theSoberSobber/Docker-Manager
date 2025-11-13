@@ -9,6 +9,7 @@ import '../../data/repositories/server_repository_impl.dart';
 import '../../data/services/docker_operations_service_impl.dart';
 import '../../data/services/container_creation_service_impl.dart';
 import '../../data/services/image_management_service_impl.dart';
+import '../../data/services/docker_registry_service.dart';
 import '../../data/services/ssh_connection_service.dart';
 
 final getIt = GetIt.instance;
@@ -18,6 +19,8 @@ final getIt = GetIt.instance;
 void setupServiceLocator() {
   // Core Infrastructure - Singleton
   getIt.registerSingleton<SSHConnectionService>(SSHConnectionService());
+  
+  getIt.registerSingleton<DockerRegistryService>(DockerRegistryService());
 
   // Repositories - Singleton (reuse across app)
   getIt.registerSingleton<DockerRepository>(

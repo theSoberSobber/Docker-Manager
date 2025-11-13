@@ -11,7 +11,7 @@ class PullImageScreen extends StatefulWidget {
 }
 
 class _PullImageScreenState extends State<PullImageScreen> {
-  final _registryService = DockerRegistryService();
+  late final DockerRegistryService _registryService;
   late final ImageManagementService _imageManagementService;
   final _searchController = TextEditingController();
   final _registryController = TextEditingController(text: 'hub.docker.com');
@@ -24,6 +24,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
   @override
   void initState() {
     super.initState();
+    _registryService = getIt<DockerRegistryService>();
     _imageManagementService = getIt<ImageManagementService>();
   }
 
