@@ -5,8 +5,9 @@ import '../../data/repositories/docker_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
-import '../widgets/search_bar.dart';
+import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ContainersScreen extends StatefulWidget {
   const ContainersScreen({super.key});
@@ -247,7 +248,17 @@ class _ContainersScreenState extends State<ContainersScreen>
       // Build the complete Docker command based on the action
       switch (action.command) {
         case 'docker logs':
-          command = 'docker logs ${container.id}';
+          // Get log lines setting
+          final prefs = await SharedPreferences.getInstance();
+          final logLines = prefs.getString('defaultLogLines') ?? '500';
+          
+          // Build command based on setting
+          if (logLines == 'all') {
+            command = 'docker logs ${container.id}';
+          } else {
+            command = 'docker logs --tail $logLines ${container.id}';
+          }
+          
           // Navigate to shell screen for logs
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -602,7 +613,7 @@ class _ContainersScreenState extends State<ContainersScreen>
     if (_filteredContainers.isEmpty && _searchQuery.isNotEmpty) {
       return Column(
         children: [
-          CustomSearchBar(
+          SearchBarWithSettings(
             hintText: 'Search containers by name, image, status, or ID...',
             onSearchChanged: _onSearchChanged,
           ),
@@ -639,7 +650,7 @@ class _ContainersScreenState extends State<ContainersScreen>
 
     return Column(
       children: [
-        CustomSearchBar(
+        SearchBarWithSettings(
           hintText: 'Search containers by name, image, status, or ID...',
           onSearchChanged: _onSearchChanged,
         ),
@@ -666,7 +677,7 @@ class _ContainersScreenState extends State<ContainersScreen>
     final hasStandaloneContainers = _containers.any((c) => !c.isPartOfStack);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(

@@ -5,7 +5,7 @@ import '../../data/repositories/docker_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
-import '../widgets/search_bar.dart';
+import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
 
 class NetworksScreen extends StatefulWidget {
@@ -317,7 +317,7 @@ class _NetworksScreenState extends State<NetworksScreen>
     if (_filteredNetworks.isEmpty && _searchQuery.isNotEmpty) {
       return Column(
         children: [
-          CustomSearchBar(
+          SearchBarWithSettings(
             hintText: 'Search networks by name, driver, or ID...',
             onSearchChanged: _onSearchChanged,
           ),
@@ -354,7 +354,7 @@ class _NetworksScreenState extends State<NetworksScreen>
 
     return Column(
       children: [
-        CustomSearchBar(
+        SearchBarWithSettings(
           hintText: 'Search networks by name, driver, or ID...',
           onSearchChanged: _onSearchChanged,
         ),
