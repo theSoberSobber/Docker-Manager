@@ -5,7 +5,7 @@ import '../../data/repositories/docker_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
-import '../widgets/search_bar.dart';
+import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
 
 class VolumesScreen extends StatefulWidget {
@@ -305,7 +305,7 @@ class _VolumesScreenState extends State<VolumesScreen>
     if (_filteredVolumes.isEmpty && _searchQuery.isNotEmpty) {
       return Column(
         children: [
-          CustomSearchBar(
+          SearchBarWithSettings(
             hintText: 'Search volumes by name or driver...',
             onSearchChanged: _onSearchChanged,
           ),
@@ -342,7 +342,7 @@ class _VolumesScreenState extends State<VolumesScreen>
 
     return Column(
       children: [
-        CustomSearchBar(
+        SearchBarWithSettings(
           hintText: 'Search volumes by name or driver...',
           onSearchChanged: _onSearchChanged,
         ),
