@@ -106,7 +106,8 @@ class SSHConnectionService {
   }
 
   /// Execute a command on the connected server
-  Future<String?> executeCommand(String command) async {
+  /// Automatically reconnects and retries once if connection is stale
+  Future<String?> executeCommand(String command, {bool isRetry = false}) async {
     if (!isConnected || _currentConnection == null) {
       throw Exception('No active SSH connection');
     }
@@ -115,6 +116,39 @@ class SSHConnectionService {
       final result = await _currentConnection!.run(command);
       return utf8.decode(result);
     } catch (e) {
+      // Check if this is a connection-related error
+      final errorString = e.toString().toLowerCase();
+      final isConnectionError = errorString.contains('socket') ||
+          errorString.contains('connection') ||
+          errorString.contains('closed') ||
+          errorString.contains('timeout') ||
+          errorString.contains('broken pipe') ||
+          errorString.contains('session');
+
+      // If it's a connection error and we haven't retried yet, attempt reconnection
+      if (isConnectionError && !isRetry && _currentServer != null) {
+        try {
+          // Mark as disconnected and clear stale connection
+          _status = ConnectionStatus.disconnected;
+          _currentConnection?.close();
+          _currentConnection = null;
+
+          // Attempt to reconnect to the same server
+          final reconnectResult = await connect(_currentServer!);
+          
+          if (reconnectResult.success) {
+            // Reconnection successful, retry the command once
+            return await executeCommand(command, isRetry: true);
+          } else {
+            // Reconnection failed
+            throw Exception('Connection lost and reconnection failed: ${reconnectResult.error}');
+          }
+        } catch (reconnectError) {
+          throw Exception('Connection lost and reconnection failed: $reconnectError');
+        }
+      }
+
+      // Either not a connection error, already retried, or no server to reconnect to
       throw Exception('Failed to execute command: $e');
     }
   }
