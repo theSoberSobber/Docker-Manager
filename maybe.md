@@ -1,8 +1,9 @@
-- maybe instead of widget to add, use a screen?
-- image build and start from here only
+- ~maybe instead of widget to add, use a screen?~ nah unless people complain about the widget
+- ~image build and start from here only~
 - ~docker ps -a has only running, what about all? `***`~
 - ~log search~
 - ~search in all tabs (container, images and ... all)~
 - ~search in insepct~
 - better shell handling? `***`
 - ~json formatting in insepct?~
+- notifications on docker events? maybe

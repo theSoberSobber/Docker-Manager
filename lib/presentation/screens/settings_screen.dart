@@ -11,6 +11,8 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _defaultLogLines = '500';
+  String _dockerCliPath = 'docker';
+  final TextEditingController _dockerPathController = TextEditingController();
   bool _isLoading = true;
 
   @override
@@ -19,10 +21,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadSettings();
   }
 
+  @override
+  void dispose() {
+    _dockerPathController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _defaultLogLines = prefs.getString('defaultLogLines') ?? '500';
+      _dockerCliPath = prefs.getString('dockerCliPath') ?? 'docker';
+      _dockerPathController.text = _dockerCliPath;
       _isLoading = false;
     });
   }
@@ -38,6 +48,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Settings saved'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
+  Future<void> _saveDockerCliPath(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    final path = value.trim().isEmpty ? 'docker' : value.trim();
+    await prefs.setString('dockerCliPath', path);
+    setState(() {
+      _dockerCliPath = path;
+    });
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Docker CLI path saved'),
           duration: Duration(seconds: 1),
         ),
       );
@@ -74,6 +102,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   'System',
                   Icons.brightness_auto,
                   ThemeMode.system,
+                ),
+                
+                const Divider(height: 32),
+                
+                // Docker Configuration Section
+                _buildSectionHeader('Docker Configuration'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Docker CLI Path',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Path to Docker CLI binary. Supports Docker, Podman, or custom installations.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _dockerPathController,
+                        decoration: InputDecoration(
+                          hintText: 'docker (default)',
+                          helperText: 'Examples: docker, /usr/bin/docker, /usr/local/bin/podman',
+                          helperMaxLines: 2,
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.save),
+                            onPressed: () {
+                              _saveDockerCliPath(_dockerPathController.text);
+                            },
+                            tooltip: 'Save',
+                          ),
+                        ),
+                        onSubmitted: _saveDockerCliPath,
+                      ),
+                    ],
+                  ),
                 ),
                 
                 const Divider(height: 32),
