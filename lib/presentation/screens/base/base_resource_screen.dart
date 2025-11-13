@@ -108,9 +108,16 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
       
       if (currentServer != lastKnownServer) {
         lastKnownServer = currentServer;
-        if (currentServer != null && 
-            (!hasTriedLoading && sshService.isConnected)) {
-          hasTriedLoading = false; // Reset to allow reload
+        
+        // If server changed and we're connected, trigger a reload
+        if (currentServer != null && sshService.isConnected) {
+          if (!hasTriedLoading) {
+            // First time we detected a connection, load items
+            loadItems();
+          } else {
+            // Server switched, reload items
+            loadItems();
+          }
         }
       }
       
@@ -143,13 +150,16 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
   Widget buildBody(BuildContext context) {
     // Initial loading check
     if (!hasTriedLoading) {
-      if (!hasTriedLoading && mounted) {
+      // Check if we can load immediately
+      if (mounted && sshService.isConnected) {
+        // Connection is ready, trigger load on next frame
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && sshService.isConnected) {
+          if (mounted && !hasTriedLoading) {
             loadItems();
           }
         });
       }
+      // If connection not ready, _startServerChangeDetection will trigger load when it becomes ready
       
       return const Center(
         child: Column(
