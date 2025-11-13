@@ -31,6 +31,45 @@ class DockerRepositoryImpl implements DockerRepository {
   }
 
   @override
+  Future<Map<String, Map<String, String>>> getContainerStats() async {
+    try {
+      if (!_sshService.isConnected) {
+        throw Exception('No SSH connection available');
+      }
+
+      // Get stats for all running containers
+      final command = '''docker stats --no-stream --format '{{.Container}}|{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}' ''';
+      final result = await _sshService.executeCommand(command);
+      
+      if (result == null || result.trim().isEmpty) {
+        return {}; // No running containers
+      }
+
+      // Parse stats into a map: containerId -> {stat_name: value}
+      final statsMap = <String, Map<String, String>>{};
+      final lines = result.split('\n').where((line) => line.trim().isNotEmpty);
+      
+      for (final line in lines) {
+        final parts = line.split('|');
+        if (parts.length >= 7) {
+          statsMap[parts[0].trim()] = {
+            'cpuPerc': parts[1].trim(),
+            'memUsage': parts[2].trim(),
+            'memPerc': parts[3].trim(),
+            'netIO': parts[4].trim(),
+            'blockIO': parts[5].trim(),
+            'pids': parts[6].trim(),
+          };
+        }
+      }
+      
+      return statsMap;
+    } catch (e) {
+      throw Exception('Failed to get container stats: $e');
+    }
+  }
+
+  @override
   Future<List<DockerImage>> getImages() async {
     try {
       if (!_sshService.isConnected) {

@@ -8,6 +8,14 @@ class DockerContainer {
   final String names;
   final String? composeProject;  // Docker Compose stack/project name
   final String? composeService;  // Service name within the stack
+  
+  // Container stats (optional, fetched separately)
+  final String? cpuPerc;
+  final String? memUsage;
+  final String? memPerc;
+  final String? netIO;
+  final String? blockIO;
+  final String? pids;
 
   const DockerContainer({
     required this.id,
@@ -19,10 +27,47 @@ class DockerContainer {
     required this.names,
     this.composeProject,
     this.composeService,
+    this.cpuPerc,
+    this.memUsage,
+    this.memPerc,
+    this.netIO,
+    this.blockIO,
+    this.pids,
   });
 
   /// Check if this container is part of a Docker Compose stack
   bool get isPartOfStack => composeProject != null && composeProject!.isNotEmpty;
+  
+  /// Check if stats are available
+  bool get hasStats => cpuPerc != null;
+  
+  /// Create a copy with stats added
+  DockerContainer copyWithStats({
+    String? cpuPerc,
+    String? memUsage,
+    String? memPerc,
+    String? netIO,
+    String? blockIO,
+    String? pids,
+  }) {
+    return DockerContainer(
+      id: id,
+      image: image,
+      command: command,
+      created: created,
+      status: status,
+      ports: ports,
+      names: names,
+      composeProject: composeProject,
+      composeService: composeService,
+      cpuPerc: cpuPerc ?? this.cpuPerc,
+      memUsage: memUsage ?? this.memUsage,
+      memPerc: memPerc ?? this.memPerc,
+      netIO: netIO ?? this.netIO,
+      blockIO: blockIO ?? this.blockIO,
+      pids: pids ?? this.pids,
+    );
+  }
 
   factory DockerContainer.fromDockerPsLine(String line) {
     // New format using --format flag with pipe separator:

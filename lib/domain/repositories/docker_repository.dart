@@ -7,6 +7,9 @@ abstract class DockerRepository {
   /// Get all containers (running and stopped)
   Future<List<DockerContainer>> getContainers();
   
+  /// Get container stats (CPU, memory, network, etc.)
+  Future<Map<String, Map<String, String>>> getContainerStats();
+  
   /// Get all images
   Future<List<DockerImage>> getImages();
   
