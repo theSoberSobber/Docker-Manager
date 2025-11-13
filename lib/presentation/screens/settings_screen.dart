@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/theme_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../data/services/ssh_connection_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -14,6 +15,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _dockerCliPath = 'docker';
   final TextEditingController _dockerPathController = TextEditingController();
   bool _isLoading = true;
+  bool _isPruning = false;
 
   @override
   void initState() {
@@ -180,6 +182,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildLogLinesOption('1000', '1000 lines (detailed)'),
                       _buildLogLinesOption('5000', '5000 lines (may be slow)'),
                       _buildLogLinesOption('all', 'All logs (risky)'),
+                    ],
+                  ),
+                ),
+                
+                const Divider(height: 32),
+                
+                // System Maintenance Section
+                _buildSectionHeader('System Maintenance'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Clean up Docker resources',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Remove unused containers, images, networks, volumes, and build cache',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: _isPruning ? null : _showSystemPruneDialog,
+                          icon: _isPruning
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.delete_sweep),
+                          label: Text(_isPruning ? 'Pruning...' : 'System Prune'),
+                        ),
+                      ),
                     ],
                   ),
                 ),
