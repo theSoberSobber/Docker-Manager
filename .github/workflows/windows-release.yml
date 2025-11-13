@@ -2,8 +2,6 @@ name: Build and Release Windows
 
 on:
   push:
-    branches:
-      - try-windows-build
   workflow_dispatch:
     inputs:
       force_release:
@@ -51,8 +49,17 @@ jobs:
       - name: Check if release needed
         id: check_release
         run: |
+          $branch = "${{ github.ref_name }}"
           $version = "v${{ steps.version.outputs.VERSION }}"
+          echo "Current branch: $branch"
           echo "Current version: $version"
+          
+          # Only create releases on main branch
+          if ($branch -ne "main") {
+            echo "Not on main branch, skipping release (artifacts only)"
+            echo "SHOULD_RELEASE=false" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
           
           # Get latest release tag
           $tags = git ls-remote --tags origin | Where-Object { $_ -notmatch '\^\{\}' } | ForEach-Object { ($_ -split '\t')[1] -replace 'refs/tags/', '' } | Where-Object { $_ -match '^v[0-9]+\.[0-9]+\.[0-9]+$' } | Sort-Object

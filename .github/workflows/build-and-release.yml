@@ -83,8 +83,17 @@ jobs:
       - name: Check if release needed
         id: check_release
         run: |
+          BRANCH="${{ github.ref_name }}"
           VERSION="v${{ steps.version.outputs.VERSION }}"
+          echo "Current branch: $BRANCH"
           echo "Current version: $VERSION"
+          
+          # Only create releases on main branch
+          if [ "$BRANCH" != "main" ]; then
+            echo "Not on main branch, skipping release (artifacts only)"
+            echo "SHOULD_RELEASE=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           
           # Get latest release tag
           LATEST_TAG=$(git ls-remote --tags origin | grep -v '\^{}' | awk '{print $2}' | sed 's#refs/tags/##' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || echo "")
