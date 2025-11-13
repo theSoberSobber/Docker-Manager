@@ -7,6 +7,8 @@ import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
+import 'settings_screen.dart';
+import 'server_list_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ContainersScreen extends StatefulWidget {
@@ -563,12 +565,14 @@ class _ContainersScreenState extends State<ContainersScreen>
                 if (isConnectionError) ...[
                   ElevatedButton.icon(
                     onPressed: () {
-                      // The servers button is in the app bar, so we can't easily navigate to it
-                      // Instead, show a helpful message
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Tap the server icon in the top-right to connect to a server'),
-                          duration: Duration(seconds: 3),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ServerListScreen(
+                            onServerSelected: (server) {
+                              Navigator.pop(context);
+                            },
+                          ),
                         ),
                       );
                     },
@@ -576,12 +580,38 @@ class _ContainersScreenState extends State<ContainersScreen>
                     label: const Text('Connect to Server'),
                   ),
                   const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SettingsScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.settings),
+                    label: const Text('Settings'),
+                  ),
+                ] else ...[
+                  ElevatedButton.icon(
+                    onPressed: _refreshContainers,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SettingsScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.settings),
+                    label: const Text('Settings'),
+                  ),
                 ],
-                ElevatedButton.icon(
-                  onPressed: _refreshContainers,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
-                ),
               ],
             ),
           ],
@@ -613,10 +643,28 @@ class _ContainersScreenState extends State<ContainersScreen>
               ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _refreshContainers,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Refresh'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _refreshContainers,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Refresh'),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.settings),
+                  label: const Text('Settings'),
+                ),
+              ],
             ),
           ],
         ),
