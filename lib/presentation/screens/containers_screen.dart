@@ -134,9 +134,35 @@ class _ContainersScreenState extends State<ContainersScreen>
 
     try {
       final containers = await _dockerRepository.getContainers();
+      
+      // Fetch stats for running containers
+      Map<String, Map<String, String>> statsMap = {};
+      try {
+        statsMap = await _dockerRepository.getContainerStats();
+      } catch (e) {
+        // Stats fetch failed, but continue with containers
+        debugPrint('Failed to fetch container stats: $e');
+      }
+      
+      // Merge stats into containers
+      final containersWithStats = containers.map((container) {
+        final stats = statsMap[container.id];
+        if (stats != null) {
+          return container.copyWithStats(
+            cpuPerc: stats['cpuPerc'],
+            memUsage: stats['memUsage'],
+            memPerc: stats['memPerc'],
+            netIO: stats['netIO'],
+            blockIO: stats['blockIO'],
+            pids: stats['pids'],
+          );
+        }
+        return container;
+      }).toList();
+      
       setState(() {
-        _containers = containers;
-        _filteredContainers = _filterContainers(containers, _searchQuery);
+        _containers = containersWithStats;
+        _filteredContainers = _filterContainers(containersWithStats, _searchQuery);
         _isLoading = false;
       });
     } catch (e) {
@@ -789,6 +815,51 @@ class _ContainersScreenState extends State<ContainersScreen>
             _buildDetailRow('Status', container.status),
             if (container.ports.isNotEmpty)
               _buildDetailRow('Ports', container.ports.join(', ')),
+            
+            // Container stats (if available)
+            if (container.hasStats) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatColumn(
+                        icon: Icons.speed,
+                        label: 'CPU',
+                        value: container.cpuPerc ?? 'N/A',
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildStatColumn(
+                        icon: Icons.memory,
+                        label: 'Memory',
+                        value: container.memPerc ?? 'N/A',
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildStatColumn(
+                        icon: Icons.cloud_queue,
+                        label: 'Network',
+                        value: container.netIO ?? 'N/A',
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildStatColumn(
+                        icon: Icons.format_list_numbered,
+                        label: 'PIDs',
+                        value: container.pids ?? 'N/A',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -819,6 +890,42 @@ class _ContainersScreenState extends State<ContainersScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatColumn({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: Colors.blue[700],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 }
