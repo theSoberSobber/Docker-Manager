@@ -74,6 +74,140 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _showSystemPruneDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('System Prune'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This will remove:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 12),
+            Text('• All stopped containers'),
+            Text('• All dangling images'),
+            Text('• All unused networks'),
+            Text('• All unused volumes'),
+            Text('• All build cache'),
+            SizedBox(height: 16),
+            Text(
+              'This action cannot be undone!',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Prune System'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _executeSystemPrune();
+    }
+  }
+
+  Future<void> _executeSystemPrune() async {
+    setState(() {
+      _isPruning = true;
+    });
+
+    try {
+      final sshService = SSHConnectionService();
+      
+      // Get the configured Docker CLI path
+      final prefs = await SharedPreferences.getInstance();
+      final dockerCmd = prefs.getString('dockerCliPath') ?? 'docker';
+      
+      final result = await sshService.executeCommand('$dockerCmd system prune -af --volumes');
+      
+      if (mounted) {
+        setState(() {
+          _isPruning = false;
+        });
+
+        // Show result dialog
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green),
+                SizedBox(width: 8),
+                Text('Prune Complete'),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Text(
+                (result?.isNotEmpty ?? false) ? result! : 'System prune completed successfully',
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isPruning = false;
+        });
+
+        // Show error dialog
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.error, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Prune Failed'),
+              ],
+            ),
+            content: Text(
+              e.toString(),
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
