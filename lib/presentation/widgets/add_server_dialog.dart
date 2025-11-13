@@ -80,14 +80,14 @@ class _AddServerDialogState extends State<AddServerDialog> {
               TextFormField(
                 controller: _ipController,
                 decoration: const InputDecoration(
-                  labelText: 'IP Address',
+                  labelText: 'IP Address/Hostname',
                   hintText: '192.168.1.100',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.computer),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter an IP address';
+                    return 'Please enter an IP address/Hostname';
                   }
                   return null;
                 },
