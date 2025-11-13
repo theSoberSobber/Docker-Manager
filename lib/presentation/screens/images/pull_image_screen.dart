@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/services/docker_registry_service.dart';
-import '../../../data/services/ssh_connection_service.dart';
+import '../../../domain/services/image_management_service.dart';
+import '../../../core/di/service_locator.dart';
 
 class PullImageScreen extends StatefulWidget {
   const PullImageScreen({super.key});
@@ -11,7 +12,7 @@ class PullImageScreen extends StatefulWidget {
 
 class _PullImageScreenState extends State<PullImageScreen> {
   final _registryService = DockerRegistryService();
-  final _sshService = SSHConnectionService();
+  late final ImageManagementService _imageManagementService;
   final _searchController = TextEditingController();
   final _registryController = TextEditingController(text: 'hub.docker.com');
 
@@ -19,6 +20,12 @@ class _PullImageScreenState extends State<PullImageScreen> {
   bool _isSearching = false;
   bool _hasSearched = false;
   String? _searchError;
+
+  @override
+  void initState() {
+    super.initState();
+    _imageManagementService = getIt<ImageManagementService>();
+  }
 
   @override
   void dispose() {
@@ -177,28 +184,18 @@ class _PullImageScreenState extends State<PullImageScreen> {
     );
 
     try {
-      final result =
-          await _sshService.executeCommand('docker pull $fullImageName');
+      await _imageManagementService.pullImage(fullImageName);
 
       if (!mounted) return;
       Navigator.of(context).pop(); // Close loading dialog
 
-      if (result != null && result.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully pulled $fullImageName'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.of(context).pop(true); // Return to images screen
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to pull image'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Successfully pulled $fullImageName'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.of(context).pop(true); // Return to images screen
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop(); // Close loading dialog
