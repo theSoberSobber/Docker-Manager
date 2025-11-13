@@ -711,7 +711,6 @@ class _ContainersScreenState extends State<ContainersScreen>
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
                             if (container.isPartOfStack) ...[
                               const SizedBox(height: 4),
@@ -731,7 +730,6 @@ class _ContainersScreenState extends State<ContainersScreen>
                                         color: Colors.blue[700],
                                         fontWeight: FontWeight.w500,
                                       ),
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
