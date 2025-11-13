@@ -627,11 +627,6 @@ class _ContainersScreenState extends State<ContainersScreen>
   Widget _buildStackFilterChips() {
     final availableStacks = _getAvailableStacks();
     final hasStandaloneContainers = _containers.any((c) => !c.isPartOfStack);
-    
-    // Don't show filter chips if there are no stacks
-    if (availableStacks.isEmpty && !hasStandaloneContainers) {
-      return const SizedBox.shrink();
-    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -716,6 +711,7 @@ class _ContainersScreenState extends State<ContainersScreen>
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                             if (container.isPartOfStack) ...[
                               const SizedBox(height: 4),
@@ -727,12 +723,15 @@ class _ContainersScreenState extends State<ContainersScreen>
                                     color: Colors.blue[700],
                                   ),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    '${container.composeProject}${container.composeService != null ? ' / ${container.composeService}' : ''}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.blue[700],
-                                      fontWeight: FontWeight.w500,
+                                  Flexible(
+                                    child: Text(
+                                      '${container.composeProject}${container.composeService != null ? ' / ${container.composeService}' : ''}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.blue[700],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
