@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/docker_image.dart';
-import '../../domain/repositories/docker_repository.dart';
-import '../../data/repositories/docker_repository_impl.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
@@ -15,11 +13,10 @@ class ImagesScreen extends BaseResourceScreen<DockerImage> {
 }
 
 class _ImagesScreenState extends BaseResourceScreenState<DockerImage, ImagesScreen> {
-  final DockerRepository _dockerRepository = DockerRepositoryImpl();
 
   @override
   Future<List<DockerImage>> fetchItems() async {
-    return await _dockerRepository.getImages();
+    return await dockerRepository.getImages();
   }
 
   @override
@@ -340,11 +337,10 @@ class _ImagesScreenState extends BaseResourceScreenState<DockerImage, ImagesScre
 
   Future<void> _handleImageAction(DockerAction action, DockerImage image) async {
     try {
-      String command;
-      
       switch (action.command) {
         case 'docker image inspect':
-          command = 'docker image inspect ${image.imageId}';
+          // Get inspect command from operations service
+          final command = await operationsService.getInspectImageCommand(image.imageId);
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => ShellScreen(
@@ -381,29 +377,22 @@ class _ImagesScreenState extends BaseResourceScreenState<DockerImage, ImagesScre
           );
 
           if (confirmed == true) {
-            command = 'docker image rm ${image.imageId}';
-          } else {
-            return;
+            // Use operations service to remove image
+            await operationsService.removeImage(image.imageId);
+            
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Image deleted successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              
+              // Refresh the list after deletion
+              loadItems();
+            }
           }
-          break;
-          
-        default:
-          command = '${action.command} ${image.imageId}';
-      }
-
-      // Execute the command using base class sshService
-      final result = await sshService.executeCommand(command);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result?.isNotEmpty == true ? result! : 'Command executed successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        
-        // Refresh the list after action
-        loadItems();
+          return;
       }
     } catch (e) {
       if (mounted) {

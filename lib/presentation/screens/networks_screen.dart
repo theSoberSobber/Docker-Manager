@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/docker_network.dart';
 import '../../domain/repositories/docker_repository.dart';
-import '../../data/repositories/docker_repository_impl.dart';
+import '../../domain/services/docker_operations_service.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
@@ -15,11 +15,10 @@ class NetworksScreen extends BaseResourceScreen<DockerNetwork> {
 }
 
 class _NetworksScreenState extends BaseResourceScreenState<DockerNetwork, NetworksScreen> {
-  final DockerRepository _dockerRepository = DockerRepositoryImpl();
 
   @override
   Future<List<DockerNetwork>> fetchItems() async {
-    return await _dockerRepository.getNetworks();
+    return await dockerRepository.getNetworks();
   }
 
   @override
@@ -322,11 +321,10 @@ class _NetworksScreenState extends BaseResourceScreenState<DockerNetwork, Networ
 
   Future<void> _handleNetworkAction(DockerAction action, DockerNetwork network) async {
     try {
-      String command;
-      
       switch (action.command) {
         case 'docker network inspect':
-          command = 'docker network inspect ${network.networkId}';
+          // Get inspect command from operations service
+          final command = await operationsService.getInspectNetworkCommand(network.networkId);
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => ShellScreen(
@@ -370,29 +368,22 @@ class _NetworksScreenState extends BaseResourceScreenState<DockerNetwork, Networ
           );
 
           if (confirmed == true) {
-            command = 'docker network rm ${network.networkId}';
-          } else {
-            return;
+            // Use operations service to remove network
+            await operationsService.removeNetwork(network.networkId);
+            
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Network deleted successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              
+              // Refresh the list after deletion
+              loadItems();
+            }
           }
-          break;
-          
-        default:
-          command = '${action.command} ${network.networkId}';
-      }
-
-      // Execute the command using base class sshService
-      final result = await sshService.executeCommand(command);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result?.isNotEmpty == true ? result! : 'Command executed successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        
-        // Refresh the list after action
-        loadItems();
+          return;
       }
     } catch (e) {
       if (mounted) {

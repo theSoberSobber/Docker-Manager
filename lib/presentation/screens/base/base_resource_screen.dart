@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../data/services/ssh_connection_service.dart';
 import '../../../domain/models/server.dart';
+import '../../../domain/repositories/docker_repository.dart';
+import '../../../domain/services/docker_operations_service.dart';
+import '../../../core/di/service_locator.dart';
 
 /// Base class for all Docker resource screens (containers, images, volumes, networks)
 /// Provides common functionality: loading, error handling, search, server change detection
@@ -11,7 +14,10 @@ abstract class BaseResourceScreen<T> extends StatefulWidget {
 abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>> 
     extends State<W> with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   
-  final SSHConnectionService sshService = SSHConnectionService();
+  // Injected dependencies from service locator
+  late final SSHConnectionService sshService = getIt<SSHConnectionService>();
+  late final DockerRepository dockerRepository = getIt<DockerRepository>();
+  late final DockerOperationsService operationsService = getIt<DockerOperationsService>();
   
   // State
   List<T> items = [];

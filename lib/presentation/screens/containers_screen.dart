@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/models/docker_container.dart';
-import '../../domain/repositories/docker_repository.dart';
-import '../../data/repositories/docker_repository_impl.dart';
-import '../../core/utils/docker_cli_config.dart';
 import '../widgets/search_bar_with_settings.dart';
 import '../widgets/docker_resource_actions.dart';
 import 'settings_screen.dart';
@@ -19,12 +16,11 @@ class ContainersScreen extends BaseResourceScreen<DockerContainer> {
 }
 
 class _ContainersScreenState extends BaseResourceScreenState<DockerContainer, ContainersScreen> {
-  final DockerRepository _dockerRepository = DockerRepositoryImpl();
   String? _selectedStack;
 
   @override
   Future<List<DockerContainer>> fetchItems() async {
-    final containers = await _dockerRepository.getContainers();
+    final containers = await dockerRepository.getContainers();
     
     // Fetch stats asynchronously in the background after showing containers
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -38,7 +34,7 @@ class _ContainersScreenState extends BaseResourceScreenState<DockerContainer, Co
 
   Future<void> _loadContainerStats() async {
     try {
-      final statsMap = await _dockerRepository.getContainerStats();
+      final statsMap = await dockerRepository.getContainerStats();
       
       if (!mounted) return;
       
@@ -605,75 +601,56 @@ class _ContainersScreenState extends BaseResourceScreenState<DockerContainer, Co
 
   Future<void> _handleContainerAction(DockerAction action, DockerContainer container) async {
     try {
-      String command;
-      
-      // Build the complete Docker command based on the action
+      // Handle navigation actions (logs, inspect, exec)
       switch (action.command) {
         case 'docker logs':
-          // Get settings
+          // Get settings for log lines
           final prefs = await SharedPreferences.getInstance();
           final logLines = prefs.getString('defaultLogLines') ?? '500';
-          final dockerCli = await DockerCliConfig.getCliPath();
           
-          // Build command based on setting
-          if (logLines == 'all') {
-            command = '$dockerCli logs ${container.id}';
-          } else {
-            command = '$dockerCli logs --tail $logLines ${container.id}';
-          }
-          
-          // Navigate to shell screen for logs
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => ShellScreen(
-                title: 'Logs - ${container.names}',
-                command: command,
-              ),
-            ),
+          // Get logs command from operations service
+          final logsCommand = await operationsService.getContainerLogsCommand(
+            container.id,
+            logLines: logLines,
           );
+          
+          // Navigate to shell screen to display logs
+          if (mounted) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => ShellScreen(
+                  title: 'Logs - ${container.names}',
+                  command: logsCommand,
+                ),
+              ),
+            );
+          }
           return;
           
         case 'docker inspect':
-          final dockerCli = await DockerCliConfig.getCliPath();
-          command = '$dockerCli inspect ${container.id}';
+          // Get inspect command from operations service
+          final inspectCommand = await operationsService.getInspectContainerCommand(container.id);
+          
           // Navigate to shell screen for inspect
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => ShellScreen(
-                title: 'Inspect - ${container.names}',
-                command: command,
+          if (mounted) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => ShellScreen(
+                  title: 'Inspect - ${container.names}',
+                  command: inspectCommand,
+                ),
               ),
-            ),
-          );
+            );
+          }
           return;
           
         case 'docker exec -it':
           // Show dialog to choose shell executable
           _showShellExecutableDialog(container);
           return;
-          
-        case 'docker stop':
-          final dockerCli1 = await DockerCliConfig.getCliPath();
-          command = '$dockerCli1 stop ${container.id}';
-          break;
-        case 'docker start':
-          final dockerCli2 = await DockerCliConfig.getCliPath();
-          command = '$dockerCli2 start ${container.id}';
-          break;
-        case 'docker restart':
-          final dockerCli3 = await DockerCliConfig.getCliPath();
-          command = '$dockerCli3 restart ${container.id}';
-          break;
-        case 'docker rm':
-          final dockerCli4 = await DockerCliConfig.getCliPath();
-          command = '$dockerCli4 rm ${container.id}';
-          break;
-        default:
-          final dockerCliDefault = await DockerCliConfig.getCliPath();
-          command = '${action.command.replaceFirst('docker', dockerCliDefault)} ${container.id}';
       }
 
-      // Show loading indicator
+      // For state-changing operations, show loading indicator
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -693,45 +670,40 @@ class _ContainersScreenState extends BaseResourceScreenState<DockerContainer, Co
         );
       }
 
-      // Execute the command
-      final result = await sshService.executeCommand(command);
-      
+      // Execute operation through service layer
+      switch (action.command) {
+        case 'docker stop':
+          await operationsService.stopContainer(container.id);
+          break;
+        case 'docker start':
+          await operationsService.startContainer(container.id);
+          break;
+        case 'docker restart':
+          await operationsService.restartContainer(container.id);
+          break;
+        case 'docker rm':
+          await operationsService.removeContainer(container.id);
+          break;
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Text('${action.label} completed successfully'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
         
-        if (result != null && result.isNotEmpty) {
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                  const SizedBox(width: 12),
-                  Text('${action.label} completed successfully'),
-                ],
-              ),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-          
-          // Refresh container list for state-changing operations
-          if (action.command.contains('stop') || 
-              action.command.contains('start') || 
-              action.command.contains('restart') ||
-              action.command.contains('rm')) {
-            await loadItems();
-          }
-        } else {
-          // Command executed but no output
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${action.label} completed'),
-              backgroundColor: Colors.blue,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
+        // Refresh container list for state-changing operations
+        await loadItems();
       }
     } catch (e) {
       if (mounted) {

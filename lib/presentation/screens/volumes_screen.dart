@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/docker_volume.dart';
-import '../../domain/repositories/docker_repository.dart';
-import '../../data/repositories/docker_repository_impl.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
@@ -15,11 +13,10 @@ class VolumesScreen extends BaseResourceScreen<DockerVolume> {
 }
 
 class _VolumesScreenState extends BaseResourceScreenState<DockerVolume, VolumesScreen> {
-  final DockerRepository _dockerRepository = DockerRepositoryImpl();
 
   @override
   Future<List<DockerVolume>> fetchItems() async {
-    return await _dockerRepository.getVolumes();
+    return await dockerRepository.getVolumes();
   }
 
   @override
@@ -247,11 +244,10 @@ class _VolumesScreenState extends BaseResourceScreenState<DockerVolume, VolumesS
 
   Future<void> _handleVolumeAction(DockerAction action, DockerVolume volume) async {
     try {
-      String command;
-      
       switch (action.command) {
         case 'docker volume inspect':
-          command = 'docker volume inspect ${volume.volumeName}';
+          // Get inspect command from operations service
+          final command = await operationsService.getInspectVolumeCommand(volume.volumeName);
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => ShellScreen(
@@ -284,29 +280,22 @@ class _VolumesScreenState extends BaseResourceScreenState<DockerVolume, VolumesS
           );
 
           if (confirmed == true) {
-            command = 'docker volume rm ${volume.volumeName}';
-          } else {
-            return;
+            // Use operations service to remove volume
+            await operationsService.removeVolume(volume.volumeName);
+            
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Volume deleted successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              
+              // Refresh the list after deletion
+              loadItems();
+            }
           }
-          break;
-          
-        default:
-          command = '${action.command} ${volume.volumeName}';
-      }
-
-      // Execute the command using base class sshService
-      final result = await sshService.executeCommand(command);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result?.isNotEmpty == true ? result! : 'Command executed successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        
-        // Refresh the list after action
-        loadItems();
+          return;
       }
     } catch (e) {
       if (mounted) {
