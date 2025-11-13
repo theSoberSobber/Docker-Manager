@@ -16,9 +16,9 @@ class DockerRepositoryImpl implements DockerRepository {
       }
 
       // Use --format to get structured output including compose labels
-      // Use single quotes to avoid shell expansion issues
-      const format = r"{{.ID}}|{{.Image}}|{{.Command}}|{{.CreatedAt}}|{{.Status}}|{{.Ports}}|{{.Names}}|{{.Label \"com.docker.compose.project\"}}|{{.Label \"com.docker.compose.service\"}}";
-      final result = await _sshService.executeCommand("docker ps -a --format '$format'");
+      // Using triple quotes and escaping for proper shell execution
+      final command = '''docker ps -a --format '{{.ID}}|{{.Image}}|{{.Command}}|{{.CreatedAt}}|{{.Status}}|{{.Ports}}|{{.Names}}|{{.Label "com.docker.compose.project"}}|{{.Label "com.docker.compose.service"}}' ''';
+      final result = await _sshService.executeCommand(command);
       
       if (result == null) {
         throw Exception('Docker ps command returned no output');
