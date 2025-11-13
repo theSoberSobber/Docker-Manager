@@ -15,7 +15,9 @@ class DockerRepositoryImpl implements DockerRepository {
         throw Exception('No SSH connection available');
       }
 
-      final result = await _sshService.executeCommand('docker ps -a');
+      // Use --format to get structured output including compose labels
+      const format = '{{.ID}}|{{.Image}}|{{.Command}}|{{.CreatedAt}}|{{.Status}}|{{.Ports}}|{{.Names}}|{{.Label "com.docker.compose.project"}}|{{.Label "com.docker.compose.service"}}';
+      final result = await _sshService.executeCommand('docker ps -a --format "$format"');
       
       if (result == null) {
         throw Exception('Docker ps command returned no output');

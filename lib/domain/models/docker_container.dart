@@ -6,6 +6,8 @@ class DockerContainer {
   final String status;
   final List<String> ports;
   final String names;
+  final String? composeProject;  // Docker Compose stack/project name
+  final String? composeService;  // Service name within the stack
 
   const DockerContainer({
     required this.id,
@@ -15,26 +17,20 @@ class DockerContainer {
     required this.status,
     required this.ports,
     required this.names,
+    this.composeProject,
+    this.composeService,
   });
 
-  factory DockerContainer.fromDockerPsLine(String line) {
-    // Docker ps output format: CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
-    final parts = line.split(RegExp(r'\s{2,}')); // Split by 2+ spaces
-    
-    if (parts.length < 6) {
-      throw FormatException('Invalid docker ps line format: $line');
-    }
+  /// Check if this container is part of a Docker Compose stack
+  bool get isPartOfStack => composeProject != null && composeProject!.isNotEmpty;
 
-    // Handle cases where PORTS column might be empty (exited containers)
-    String ports = '';
-    String names = '';
+  factory DockerContainer.fromDockerPsLine(String line) {
+    // New format using --format flag with pipe separator:
+    // {{.ID}}|{{.Image}}|{{.Command}}|{{.CreatedAt}}|{{.Status}}|{{.Ports}}|{{.Names}}|{{.Label "com.docker.compose.project"}}|{{.Label "com.docker.compose.service"}}
+    final parts = line.split('|');
     
-    if (parts.length >= 7) {
-      ports = parts[5].trim();
-      names = parts[6].trim();
-    } else if (parts.length == 6) {
-      // No ports, names is in parts[5]
-      names = parts[5].trim();
+    if (parts.length < 7) {
+      throw FormatException('Invalid docker ps line format: $line');
     }
 
     return DockerContainer(
@@ -43,8 +39,10 @@ class DockerContainer {
       command: parts[2].trim(),
       created: parts[3].trim(),
       status: parts[4].trim(),
-      ports: ports.isEmpty ? [] : [ports],
-      names: names,
+      ports: parts[5].trim().isEmpty ? [] : [parts[5].trim()],
+      names: parts[6].trim(),
+      composeProject: parts.length > 7 && parts[7].trim().isNotEmpty ? parts[7].trim() : null,
+      composeService: parts.length > 8 && parts[8].trim().isNotEmpty ? parts[8].trim() : null,
     );
   }
 
@@ -52,8 +50,8 @@ class DockerContainer {
     final lines = output.split('\n');
     if (lines.isEmpty) return [];
 
-    // Skip header line and empty lines
-    final dataLines = lines.skip(1).where((line) => line.trim().isNotEmpty);
+    // Skip empty lines (no header line with --format)
+    final dataLines = lines.where((line) => line.trim().isNotEmpty);
     
     return dataLines
         .map((line) {
@@ -71,6 +69,6 @@ class DockerContainer {
 
   @override
   String toString() {
-    return 'DockerContainer(id: $id, image: $image, names: $names, status: $status)';
+    return 'DockerContainer(id: $id, image: $image, names: $names, status: $status, stack: $composeProject)';
   }
 }

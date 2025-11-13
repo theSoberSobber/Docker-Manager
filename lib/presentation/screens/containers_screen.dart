@@ -26,6 +26,7 @@ class _ContainersScreenState extends State<ContainersScreen>
   bool _hasTriedLoading = false;
   Server? _lastKnownServer;
   String _searchQuery = '';
+  String? _selectedStack; // null means "All", "no-stack" means containers without stack
 
   @override
   bool get wantKeepAlive => true;
@@ -151,15 +152,40 @@ class _ContainersScreenState extends State<ContainersScreen>
     await _checkConnectionAndLoad();
   }
 
+  /// Get unique stack names from containers
+  List<String> _getAvailableStacks() {
+    final stacks = _containers
+        .where((c) => c.isPartOfStack)
+        .map((c) => c.composeProject!)
+        .toSet()
+        .toList()
+      ..sort();
+    return stacks;
+  }
+
+  /// Filter containers by search query and selected stack
   List<DockerContainer> _filterContainers(List<DockerContainer> containers, String query) {
-    if (query.isEmpty) return containers;
+    var filtered = containers;
+
+    // Filter by stack first
+    if (_selectedStack != null) {
+      if (_selectedStack == 'no-stack') {
+        filtered = filtered.where((c) => !c.isPartOfStack).toList();
+      } else {
+        filtered = filtered.where((c) => c.composeProject == _selectedStack).toList();
+      }
+    }
+
+    // Then filter by search query
+    if (query.isEmpty) return filtered;
     
     final lowercaseQuery = query.toLowerCase();
-    return containers.where((container) {
+    return filtered.where((container) {
       return container.names.toLowerCase().contains(lowercaseQuery) ||
              container.image.toLowerCase().contains(lowercaseQuery) ||
              container.status.toLowerCase().contains(lowercaseQuery) ||
-             container.id.toLowerCase().contains(lowercaseQuery);
+             container.id.toLowerCase().contains(lowercaseQuery) ||
+             (container.composeProject?.toLowerCase().contains(lowercaseQuery) ?? false);
     }).toList();
   }
 
@@ -167,6 +193,13 @@ class _ContainersScreenState extends State<ContainersScreen>
     setState(() {
       _searchQuery = query;
       _filteredContainers = _filterContainers(_containers, query);
+    });
+  }
+
+  void _onStackFilterChanged(String? stack) {
+    setState(() {
+      _selectedStack = stack;
+      _filteredContainers = _filterContainers(_containers, _searchQuery);
     });
   }
 
@@ -573,6 +606,7 @@ class _ContainersScreenState extends State<ContainersScreen>
           hintText: 'Search containers by name, image, status, or ID...',
           onSearchChanged: _onSearchChanged,
         ),
+        _buildStackFilterChips(),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _refreshContainers,
@@ -587,6 +621,71 @@ class _ContainersScreenState extends State<ContainersScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildStackFilterChips() {
+    final availableStacks = _getAvailableStacks();
+    final hasStandaloneContainers = _containers.any((c) => !c.isPartOfStack);
+    
+    // Don't show filter chips if there are no stacks
+    if (availableStacks.isEmpty && !hasStandaloneContainers) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            // "All" chip
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                label: Text('All (${_containers.length})'),
+                selected: _selectedStack == null,
+                onSelected: (selected) {
+                  if (selected) _onStackFilterChanged(null);
+                },
+              ),
+            ),
+            // Stack chips
+            ...availableStacks.map((stack) {
+              final count = _containers.where((c) => c.composeProject == stack).length;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.layers, size: 16),
+                      const SizedBox(width: 4),
+                      Text('$stack ($count)'),
+                    ],
+                  ),
+                  selected: _selectedStack == stack,
+                  onSelected: (selected) {
+                    _onStackFilterChanged(selected ? stack : null);
+                  },
+                ),
+              );
+            }),
+            // "No Stack" chip
+            if (hasStandaloneContainers)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text('No Stack (${_containers.where((c) => !c.isPartOfStack).length})'),
+                  selected: _selectedStack == 'no-stack',
+                  onSelected: (selected) {
+                    _onStackFilterChanged(selected ? 'no-stack' : null);
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -609,11 +708,37 @@ class _ContainersScreenState extends State<ContainersScreen>
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          container.names,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              container.names,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (container.isPartOfStack) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.layers,
+                                    size: 14,
+                                    color: Colors.blue[700],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${container.composeProject}${container.composeService != null ? ' / ${container.composeService}' : ''}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.blue[700],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                       const SizedBox(width: 8),
