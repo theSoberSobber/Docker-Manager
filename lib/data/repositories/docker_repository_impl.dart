@@ -4,9 +4,16 @@ import '../../domain/models/docker_volume.dart';
 import '../../domain/models/docker_network.dart';
 import '../../domain/repositories/docker_repository.dart';
 import '../services/ssh_connection_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DockerRepositoryImpl implements DockerRepository {
   final SSHConnectionService _sshService = SSHConnectionService();
+
+  /// Get the configured Docker CLI path from settings
+  Future<String> _getDockerCliPath() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('dockerCliPath') ?? 'docker';
+  }
 
   @override
   Future<List<DockerContainer>> getContainers() async {
@@ -15,9 +22,11 @@ class DockerRepositoryImpl implements DockerRepository {
         throw Exception('No SSH connection available');
       }
 
+      final dockerCli = await _getDockerCliPath();
+      
       // Use --format to get structured output including compose labels
       // Using triple quotes and escaping for proper shell execution
-      final command = '''docker ps -a --format '{{.ID}}|{{.Image}}|{{.Command}}|{{.CreatedAt}}|{{.Status}}|{{.Ports}}|{{.Names}}|{{.Label "com.docker.compose.project"}}|{{.Label "com.docker.compose.service"}}' ''';
+      final command = '''$dockerCli ps -a --format '{{.ID}}|{{.Image}}|{{.Command}}|{{.CreatedAt}}|{{.Status}}|{{.Ports}}|{{.Names}}|{{.Label "com.docker.compose.project"}}|{{.Label "com.docker.compose.service"}}' ''';
       final result = await _sshService.executeCommand(command);
       
       if (result == null) {
@@ -37,8 +46,10 @@ class DockerRepositoryImpl implements DockerRepository {
         throw Exception('No SSH connection available');
       }
 
+      final dockerCli = await _getDockerCliPath();
+
       // Get stats for all running containers
-      final command = '''docker stats --no-stream --format '{{.Container}}|{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}' ''';
+      final command = '''$dockerCli stats --no-stream --format '{{.Container}}|{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}' ''';
       final result = await _sshService.executeCommand(command);
       
       if (result == null || result.trim().isEmpty) {
@@ -76,7 +87,8 @@ class DockerRepositoryImpl implements DockerRepository {
         throw Exception('No SSH connection available');
       }
 
-      final result = await _sshService.executeCommand('docker images');
+      final dockerCli = await _getDockerCliPath();
+      final result = await _sshService.executeCommand('$dockerCli images');
       
       if (result == null) {
         throw Exception('Docker images command returned no output');
@@ -95,7 +107,8 @@ class DockerRepositoryImpl implements DockerRepository {
         throw Exception('No SSH connection available');
       }
 
-      final result = await _sshService.executeCommand('docker volume ls');
+      final dockerCli = await _getDockerCliPath();
+      final result = await _sshService.executeCommand('$dockerCli volume ls');
       
       if (result == null) {
         throw Exception('Docker volume ls command returned no output');
@@ -114,7 +127,8 @@ class DockerRepositoryImpl implements DockerRepository {
         throw Exception('No SSH connection available');
       }
 
-      final result = await _sshService.executeCommand('docker network ls');
+      final dockerCli = await _getDockerCliPath();
+      final result = await _sshService.executeCommand('$dockerCli network ls');
       
       if (result == null) {
         throw Exception('Docker network ls command returned no output');

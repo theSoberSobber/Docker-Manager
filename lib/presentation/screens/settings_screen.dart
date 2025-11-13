@@ -12,6 +12,8 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _defaultLogLines = '500';
+  String _dockerCliPath = 'docker';
+  final TextEditingController _dockerPathController = TextEditingController();
   bool _isLoading = true;
   bool _isPruning = false;
 
@@ -21,10 +23,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadSettings();
   }
 
+  @override
+  void dispose() {
+    _dockerPathController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _defaultLogLines = prefs.getString('defaultLogLines') ?? '500';
+      _dockerCliPath = prefs.getString('dockerCliPath') ?? 'docker';
+      _dockerPathController.text = _dockerCliPath;
       _isLoading = false;
     });
   }
@@ -46,115 +56,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _showSystemPruneDialog() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('System Prune'),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'This will remove:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 12),
-            Text('• All stopped containers'),
-            Text('• All dangling images'),
-            Text('• All unused networks'),
-            Text('• All unused volumes'),
-            Text('• All build cache'),
-            SizedBox(height: 16),
-            Text(
-              'This action cannot be undone!',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.red,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Prune System'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      await _executeSystemPrune();
-    }
-  }
-
-  Future<void> _executeSystemPrune() async {
+  Future<void> _saveDockerCliPath(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    final path = value.trim().isEmpty ? 'docker' : value.trim();
+    await prefs.setString('dockerCliPath', path);
     setState(() {
-      _isPruning = true;
+      _dockerCliPath = path;
     });
-
-    try {
-      final sshService = SSHConnectionService();
-      final result = await sshService.executeCommand('docker system prune -af --volumes');
-      
-      if (mounted) {
-        setState(() {
-          _isPruning = false;
-        });
-
-        // Show result dialog
-        await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green),
-                SizedBox(width: 8),
-                Text('Prune Complete'),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Text(
-                (result?.isNotEmpty ?? false) ? result! : 'System prune completed successfully',
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isPruning = false;
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Docker CLI path saved'),
+          duration: Duration(seconds: 1),
+        ),
+      );
     }
   }
 
@@ -188,6 +104,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   'System',
                   Icons.brightness_auto,
                   ThemeMode.system,
+                ),
+                
+                const Divider(height: 32),
+                
+                // Docker Configuration Section
+                _buildSectionHeader('Docker Configuration'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Docker CLI Path',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Path to Docker CLI binary. Supports Docker, Podman, or custom installations.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _dockerPathController,
+                        decoration: InputDecoration(
+                          hintText: 'docker (default)',
+                          helperText: 'Examples: docker, /usr/bin/docker, /usr/local/bin/podman',
+                          helperMaxLines: 2,
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.save),
+                            onPressed: () {
+                              _saveDockerCliPath(_dockerPathController.text);
+                            },
+                            tooltip: 'Save',
+                          ),
+                        ),
+                        onSubmitted: _saveDockerCliPath,
+                      ),
+                    ],
+                  ),
                 ),
                 
                 const Divider(height: 32),
