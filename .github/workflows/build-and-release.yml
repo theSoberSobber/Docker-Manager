@@ -2,7 +2,15 @@ name: Build and Release Docker Manager (APK + AAB with Environment Management)
 
 on:
   push:
+    branches:
+      - main
   workflow_dispatch:
+    inputs:
+      force_release:
+        description: 'Force create release even if version unchanged'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -65,9 +73,38 @@ jobs:
       - name: Analyze code
         run: flutter analyze --no-fatal-infos
       
-      - name: Generate version name
+      - name: Extract version from pubspec.yaml
         id: version
-        run: echo "VERSION_NAME=$(date +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
+        run: |
+          VERSION=$(grep '^version: ' pubspec.yaml | cut -d ' ' -f 2 | cut -d '+' -f 1)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+      
+      - name: Check if release needed
+        id: check_release
+        run: |
+          VERSION="v${{ steps.version.outputs.VERSION }}"
+          echo "Current version: $VERSION"
+          
+          # Get latest release tag
+          LATEST_TAG=$(git ls-remote --tags origin | grep -v '\^{}' | awk '{print $2}' | sed 's#refs/tags/##' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || echo "")
+          echo "Latest release tag: $LATEST_TAG"
+          
+          FORCE_RELEASE="${{ github.event.inputs.force_release }}"
+          
+          if [ "$FORCE_RELEASE" = "true" ]; then
+            echo "Force release enabled"
+            echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
+          elif [ -z "$LATEST_TAG" ]; then
+            echo "No previous release found, will create first release"
+            echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
+          elif [ "$VERSION" != "$LATEST_TAG" ]; then
+            echo "Version changed from $LATEST_TAG to $VERSION"
+            echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version unchanged, skipping release"
+            echo "SHOULD_RELEASE=false" >> $GITHUB_OUTPUT
+          fi
       
       # --- Build APK ---
       - name: Build Release APK
@@ -76,7 +113,7 @@ jobs:
       - name: Rename APK
         run: |
           mv build/app/outputs/flutter-apk/app-release.apk \
-             build/app/outputs/flutter-apk/DockerManager-${{ steps.version.outputs.VERSION_NAME }}.apk
+             build/app/outputs/flutter-apk/DockerManager-${{ steps.version.outputs.VERSION }}.apk
       
       # --- Build AAB ---
       - name: Build Release AAB
@@ -85,42 +122,43 @@ jobs:
       - name: Rename AAB
         run: |
           mv build/app/outputs/bundle/release/app-release.aab \
-             build/app/outputs/bundle/release/DockerManager-${{ steps.version.outputs.VERSION_NAME }}.aab
+             build/app/outputs/bundle/release/DockerManager-${{ steps.version.outputs.VERSION }}.aab
       
       # --- Upload as artifacts ---
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DockerManager-APK-${{ steps.version.outputs.VERSION_NAME }}
-          path: build/app/outputs/flutter-apk/DockerManager-${{ steps.version.outputs.VERSION_NAME }}.apk
+          name: DockerManager-APK-${{ steps.version.outputs.VERSION }}
+          path: build/app/outputs/flutter-apk/DockerManager-${{ steps.version.outputs.VERSION }}.apk
           retention-days: 7
       
       - name: Upload AAB as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DockerManager-AAB-${{ steps.version.outputs.VERSION_NAME }}
-          path: build/app/outputs/bundle/release/DockerManager-${{ steps.version.outputs.VERSION_NAME }}.aab
+          name: DockerManager-AAB-${{ steps.version.outputs.VERSION }}
+          path: build/app/outputs/bundle/release/DockerManager-${{ steps.version.outputs.VERSION }}.aab
           retention-days: 7
       
-      # --- GitHub Release ---
+      # --- GitHub Release (only if version changed or forced) ---
       - name: Create GitHub Release
+        if: steps.check_release.outputs.SHOULD_RELEASE == 'true'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.version.outputs.VERSION_NAME }}
-          name: Docker Manager v${{ steps.version.outputs.VERSION_NAME }}
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: Docker Manager v${{ steps.version.outputs.VERSION }}
           body: |
-            Automated Flutter build created on $(date)
+            🚀 Docker Manager v${{ steps.version.outputs.VERSION }}
             
-            Changes in this build:
+            **Changes in this build:**
             - Latest commit: ${{ github.event.head_commit.message }}
             - Branch: ${{ github.ref_name }}
             
             📱 **Android Downloads:**
-            - APK: Direct install for Android devices
-            - AAB: Google Play Store format
+            - **APK**: Direct install for Android devices
+            - **AAB**: Google Play Store format
           files: |
-            build/app/outputs/flutter-apk/DockerManager-${{ steps.version.outputs.VERSION_NAME }}.apk
-            build/app/outputs/bundle/release/DockerManager-${{ steps.version.outputs.VERSION_NAME }}.aab
+            build/app/outputs/flutter-apk/DockerManager-${{ steps.version.outputs.VERSION }}.apk
+            build/app/outputs/bundle/release/DockerManager-${{ steps.version.outputs.VERSION }}.aab
           generate_release_notes: true
           
       # --- Custom APK Manager Upload (APK only) ---
@@ -129,5 +167,5 @@ jobs:
           echo "Uploading APK to APK Manager..."
           curl -v -X POST \
             -H "X-Secret-Key: ${APK_MANAGER_SECRET_KEY}" \
-            -F "file=@build/app/outputs/flutter-apk/DockerManager-${{ steps.version.outputs.VERSION_NAME }}.apk" \
+            -F "file=@build/app/outputs/flutter-apk/DockerManager-${{ steps.version.outputs.VERSION }}.apk" \
             https://apkmanager.1110777.xyz/docker-manager/upload
