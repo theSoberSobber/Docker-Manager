@@ -2,377 +2,46 @@ import 'package:flutter/material.dart';
 import '../../domain/models/docker_network.dart';
 import '../../domain/repositories/docker_repository.dart';
 import '../../data/repositories/docker_repository_impl.dart';
-import '../../data/services/ssh_connection_service.dart';
-import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
+import 'base/base_resource_screen.dart';
 
-class NetworksScreen extends StatefulWidget {
+class NetworksScreen extends BaseResourceScreen<DockerNetwork> {
   const NetworksScreen({super.key});
 
   @override
   State<NetworksScreen> createState() => _NetworksScreenState();
 }
 
-class _NetworksScreenState extends State<NetworksScreen> 
-    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
+class _NetworksScreenState extends BaseResourceScreenState<DockerNetwork, NetworksScreen> {
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
-  final SSHConnectionService _sshService = SSHConnectionService();
-  List<DockerNetwork> _networks = [];
-  List<DockerNetwork> _filteredNetworks = [];
-  bool _isLoading = false;
-  String? _error;
-  bool _hasTriedLoading = false;
-  Server? _lastKnownServer;
-  String _searchQuery = '';
 
   @override
-  bool get wantKeepAlive => true;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _startServerChangeDetection();
+  Future<List<DockerNetwork>> fetchItems() async {
+    return await _dockerRepository.getNetworks();
   }
 
   @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  void _startServerChangeDetection() {
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      
-      final currentServer = _sshService.currentServer;
-      
-      if (currentServer != _lastKnownServer) {
-        _lastKnownServer = currentServer;
-        if (currentServer != null && 
-            (!_hasTriedLoading && _sshService.isConnected)) {
-          // Reset flag when server changes
-          _hasTriedLoading = false; // Reset to allow reload
-        }
-      }
-      
-      _startServerChangeDetection();
-    });
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      // Only load if we've tried loading before (user has seen this tab)
-      if (_hasTriedLoading) {
-        _loadNetworks();
-      }
-    }
-  }
-
-  Future<void> _loadNetworks() async {
-    if (!_sshService.isConnected) {
-      setState(() {
-        _error = 'No SSH connection available';
-        _isLoading = false;
-      });
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _error = null;
-      _hasTriedLoading = true;
-    });
-
-    try {
-      final networks = await _dockerRepository.getNetworks();
-      if (mounted) {
-        setState(() {
-          _networks = networks;
-          _filteredNetworks = _filterNetworks(networks, _searchQuery);
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  List<DockerNetwork> _filterNetworks(List<DockerNetwork> networks, String query) {
-    if (query.isEmpty) return networks;
+  List<DockerNetwork> filterItems(List<DockerNetwork> items, String query) {
+    if (query.isEmpty) return items;
     
     final lowercaseQuery = query.toLowerCase();
-    return networks.where((network) {
+    return items.where((network) {
       return network.name.toLowerCase().contains(lowercaseQuery) ||
              network.driver.toLowerCase().contains(lowercaseQuery) ||
              network.networkId.toLowerCase().contains(lowercaseQuery);
     }).toList();
   }
 
-  void _onSearchChanged(String query) {
-    setState(() {
-      _searchQuery = query;
-      _filteredNetworks = _filterNetworks(_networks, query);
-    });
-  }
-
-  Future<void> _handleNetworkAction(DockerAction action, DockerNetwork network) async {
-    try {
-      String command;
-      
-      switch (action.command) {
-        case 'docker network inspect':
-          command = 'docker network inspect ${network.networkId}';
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => ShellScreen(
-                title: 'Inspect Network - ${network.name}',
-                command: command,
-              ),
-            ),
-          );
-          return;
-          
-        case 'docker network rm':
-          // Prevent deletion of system networks
-          if (['bridge', 'host', 'none'].contains(network.name)) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Cannot delete system network "${network.name}"'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-            return;
-          }
-
-          // Show confirmation dialog
-          final confirmed = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Delete Network'),
-              content: Text('Are you sure you want to delete network "${network.name}"?\\n\\nThis action cannot be undone.'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  child: const Text('Delete'),
-                ),
-              ],
-            ),
-          );
-
-          if (confirmed == true) {
-            command = 'docker network rm ${network.networkId}';
-          } else {
-            return;
-          }
-          break;
-          
-        default:
-          command = '${action.command} ${network.networkId}';
-      }
-
-      // Execute the command
-      final result = await _sshService.executeCommand(command);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result?.isNotEmpty == true ? result! : 'Command executed successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        
-        // Refresh the list after action
-        _loadNetworks();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
+  @override
+  String getResourceName() => 'networks';
 
   @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _loadNetworks,
-        child: _buildBody(),
-      ),
-    );
-  }
+  IconData getEmptyIcon() => Icons.lan_outlined;
 
-  Widget _buildBody() {
-    // Show loading on first load or when explicitly loading
-    if (!_hasTriedLoading) {
-      // Auto-load when tab becomes visible for the first time
-      if (!_hasTriedLoading && mounted) {
-        // Use a post-frame callback to avoid calling setState during build
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _sshService.isConnected) {
-            _loadNetworks();
-          }
-        });
-      }
-      
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading networks...'),
-          ],
-        ),
-      );
-    }
-
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[300],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Failed to load networks',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _loadNetworks,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading networks...'),
-          ],
-        ),
-      );
-    }
-
-    if (_networks.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.hub_outlined,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No networks found',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            const Text('Pull down to refresh'),
-          ],
-        ),
-      );
-    }
-
-    if (_filteredNetworks.isEmpty && _searchQuery.isNotEmpty) {
-      return Column(
-        children: [
-          SearchBarWithSettings(
-            hintText: 'Search networks by name, driver, or ID...',
-            onSearchChanged: _onSearchChanged,
-          ),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.search_off,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No networks match your search',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Try a different search term',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Column(
-      children: [
-        SearchBarWithSettings(
-          hintText: 'Search networks by name, driver, or ID...',
-          onSearchChanged: _onSearchChanged,
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _filteredNetworks.length,
-            itemBuilder: (context, index) {
-              final network = _filteredNetworks[index];
-              return _buildNetworkCard(network);
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNetworkCard(DockerNetwork network) {
+  @override
+  Widget buildItemCard(DockerNetwork network) {
     final isSystemNetwork = ['bridge', 'host', 'none'].contains(network.name);
     
     return Card(
@@ -451,7 +120,7 @@ class _NetworksScreenState extends State<NetworksScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.settings_ethernet,
                         size: 12,
                         color: Colors.blue,
@@ -459,7 +128,7 @@ class _NetworksScreenState extends State<NetworksScreen>
                       const SizedBox(width: 4),
                       Text(
                         network.driver,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.blue,
                           fontWeight: FontWeight.w500,
                           fontSize: 12,
@@ -479,7 +148,7 @@ class _NetworksScreenState extends State<NetworksScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.public,
                         size: 12,
                         color: Colors.purple,
@@ -487,7 +156,7 @@ class _NetworksScreenState extends State<NetworksScreen>
                       const SizedBox(width: 4),
                       Text(
                         network.scope,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.purple,
                           fontWeight: FontWeight.w500,
                           fontSize: 12,
@@ -508,13 +177,13 @@ class _NetworksScreenState extends State<NetworksScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.security,
                           size: 12,
                           color: Colors.orange,
                         ),
                         const SizedBox(width: 4),
-                        Text(
+                        const Text(
                           'System',
                           style: TextStyle(
                             color: Colors.orange,
@@ -532,5 +201,208 @@ class _NetworksScreenState extends State<NetworksScreen>
         ),
       ),
     );
+  }
+
+  @override
+  Widget buildErrorState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.red[300],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Failed to load networks',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            error!,
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: loadItems,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.lan_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No networks found',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          const Text('Pull down to refresh'),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget buildNoSearchResultsState(BuildContext context) {
+    return Column(
+      children: [
+        SearchBarWithSettings(
+          hintText: 'Search networks by name, driver, or ID...',
+          onSearchChanged: onSearchChanged,
+        ),
+        Expanded(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.search_off,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No networks match your search',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Try a different search term',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget buildItemList(BuildContext context) {
+    return Column(
+      children: [
+        SearchBarWithSettings(
+          hintText: 'Search networks by name, driver, or ID...',
+          onSearchChanged: onSearchChanged,
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: filteredItems.length,
+            itemBuilder: (context, index) {
+              final network = filteredItems[index];
+              return buildItemCard(network);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleNetworkAction(DockerAction action, DockerNetwork network) async {
+    try {
+      String command;
+      
+      switch (action.command) {
+        case 'docker network inspect':
+          command = 'docker network inspect ${network.networkId}';
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ShellScreen(
+                title: 'Inspect Network - ${network.name}',
+                command: command,
+              ),
+            ),
+          );
+          return;
+          
+        case 'docker network rm':
+          // Prevent deletion of system networks
+          if (['bridge', 'host', 'none'].contains(network.name)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Cannot delete system network'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+            return;
+          }
+
+          // Show confirmation dialog
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Delete Network'),
+              content: Text('Are you sure you want to delete network "${network.name}"?\n\nThis action cannot be undone.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  child: const Text('Delete'),
+                ),
+              ],
+            ),
+          );
+
+          if (confirmed == true) {
+            command = 'docker network rm ${network.networkId}';
+          } else {
+            return;
+          }
+          break;
+          
+        default:
+          command = '${action.command} ${network.networkId}';
+      }
+
+      // Execute the command using base class sshService
+      final result = await sshService.executeCommand(command);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result?.isNotEmpty == true ? result! : 'Command executed successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Refresh the list after action
+        loadItems();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

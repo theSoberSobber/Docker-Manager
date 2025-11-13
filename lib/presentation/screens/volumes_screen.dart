@@ -2,365 +2,45 @@ import 'package:flutter/material.dart';
 import '../../domain/models/docker_volume.dart';
 import '../../domain/repositories/docker_repository.dart';
 import '../../data/repositories/docker_repository_impl.dart';
-import '../../data/services/ssh_connection_service.dart';
-import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
+import 'base/base_resource_screen.dart';
 
-class VolumesScreen extends StatefulWidget {
+class VolumesScreen extends BaseResourceScreen<DockerVolume> {
   const VolumesScreen({super.key});
 
   @override
   State<VolumesScreen> createState() => _VolumesScreenState();
 }
 
-class _VolumesScreenState extends State<VolumesScreen> 
-    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
+class _VolumesScreenState extends BaseResourceScreenState<DockerVolume, VolumesScreen> {
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
-  final SSHConnectionService _sshService = SSHConnectionService();
-  List<DockerVolume> _volumes = [];
-  List<DockerVolume> _filteredVolumes = [];
-  bool _isLoading = false;
-  String? _error;
-  bool _hasTriedLoading = false;
-  Server? _lastKnownServer;
-  String _searchQuery = '';
 
   @override
-  bool get wantKeepAlive => true;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _startServerChangeDetection();
+  Future<List<DockerVolume>> fetchItems() async {
+    return await _dockerRepository.getVolumes();
   }
 
   @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  void _startServerChangeDetection() {
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      
-      final currentServer = _sshService.currentServer;
-      
-      if (currentServer != _lastKnownServer) {
-        _lastKnownServer = currentServer;
-        if (currentServer != null && 
-            (!_hasTriedLoading && _sshService.isConnected)) {
-          // Reset flag when server changes
-          _hasTriedLoading = false; // Reset to allow reload
-        }
-      }
-      
-      _startServerChangeDetection();
-    });
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      // Only load if we've tried loading before (user has seen this tab)
-      if (_hasTriedLoading) {
-        _loadVolumes();
-      }
-    }
-  }
-
-  Future<void> _loadVolumes() async {
-    if (!_sshService.isConnected) {
-      setState(() {
-        _error = 'No SSH connection available';
-        _isLoading = false;
-      });
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _error = null;
-      _hasTriedLoading = true;
-    });
-
-    try {
-      final volumes = await _dockerRepository.getVolumes();
-      if (mounted) {
-        setState(() {
-          _volumes = volumes;
-          _filteredVolumes = _filterVolumes(volumes, _searchQuery);
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  List<DockerVolume> _filterVolumes(List<DockerVolume> volumes, String query) {
-    if (query.isEmpty) return volumes;
+  List<DockerVolume> filterItems(List<DockerVolume> items, String query) {
+    if (query.isEmpty) return items;
     
     final lowercaseQuery = query.toLowerCase();
-    return volumes.where((volume) {
+    return items.where((volume) {
       return volume.volumeName.toLowerCase().contains(lowercaseQuery) ||
              volume.driver.toLowerCase().contains(lowercaseQuery);
     }).toList();
   }
 
-  void _onSearchChanged(String query) {
-    setState(() {
-      _searchQuery = query;
-      _filteredVolumes = _filterVolumes(_volumes, query);
-    });
-  }
-
-  Future<void> _handleVolumeAction(DockerAction action, DockerVolume volume) async {
-    try {
-      String command;
-      
-      switch (action.command) {
-        case 'docker volume inspect':
-          command = 'docker volume inspect ${volume.volumeName}';
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => ShellScreen(
-                title: 'Inspect Volume - ${volume.volumeName}',
-                command: command,
-              ),
-            ),
-          );
-          return;
-          
-        case 'docker volume rm':
-          // Show confirmation dialog
-          final confirmed = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Delete Volume'),
-              content: Text('Are you sure you want to delete volume "${volume.volumeName}"?\\n\\nThis action cannot be undone.'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  child: const Text('Delete'),
-                ),
-              ],
-            ),
-          );
-
-          if (confirmed == true) {
-            command = 'docker volume rm ${volume.volumeName}';
-          } else {
-            return;
-          }
-          break;
-          
-        default:
-          command = '${action.command} ${volume.volumeName}';
-      }
-
-      // Execute the command
-      final result = await _sshService.executeCommand(command);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result?.isNotEmpty == true ? result! : 'Command executed successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        
-        // Refresh the list after action
-        _loadVolumes();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
+  @override
+  String getResourceName() => 'volumes';
 
   @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _loadVolumes,
-        child: _buildBody(),
-      ),
-    );
-  }
+  IconData getEmptyIcon() => Icons.storage_outlined;
 
-  Widget _buildBody() {
-    // Show loading on first load or when explicitly loading
-    if (!_hasTriedLoading) {
-      // Auto-load when tab becomes visible for the first time
-      if (!_hasTriedLoading && mounted) {
-        // Use a post-frame callback to avoid calling setState during build
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _sshService.isConnected) {
-            _loadVolumes();
-          }
-        });
-      }
-      
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading volumes...'),
-          ],
-        ),
-      );
-    }
-
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[300],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Failed to load volumes',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _loadVolumes,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading volumes...'),
-          ],
-        ),
-      );
-    }
-
-    if (_volumes.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.storage_outlined,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No volumes found',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            const Text('Pull down to refresh'),
-          ],
-        ),
-      );
-    }
-
-    if (_filteredVolumes.isEmpty && _searchQuery.isNotEmpty) {
-      return Column(
-        children: [
-          SearchBarWithSettings(
-            hintText: 'Search volumes by name or driver...',
-            onSearchChanged: _onSearchChanged,
-          ),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.search_off,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No volumes match your search',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Try a different search term',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Column(
-      children: [
-        SearchBarWithSettings(
-          hintText: 'Search volumes by name or driver...',
-          onSearchChanged: _onSearchChanged,
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _filteredVolumes.length,
-            itemBuilder: (context, index) {
-              final volume = _filteredVolumes[index];
-              return _buildVolumeCard(volume);
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildVolumeCard(DockerVolume volume) {
+  @override
+  Widget buildItemCard(DockerVolume volume) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
@@ -374,7 +54,7 @@ class _VolumesScreenState extends State<VolumesScreen>
                 Expanded(
                   child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.storage,
                         color: Colors.blue,
                         size: 20,
@@ -423,7 +103,7 @@ class _VolumesScreenState extends State<VolumesScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.settings,
                         size: 12,
                         color: Colors.blue,
@@ -431,7 +111,7 @@ class _VolumesScreenState extends State<VolumesScreen>
                       const SizedBox(width: 4),
                       Text(
                         volume.driver,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.blue,
                           fontWeight: FontWeight.w500,
                           fontSize: 12,
@@ -446,5 +126,197 @@ class _VolumesScreenState extends State<VolumesScreen>
         ),
       ),
     );
+  }
+
+  @override
+  Widget buildErrorState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.red[300],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Failed to load volumes',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            error!,
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: loadItems,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.storage_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No volumes found',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          const Text('Pull down to refresh'),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget buildNoSearchResultsState(BuildContext context) {
+    return Column(
+      children: [
+        SearchBarWithSettings(
+          hintText: 'Search volumes by name or driver...',
+          onSearchChanged: onSearchChanged,
+        ),
+        Expanded(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.search_off,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No volumes match your search',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Try a different search term',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget buildItemList(BuildContext context) {
+    return Column(
+      children: [
+        SearchBarWithSettings(
+          hintText: 'Search volumes by name or driver...',
+          onSearchChanged: onSearchChanged,
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: filteredItems.length,
+            itemBuilder: (context, index) {
+              final volume = filteredItems[index];
+              return buildItemCard(volume);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleVolumeAction(DockerAction action, DockerVolume volume) async {
+    try {
+      String command;
+      
+      switch (action.command) {
+        case 'docker volume inspect':
+          command = 'docker volume inspect ${volume.volumeName}';
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ShellScreen(
+                title: 'Inspect Volume - ${volume.volumeName}',
+                command: command,
+              ),
+            ),
+          );
+          return;
+          
+        case 'docker volume rm':
+          // Show confirmation dialog
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Delete Volume'),
+              content: Text('Are you sure you want to delete volume "${volume.volumeName}"?\n\nThis action cannot be undone.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  child: const Text('Delete'),
+                ),
+              ],
+            ),
+          );
+
+          if (confirmed == true) {
+            command = 'docker volume rm ${volume.volumeName}';
+          } else {
+            return;
+          }
+          break;
+          
+        default:
+          command = '${action.command} ${volume.volumeName}';
+      }
+
+      // Execute the command using base class sshService
+      final result = await sshService.executeCommand(command);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result?.isNotEmpty == true ? result! : 'Command executed successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Refresh the list after action
+        loadItems();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

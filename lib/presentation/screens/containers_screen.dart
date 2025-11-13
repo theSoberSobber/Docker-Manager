@@ -1,158 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../domain/models/docker_container.dart';
 import '../../domain/repositories/docker_repository.dart';
 import '../../data/repositories/docker_repository_impl.dart';
-import '../../data/services/ssh_connection_service.dart';
-import '../../domain/models/server.dart';
-import '../widgets/docker_resource_actions.dart';
+import '../../core/utils/docker_cli_config.dart';
 import '../widgets/search_bar_with_settings.dart';
-import 'shell_screen.dart';
+import '../widgets/docker_resource_actions.dart';
 import 'settings_screen.dart';
-import 'server_list_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'shell_screen.dart';
+import 'base/base_resource_screen.dart';
 
-class ContainersScreen extends StatefulWidget {
+class ContainersScreen extends BaseResourceScreen<DockerContainer> {
   const ContainersScreen({super.key});
 
   @override
   State<ContainersScreen> createState() => _ContainersScreenState();
 }
 
-class _ContainersScreenState extends State<ContainersScreen> 
-    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
+class _ContainersScreenState extends BaseResourceScreenState<DockerContainer, ContainersScreen> {
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
-  final SSHConnectionService _sshService = SSHConnectionService();
-  List<DockerContainer> _containers = [];
-  List<DockerContainer> _filteredContainers = [];
-  bool _isLoading = false;
-  String? _error;
-  bool _hasTriedLoading = false;
-  Server? _lastKnownServer;
-  String _searchQuery = '';
-  String? _selectedStack; // null means "All", "no-stack" means containers without stack
+  String? _selectedStack;
 
   @override
-  bool get wantKeepAlive => true;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    // Start a periodic check to detect server changes
-    _startServerChangeDetection();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  /// Start a timer to detect when server changes
-  void _startServerChangeDetection() {
-    // Check every second if the server changed
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      
-      final currentServer = _sshService.currentServer;
-      
-      // If server changed or connection status changed, reload
-      if (_lastKnownServer?.id != currentServer?.id || 
-          (!_hasTriedLoading && _sshService.isConnected)) {
-        _lastKnownServer = currentServer;
-        _hasTriedLoading = false; // Reset to allow reload
-        _checkConnectionAndLoad();
-      }
-      
-      // Continue checking
-      _startServerChangeDetection();
-    });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // This gets called when the tab becomes visible
-    if (!_hasTriedLoading && mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _checkConnectionAndLoad();
-        }
-      });
-    }
-  }
-
-  /// Check if SSH is connected before loading
-  Future<void> _checkConnectionAndLoad() async {
-    if (!mounted) return;
+  Future<List<DockerContainer>> fetchItems() async {
+    final containers = await _dockerRepository.getContainers();
     
-    setState(() {
-      _hasTriedLoading = true;
-      _isLoading = true;
-      _error = null;
-    });
-
-    if (_sshService.isConnected) {
-      // Connection is ready, load immediately
-      await _loadContainers();
-    } else if (_sshService.isConnecting) {
-      // Connection is in progress, wait and try again
-      // Wait up to 10 seconds for connection
-      bool connectionSucceeded = false;
-      for (int i = 0; i < 20; i++) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (!mounted) return;
-        
-        if (_sshService.isConnected) {
-          connectionSucceeded = true;
-          await _loadContainers();
-          return;
-        }
-        if (_sshService.status == ConnectionStatus.failed || 
-            _sshService.status == ConnectionStatus.disconnected) {
-          break;
-        }
+    // Fetch stats asynchronously in the background after showing containers
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _loadContainerStats();
       }
-      
-      if (!connectionSucceeded && mounted) {
-        setState(() {
-          _isLoading = false;
-          _error = 'Connection timeout. Please try again or check your server connection.';
-        });
-      }
-    } else {
-      // No connection
-      setState(() {
-        _isLoading = false;
-        _error = 'No SSH connection available. Please connect to a server first.';
-      });
-    }
-  }
-
-  Future<void> _loadContainers() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
     });
-
-    try {
-      final containers = await _dockerRepository.getContainers();
-      
-      // Show containers immediately without stats
-      setState(() {
-        _containers = containers;
-        _filteredContainers = _filterContainers(containers, _searchQuery);
-        _isLoading = false;
-      });
-      
-      // Fetch stats asynchronously in the background
-      _loadContainerStats();
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
+    
+    return containers;
   }
 
   Future<void> _loadContainerStats() async {
@@ -162,7 +43,7 @@ class _ContainersScreenState extends State<ContainersScreen>
       if (!mounted) return;
       
       // Merge stats into containers
-      final containersWithStats = _containers.map((container) {
+      final containersWithStats = items.map((container) {
         final stats = statsMap[container.id];
         if (stats != null) {
           return container.copyWithStats(
@@ -178,8 +59,8 @@ class _ContainersScreenState extends State<ContainersScreen>
       }).toList();
       
       setState(() {
-        _containers = containersWithStats;
-        _filteredContainers = _filterContainers(containersWithStats, _searchQuery);
+        items = containersWithStats;
+        filteredItems = filterItems(containersWithStats, searchQuery);
       });
     } catch (e) {
       // Stats fetch failed, but containers are already displayed
@@ -187,24 +68,8 @@ class _ContainersScreenState extends State<ContainersScreen>
     }
   }
 
-  Future<void> _refreshContainers() async {
-    _hasTriedLoading = false; // Reset the flag to allow reload
-    await _checkConnectionAndLoad();
-  }
-
-  /// Get unique stack names from containers
-  List<String> _getAvailableStacks() {
-    final stacks = _containers
-        .where((c) => c.isPartOfStack)
-        .map((c) => c.composeProject!)
-        .toSet()
-        .toList()
-      ..sort();
-    return stacks;
-  }
-
-  /// Filter containers by search query and selected stack
-  List<DockerContainer> _filterContainers(List<DockerContainer> containers, String query) {
+  @override
+  List<DockerContainer> filterItems(List<DockerContainer> containers, String query) {
     var filtered = containers;
 
     // Filter by stack first
@@ -229,571 +94,32 @@ class _ContainersScreenState extends State<ContainersScreen>
     }).toList();
   }
 
-  void _onSearchChanged(String query) {
-    setState(() {
-      _searchQuery = query;
-      _filteredContainers = _filterContainers(_containers, query);
-    });
-  }
-
   void _onStackFilterChanged(String? stack) {
     setState(() {
       _selectedStack = stack;
-      _filteredContainers = _filterContainers(_containers, _searchQuery);
+      filteredItems = filterItems(items, searchQuery);
     });
   }
 
-  Future<void> _handleContainerAction(DockerAction action, DockerContainer container) async {
-    try {
-      String command;
-      
-      // Build the complete Docker command based on the action
-      switch (action.command) {
-        case 'docker logs':
-          // Get settings
-          final prefs = await SharedPreferences.getInstance();
-          final logLines = prefs.getString('defaultLogLines') ?? '500';
-          final dockerCli = prefs.getString('dockerCliPath') ?? 'docker';
-          
-          // Build command based on setting
-          if (logLines == 'all') {
-            command = '$dockerCli logs ${container.id}';
-          } else {
-            command = '$dockerCli logs --tail $logLines ${container.id}';
-          }
-          
-          // Navigate to shell screen for logs
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => ShellScreen(
-                title: 'Logs - ${container.names}',
-                command: command,
-              ),
-            ),
-          );
-          return;
-          
-        case 'docker inspect':
-          final prefs = await SharedPreferences.getInstance();
-          final dockerCli = prefs.getString('dockerCliPath') ?? 'docker';
-          command = '$dockerCli inspect ${container.id}';
-          // Navigate to shell screen for inspect
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => ShellScreen(
-                title: 'Inspect - ${container.names}',
-                command: command,
-              ),
-            ),
-          );
-          return;
-          
-        case 'docker exec -it':
-          // Show dialog to choose shell executable
-          _showShellExecutableDialog(container);
-          return;
-          
-        case 'docker stop':
-          final prefs1 = await SharedPreferences.getInstance();
-          final dockerCli1 = prefs1.getString('dockerCliPath') ?? 'docker';
-          command = '$dockerCli1 stop ${container.id}';
-          break;
-        case 'docker start':
-          final prefs2 = await SharedPreferences.getInstance();
-          final dockerCli2 = prefs2.getString('dockerCliPath') ?? 'docker';
-          command = '$dockerCli2 start ${container.id}';
-          break;
-        case 'docker restart':
-          final prefs3 = await SharedPreferences.getInstance();
-          final dockerCli3 = prefs3.getString('dockerCliPath') ?? 'docker';
-          command = '$dockerCli3 restart ${container.id}';
-          break;
-        case 'docker rm':
-          final prefs4 = await SharedPreferences.getInstance();
-          final dockerCli4 = prefs4.getString('dockerCliPath') ?? 'docker';
-          command = '$dockerCli4 rm ${container.id}';
-          break;
-        default:
-          final prefsDefault = await SharedPreferences.getInstance();
-          final dockerCliDefault = prefsDefault.getString('dockerCliPath') ?? 'docker';
-          command = '${action.command.replaceFirst('docker', dockerCliDefault)} ${container.id}';
-      }
-
-      // Show loading indicator
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const SizedBox(width: 12),
-                Text('${action.label}...'),
-              ],
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-
-      // Execute the command
-      final result = await _sshService.executeCommand(command);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        
-        if (result != null && result.isNotEmpty) {
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                  const SizedBox(width: 12),
-                  Text('${action.label} completed successfully'),
-                ],
-              ),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-          
-          // Refresh container list for state-changing operations
-          if (action.command.contains('stop') || 
-              action.command.contains('start') || 
-              action.command.contains('restart') ||
-              action.command.contains('rm')) {
-            await _refreshContainers();
-          }
-        } else {
-          // Command executed but no output
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${action.label} completed'),
-              backgroundColor: Colors.blue,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white, size: 20),
-                const SizedBox(width: 12),
-                Expanded(child: Text('${action.label} failed: $e')),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    }
-  }
-
-  void _showShellExecutableDialog(DockerContainer container) {
-    final TextEditingController executableController = TextEditingController(text: '/bin/bash');
-    
-    final commonExecutables = [
-      '/bin/bash',
-      '/bin/sh',
-      '/bin/ash',
-      '/bin/zsh',
-      '/bin/fish',
-      'redis-cli',
-      'mysql',
-      'psql',
-      'mongo',
-      'python',
-      'node',
-    ];
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Choose Shell - ${container.names}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: executableController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Executable',
-                  hintText: 'Enter executable path or command',
-                  border: OutlineInputBorder(),
-                ),
-                onSubmitted: (value) {
-                  if (value.trim().isNotEmpty) {
-                    Navigator.of(context).pop();
-                    _openInteractiveShell(container, value.trim());
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Common executables:',
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 150,
-                child: SingleChildScrollView(
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: commonExecutables.map((executable) {
-                      return ActionChip(
-                        label: Text(executable),
-                        onPressed: () {
-                          executableController.text = executable;
-                        },
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final executable = executableController.text.trim();
-                if (executable.isNotEmpty) {
-                  Navigator.of(context).pop();
-                  _openInteractiveShell(container, executable);
-                }
-              },
-              child: const Text('Connect'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _openInteractiveShell(DockerContainer container, String executable) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ShellScreen(
-          title: 'Shell - ${container.names}',
-          isInteractive: true,
-          containerInfo: {
-            'containerId': container.id,
-            'executable': executable,
-          },
-        ),
-      ),
-    );
+  /// Get unique stack names from containers
+  List<String> _getAvailableStacks() {
+    final stacks = items
+        .where((c) => c.isPartOfStack)
+        .map((c) => c.composeProject!)
+        .toSet()
+        .toList()
+      ..sort();
+    return stacks;
   }
 
   @override
-  Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
-    
-    if (!_hasTriedLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Initializing...'),
-          ],
-        ),
-      );
-    }
-    if (_isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading containers...'),
-          ],
-        ),
-      );
-    }
+  String getResourceName() => 'containers';
 
-    if (_error != null) {
-      final isConnectionError = _error!.contains('No SSH connection') || 
-                                _error!.contains('Connection timeout') ||
-                                _error!.contains('Failed to get containers: Exception: No SSH connection');
-      
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isConnectionError ? Icons.cloud_off : Icons.error_outline,
-              size: 64,
-              color: isConnectionError ? Colors.orange[400] : Colors.red[300],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              isConnectionError ? 'No Server Connection' : 'Failed to load containers',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isConnectionError 
-                ? 'Please connect to a server to view containers'
-                : _error!,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (isConnectionError) ...[
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ServerListScreen(
-                            onServerSelected: (server) {
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.dns),
-                    label: const Text('Connect to Server'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SettingsScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.settings),
-                    label: const Text('Settings'),
-                  ),
-                ] else ...[
-                  ElevatedButton.icon(
-                    onPressed: _refreshContainers,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SettingsScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.settings),
-                    label: const Text('Settings'),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-      );
-    }
+  @override
+  IconData getEmptyIcon() => Icons.view_in_ar;
 
-    if (_containers.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.inventory_2_outlined,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No containers found',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'No Docker containers are available on this server.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _refreshContainers,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Refresh'),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SettingsScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.settings),
-                  label: const Text('Settings'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_filteredContainers.isEmpty && _searchQuery.isNotEmpty) {
-      return Column(
-        children: [
-          SearchBarWithSettings(
-            hintText: 'Search containers by name, image, status, or ID...',
-            onSearchChanged: _onSearchChanged,
-          ),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.search_off,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No containers match your search',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Try a different search term',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Column(
-      children: [
-        SearchBarWithSettings(
-          hintText: 'Search containers by name, image, status, or ID...',
-          onSearchChanged: _onSearchChanged,
-        ),
-        _buildStackFilterChips(),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: _refreshContainers,
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _filteredContainers.length,
-              itemBuilder: (context, index) {
-                final container = _filteredContainers[index];
-                return _buildContainerCard(container);
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStackFilterChips() {
-    final availableStacks = _getAvailableStacks();
-    final hasStandaloneContainers = _containers.any((c) => !c.isPartOfStack);
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            // "All" chip
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: FilterChip(
-                label: Text('All (${_containers.length})'),
-                selected: _selectedStack == null,
-                onSelected: (selected) {
-                  if (selected) _onStackFilterChanged(null);
-                },
-              ),
-            ),
-            // Stack chips
-            ...availableStacks.map((stack) {
-              final count = _containers.where((c) => c.composeProject == stack).length;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.layers, size: 16),
-                      const SizedBox(width: 4),
-                      Text('$stack ($count)'),
-                    ],
-                  ),
-                  selected: _selectedStack == stack,
-                  onSelected: (selected) {
-                    _onStackFilterChanged(selected ? stack : null);
-                  },
-                ),
-              );
-            }),
-            // "No Stack" chip
-            if (hasStandaloneContainers)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text('No Stack (${_containers.where((c) => !c.isPartOfStack).length})'),
-                  selected: _selectedStack == 'no-stack',
-                  onSelected: (selected) {
-                    _onStackFilterChanged(selected ? 'no-stack' : null);
-                  },
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContainerCard(DockerContainer container) {
+  @override
+  Widget buildItemCard(DockerContainer container) {
     final isRunning = container.status.toLowerCase().startsWith('up');
     final statusColor = isRunning ? Colors.green : Colors.orange;
     
@@ -1033,6 +359,498 @@ class _ContainersScreenState extends State<ContainersScreen>
           overflow: TextOverflow.ellipsis,
         ),
       ],
+    );
+  }
+
+  @override
+  Widget buildErrorState(BuildContext context) {
+    final isConnectionError = error!.contains('No SSH connection') || 
+                              error!.contains('Connection timeout') ||
+                              error!.contains('Failed to get containers: Exception: No SSH connection');
+    
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            isConnectionError ? Icons.cloud_off : Icons.error_outline,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            isConnectionError ? 'Not Connected' : 'Error',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              error!,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (isConnectionError) ...[
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.settings),
+                  label: const Text('Settings'),
+                ),
+                const SizedBox(width: 12),
+              ],
+              ElevatedButton.icon(
+                onPressed: loadItems,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.view_in_ar,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No containers found',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Start a container to see it here',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                onPressed: loadItems,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Refresh'),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.settings),
+                label: const Text('Settings'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget buildNoSearchResultsState(BuildContext context) {
+    return Column(
+      children: [
+        SearchBarWithSettings(
+          hintText: 'Search containers by name, image, status, or ID...',
+          onSearchChanged: onSearchChanged,
+        ),
+        _buildStackFilterChips(),
+        Expanded(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.search_off,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No containers match your search',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Try a different search term',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget buildItemList(BuildContext context) {
+    return Column(
+      children: [
+        SearchBarWithSettings(
+          hintText: 'Search containers by name, image, status, or ID...',
+          onSearchChanged: onSearchChanged,
+        ),
+        _buildStackFilterChips(),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: loadItems,
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: filteredItems.length,
+              itemBuilder: (context, index) {
+                final container = filteredItems[index];
+                return buildItemCard(container);
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStackFilterChips() {
+    final availableStacks = _getAvailableStacks();
+    final hasStandaloneContainers = items.any((c) => !c.isPartOfStack);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            // "All" chip
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                label: Text('All (${items.length})'),
+                selected: _selectedStack == null,
+                onSelected: (selected) {
+                  if (selected) _onStackFilterChanged(null);
+                },
+              ),
+            ),
+            // Stack chips
+            ...availableStacks.map((stack) {
+              final count = items.where((c) => c.composeProject == stack).length;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.layers, size: 16),
+                      const SizedBox(width: 4),
+                      Text('$stack ($count)'),
+                    ],
+                  ),
+                  selected: _selectedStack == stack,
+                  onSelected: (selected) {
+                    _onStackFilterChanged(selected ? stack : null);
+                  },
+                ),
+              );
+            }),
+            // "No Stack" chip
+            if (hasStandaloneContainers)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text('No Stack (${items.where((c) => !c.isPartOfStack).length})'),
+                  selected: _selectedStack == 'no-stack',
+                  onSelected: (selected) {
+                    _onStackFilterChanged(selected ? 'no-stack' : null);
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleContainerAction(DockerAction action, DockerContainer container) async {
+    try {
+      String command;
+      
+      // Build the complete Docker command based on the action
+      switch (action.command) {
+        case 'docker logs':
+          // Get settings
+          final prefs = await SharedPreferences.getInstance();
+          final logLines = prefs.getString('defaultLogLines') ?? '500';
+          final dockerCli = await DockerCliConfig.getCliPath();
+          
+          // Build command based on setting
+          if (logLines == 'all') {
+            command = '$dockerCli logs ${container.id}';
+          } else {
+            command = '$dockerCli logs --tail $logLines ${container.id}';
+          }
+          
+          // Navigate to shell screen for logs
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ShellScreen(
+                title: 'Logs - ${container.names}',
+                command: command,
+              ),
+            ),
+          );
+          return;
+          
+        case 'docker inspect':
+          final dockerCli = await DockerCliConfig.getCliPath();
+          command = '$dockerCli inspect ${container.id}';
+          // Navigate to shell screen for inspect
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ShellScreen(
+                title: 'Inspect - ${container.names}',
+                command: command,
+              ),
+            ),
+          );
+          return;
+          
+        case 'docker exec -it':
+          // Show dialog to choose shell executable
+          _showShellExecutableDialog(container);
+          return;
+          
+        case 'docker stop':
+          final dockerCli1 = await DockerCliConfig.getCliPath();
+          command = '$dockerCli1 stop ${container.id}';
+          break;
+        case 'docker start':
+          final dockerCli2 = await DockerCliConfig.getCliPath();
+          command = '$dockerCli2 start ${container.id}';
+          break;
+        case 'docker restart':
+          final dockerCli3 = await DockerCliConfig.getCliPath();
+          command = '$dockerCli3 restart ${container.id}';
+          break;
+        case 'docker rm':
+          final dockerCli4 = await DockerCliConfig.getCliPath();
+          command = '$dockerCli4 rm ${container.id}';
+          break;
+        default:
+          final dockerCliDefault = await DockerCliConfig.getCliPath();
+          command = '${action.command.replaceFirst('docker', dockerCliDefault)} ${container.id}';
+      }
+
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 12),
+                Text('${action.label}...'),
+              ],
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+
+      // Execute the command
+      final result = await sshService.executeCommand(command);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        
+        if (result != null && result.isNotEmpty) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  const SizedBox(width: 12),
+                  Text('${action.label} completed successfully'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          
+          // Refresh container list for state-changing operations
+          if (action.command.contains('stop') || 
+              action.command.contains('start') || 
+              action.command.contains('restart') ||
+              action.command.contains('rm')) {
+            await loadItems();
+          }
+        } else {
+          // Command executed but no output
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${action.label} completed'),
+              backgroundColor: Colors.blue,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(child: Text('${action.label} failed: $e')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showShellExecutableDialog(DockerContainer container) {
+    final TextEditingController executableController = TextEditingController(text: '/bin/bash');
+    
+    final commonExecutables = [
+      '/bin/bash',
+      '/bin/sh',
+      '/bin/ash',
+      '/bin/zsh',
+      '/bin/fish',
+      'redis-cli',
+      'mysql',
+      'psql',
+      'mongo',
+      'python',
+      'node',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Choose Shell - ${container.names}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: executableController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Executable',
+                  hintText: 'Enter executable path or command',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (value) {
+                  if (value.trim().isNotEmpty) {
+                    Navigator.of(context).pop();
+                    _openInteractiveShell(container, value.trim());
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Common executables:',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 150,
+                child: SingleChildScrollView(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: commonExecutables.map((executable) {
+                      return ActionChip(
+                        label: Text(executable),
+                        onPressed: () {
+                          executableController.text = executable;
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final executable = executableController.text.trim();
+                if (executable.isNotEmpty) {
+                  Navigator.of(context).pop();
+                  _openInteractiveShell(container, executable);
+                }
+              },
+              child: const Text('Connect'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _openInteractiveShell(DockerContainer container, String executable) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ShellScreen(
+          title: 'Shell - ${container.names}',
+          isInteractive: true,
+          containerInfo: {
+            'containerId': container.id,
+            'executable': executable,
+          },
+        ),
+      ),
     );
   }
 }
