@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/theme_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../data/services/ssh_connection_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -12,6 +13,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   String _defaultLogLines = '500';
   bool _isLoading = true;
+  bool _isPruning = false;
 
   @override
   void initState() {
@@ -41,6 +43,118 @@ class _SettingsScreenState extends State<SettingsScreen> {
           duration: Duration(seconds: 1),
         ),
       );
+    }
+  }
+
+  Future<void> _showSystemPruneDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('System Prune'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This will remove:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 12),
+            Text('• All stopped containers'),
+            Text('• All dangling images'),
+            Text('• All unused networks'),
+            Text('• All unused volumes'),
+            Text('• All build cache'),
+            SizedBox(height: 16),
+            Text(
+              'This action cannot be undone!',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Prune System'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _executeSystemPrune();
+    }
+  }
+
+  Future<void> _executeSystemPrune() async {
+    setState(() {
+      _isPruning = true;
+    });
+
+    try {
+      final sshService = SSHConnectionService();
+      final result = await sshService.executeCommand('docker system prune -af --volumes');
+      
+      if (mounted) {
+        setState(() {
+          _isPruning = false;
+        });
+
+        // Show result dialog
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green),
+                SizedBox(width: 8),
+                Text('Prune Complete'),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Text(
+                (result?.isNotEmpty ?? false) ? result! : 'System prune completed successfully',
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isPruning = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -106,6 +220,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildLogLinesOption('1000', '1000 lines (detailed)'),
                       _buildLogLinesOption('5000', '5000 lines (may be slow)'),
                       _buildLogLinesOption('all', 'All logs (risky)'),
+                    ],
+                  ),
+                ),
+                
+                const Divider(height: 32),
+                
+                // System Maintenance Section
+                _buildSectionHeader('System Maintenance'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Clean up Docker resources',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Remove unused containers, images, networks, volumes, and build cache',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: _isPruning ? null : _showSystemPruneDialog,
+                          icon: _isPruning
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.delete_sweep),
+                          label: Text(_isPruning ? 'Pruning...' : 'System Prune'),
+                        ),
+                      ),
                     ],
                   ),
                 ),
