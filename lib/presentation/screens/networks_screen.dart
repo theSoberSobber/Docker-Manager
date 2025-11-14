@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/docker_network.dart';
-import '../../domain/repositories/docker_repository.dart';
-import '../../domain/services/docker_operations_service.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';

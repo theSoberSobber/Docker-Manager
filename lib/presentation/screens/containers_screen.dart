@@ -523,16 +523,13 @@ class _ContainersScreenState extends BaseResourceScreenState<DockerContainer, Co
         ),
         _buildStackFilterChips(),
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: loadItems,
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: filteredItems.length,
-              itemBuilder: (context, index) {
-                final container = filteredItems[index];
-                return buildItemCard(container);
-              },
-            ),
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: filteredItems.length,
+            itemBuilder: (context, index) {
+              final container = filteredItems[index];
+              return buildItemCard(container);
+            },
           ),
         ),
       ],
