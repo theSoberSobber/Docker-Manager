@@ -2,20 +2,22 @@
 
 A mobile application for managing Docker containers, images, networks, and volumes from your phone.
 
-[![Get it on Google Play](https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png)](https://play.google.com/store/apps/details?id=com.pavit.docker)
+<a href="https://play.google.com/store/apps/details?id=com.pavit.docker">
+  <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="80"/>
+</a>
 
 ## Screenshots
 
 <p align="center">
-  <img src="store_listing/ss1.png" width="200" />
-  <img src="store_listing/ss2.png" width="200" />
-  <img src="store_listing/ss3.png" width="200" />
-  <img src="store_listing/ss4.png" width="200" />
+  <img src="store_listing/ss1.png" width="250" />
+  <img src="store_listing/ss2.png" width="250" />
+  <img src="store_listing/ss3.png" width="250" />
 </p>
 
 <p align="center">
-  <img src="store_listing/ss5.png" width="200" />
-  <img src="store_listing/ss6.png" width="200" />
+  <img src="store_listing/ss4.png" width="250" />
+  <img src="store_listing/ss5.png" width="250" />
+  <img src="store_listing/ss6.png" width="250" />
 </p>
 
 ## Overview
