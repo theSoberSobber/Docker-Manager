@@ -118,44 +118,6 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
     });
   }
 
-  String _buildDockerRunCommand() {
-    if (_selectedImage == null) return '';
-
-    // Convert local data structures to domain models
-    final portMappings = _portMappings
-        .where((p) => p.hostPort.isNotEmpty && p.containerPort.isNotEmpty)
-        .map((p) => domain.PortMapping(hostPort: p.hostPort, containerPort: p.containerPort))
-        .toList();
-
-    final envVars = _envVariables
-        .where((e) => e.key.isNotEmpty && e.value.isNotEmpty)
-        .map((e) => domain.EnvironmentVariable(key: e.key, value: e.value))
-        .toList();
-
-    final volumes = _volumeMounts
-        .where((v) => v.hostPath.isNotEmpty && v.containerPath.isNotEmpty)
-        .map((v) => domain.VolumeMount(hostPath: v.hostPath, containerPath: v.containerPath))
-        .toList();
-
-    final config = ContainerCreationConfig(
-      imageName: _selectedImage!.repository,
-      imageTag: _selectedImage!.tag,
-      containerName: _nameController.text.isEmpty ? null : _nameController.text,
-      portMappings: portMappings,
-      environmentVariables: envVars,
-      volumeMounts: volumes,
-      restartPolicy: _restartPolicy,
-      workingDirectory: _workDirController.text.isEmpty ? null : _workDirController.text,
-      memoryLimit: _memoryController.text.isEmpty ? null : _memoryController.text,
-      cpuLimit: _cpuController.text.isEmpty ? null : _cpuController.text,
-      networkMode: _networkMode,
-      privileged: _privileged,
-      commandOverride: _commandController.text.isEmpty ? null : _commandController.text,
-    );
-
-    return _containerCreationService.buildDockerRunCommand(config);
-  }
-
   Future<void> _createContainer() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedImage == null) {
