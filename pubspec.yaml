@@ -37,6 +37,7 @@ dependencies:
   shared_preferences: ^2.2.2
   dartssh2: ^2.9.0
   http: ^1.2.2
+  get_it: ^8.0.2
 
 dev_dependencies:
   flutter_test:

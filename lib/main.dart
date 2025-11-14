@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/widgets/theme_manager.dart';
+import 'core/di/service_locator.dart';
 
 void main() {
+  // Setup dependency injection before running app
+  setupServiceLocator();
+  
   runApp(const MyApp());
 }
 

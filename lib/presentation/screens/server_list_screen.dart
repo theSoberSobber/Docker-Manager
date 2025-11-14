@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/server.dart';
 import '../../domain/repositories/server_repository.dart';
-import '../../data/repositories/server_repository_impl.dart';
+import '../../core/di/service_locator.dart';
 import '../widgets/add_server_dialog.dart';
 
 class ServerListScreen extends StatefulWidget {
@@ -17,7 +17,7 @@ class ServerListScreen extends StatefulWidget {
 }
 
 class _ServerListScreenState extends State<ServerListScreen> {
-  final ServerRepository _serverRepository = ServerRepositoryImpl();
+  late final ServerRepository _serverRepository;
   List<Server> _servers = [];
   bool _isLoading = true;
   String? _currentServerId;
@@ -25,6 +25,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
   @override
   void initState() {
     super.initState();
+    _serverRepository = getIt<ServerRepository>();
     _loadServers();
     _loadCurrentServerId();
   }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/server.dart';
 import '../../domain/repositories/server_repository.dart';
-import '../../data/repositories/server_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
+import '../../core/di/service_locator.dart';
 import '../widgets/theme_manager.dart';
 import '../widgets/system_info_dialog.dart';
 import '../widgets/speed_dial_fab.dart';
@@ -24,13 +24,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  final ServerRepository _serverRepository = ServerRepositoryImpl();
-  final SSHConnectionService _sshService = SSHConnectionService();
+  late final ServerRepository _serverRepository;
+  late final SSHConnectionService _sshService;
   int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    _serverRepository = getIt<ServerRepository>();
+    _sshService = getIt<SSHConnectionService>();
     WidgetsBinding.instance.addObserver(this);
     _loadLastUsedServer();
   }

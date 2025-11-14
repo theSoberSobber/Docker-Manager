@@ -4,16 +4,10 @@ import '../../domain/models/docker_volume.dart';
 import '../../domain/models/docker_network.dart';
 import '../../domain/repositories/docker_repository.dart';
 import '../services/ssh_connection_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/utils/docker_cli_config.dart';
 
 class DockerRepositoryImpl implements DockerRepository {
   final SSHConnectionService _sshService = SSHConnectionService();
-
-  /// Get the configured Docker CLI path from settings
-  Future<String> _getDockerCliPath() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('dockerCliPath') ?? 'docker';
-  }
 
   @override
   Future<List<DockerContainer>> getContainers() async {
@@ -22,7 +16,7 @@ class DockerRepositoryImpl implements DockerRepository {
         throw Exception('No SSH connection available');
       }
 
-      final dockerCli = await _getDockerCliPath();
+      final dockerCli = await DockerCliConfig.getCliPath();
       
       // Use --format to get structured output including compose labels
       // Using triple quotes and escaping for proper shell execution
@@ -46,7 +40,7 @@ class DockerRepositoryImpl implements DockerRepository {
         throw Exception('No SSH connection available');
       }
 
-      final dockerCli = await _getDockerCliPath();
+      final dockerCli = await DockerCliConfig.getCliPath();
 
       // Get stats for all running containers
       final command = '''$dockerCli stats --no-stream --format '{{.Container}}|{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}' ''';
@@ -87,7 +81,7 @@ class DockerRepositoryImpl implements DockerRepository {
         throw Exception('No SSH connection available');
       }
 
-      final dockerCli = await _getDockerCliPath();
+      final dockerCli = await DockerCliConfig.getCliPath();
       final result = await _sshService.executeCommand('$dockerCli images');
       
       if (result == null) {
@@ -107,7 +101,7 @@ class DockerRepositoryImpl implements DockerRepository {
         throw Exception('No SSH connection available');
       }
 
-      final dockerCli = await _getDockerCliPath();
+      final dockerCli = await DockerCliConfig.getCliPath();
       final result = await _sshService.executeCommand('$dockerCli volume ls');
       
       if (result == null) {
@@ -127,7 +121,7 @@ class DockerRepositoryImpl implements DockerRepository {
         throw Exception('No SSH connection available');
       }
 
-      final dockerCli = await _getDockerCliPath();
+      final dockerCli = await DockerCliConfig.getCliPath();
       final result = await _sshService.executeCommand('$dockerCli network ls');
       
       if (result == null) {
