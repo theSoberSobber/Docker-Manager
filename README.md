@@ -66,7 +66,7 @@ Contributions are welcome. Please feel free to submit issues or pull requests.
 
 ## License
 
-This project is open source. See the LICENSE file for details.
+This project is open source. See the [LICENSE.md](./LICENSE.md) file for details.
 
 ## Links
 
