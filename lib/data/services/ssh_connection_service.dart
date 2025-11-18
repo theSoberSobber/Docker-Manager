@@ -29,6 +29,8 @@ class SSHConnectionService {
   SSHClient? _currentConnection;
   Server? _currentServer;
   ConnectionStatus _status = ConnectionStatus.disconnected;
+  bool _hasEverConnected = false; // Track if we've ever had a successful connection
+  bool _isReconnecting = false; // Prevent concurrent reconnection attempts
 
   // Getters
   ConnectionStatus get status => _status;
@@ -72,6 +74,7 @@ class SSHConnectionService {
       _currentConnection = client;
       _currentServer = server;
       _status = ConnectionStatus.connected;
+      _hasEverConnected = true; // Mark that we've had at least one successful connection
 
       return SSHConnectionResult(
         success: true,
@@ -81,6 +84,7 @@ class SSHConnectionService {
       _status = ConnectionStatus.failed;
       _currentConnection = null;
       _currentServer = null;
+      _isReconnecting = false; // Clear reconnection flag on failure
 
       return SSHConnectionResult(
         success: false,
@@ -102,6 +106,8 @@ class SSHConnectionService {
     } finally {
       _currentServer = null;
       _status = ConnectionStatus.disconnected;
+      _isReconnecting = false; // Clear reconnection flag on disconnect
+      // Note: We don't reset _hasEverConnected here as it tracks historical state
     }
   }
 
@@ -125,9 +131,20 @@ class SSHConnectionService {
           errorString.contains('broken pipe') ||
           errorString.contains('session');
 
-      // If it's a connection error and we haven't retried yet, attempt reconnection
-      if (isConnectionError && !isRetry && _currentServer != null) {
+      // Only attempt auto-reconnect if:
+      // 1. It's a connection error
+      // 2. We haven't already retried
+      // 3. We have a server to reconnect to
+      // 4. We've had at least one successful connection before (not initial setup)
+      // 5. We're not already in the middle of reconnecting
+      if (isConnectionError && 
+          !isRetry && 
+          _currentServer != null && 
+          _hasEverConnected && 
+          !_isReconnecting) {
         try {
+          _isReconnecting = true; // Prevent concurrent reconnection attempts
+          
           // Mark as disconnected and clear stale connection
           _status = ConnectionStatus.disconnected;
           _currentConnection?.close();
@@ -138,12 +155,15 @@ class SSHConnectionService {
           
           if (reconnectResult.success) {
             // Reconnection successful, retry the command once
+            _isReconnecting = false;
             return await executeCommand(command, isRetry: true);
           } else {
             // Reconnection failed
+            _isReconnecting = false;
             throw Exception('Connection lost and reconnection failed: ${reconnectResult.error}');
           }
         } catch (reconnectError) {
+          _isReconnecting = false;
           throw Exception('Connection lost and reconnection failed: $reconnectError');
         }
       }
