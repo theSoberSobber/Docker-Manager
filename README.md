@@ -76,3 +76,7 @@ This project is open source. See the [LICENSE.md](./LICENSE.md) file for details
 
 - GitHub Repository: [https://github.com/theSoberSobber/Docker-Manager/](https://github.com/theSoberSobber/Docker-Manager/)
 - Play Store: [https://play.google.com/store/apps/details?id=com.pavit.docker](https://play.google.com/store/apps/details?id=com.pavit.docker)
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=theSoberSobber/Docker-Manager&type=date&legend=top-left)](https://www.star-history.com/#theSoberSobber/Docker-Manager&type=date&legend=top-left)
