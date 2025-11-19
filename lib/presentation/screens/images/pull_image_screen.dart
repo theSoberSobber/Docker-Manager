@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/services/docker_registry_service.dart';
 import '../../../data/services/ssh_connection_service.dart';
-import '../../../data/repositories/docker_repository_impl.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class PullImageScreen extends StatefulWidget {
