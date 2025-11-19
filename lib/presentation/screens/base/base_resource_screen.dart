@@ -111,32 +111,68 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
           print('[CHECK 2.2] Permission error detected');
         }
         
+        if (mounted) {
+          hasTriedLoading = true; // Mark as tried to prevent infinite loop
+        }
+        
         return ErrorState.permission(
           message: errorMessage,
           onRetry: () {
+            // For permission errors, just retry loading (don't reconnect)
             setState(() {
               errorState = null;
               isLoading = true;
-              hasTriedLoading = false;
+            });
+            
+            // Reset flag and load again
+            hasTriedLoading = false;
+            _loadItems().then((error) {
+              if (mounted) {
+                // Check if it's a reconnect signal
+                if (error?.message == '__RECONNECT__') {
+                  setState(() {
+                    isLoading = false;
+                  });
+                } else {
+                  setState(() {
+                    isLoading = false;
+                    errorState = error;
+                  });
+                }
+              }
             });
           },
         );
       }
       
       // Other error - return error state
+      if (mounted) {
+        hasTriedLoading = true; // Mark as tried to prevent infinite loop
+      }
+      
       return ErrorState.general(
         message: errorMessage,
         onRetry: () {
+          // For general errors, retry loading directly
           setState(() {
             errorState = null;
             isLoading = true;
           });
+          
+          hasTriedLoading = false;
           _loadItems().then((error) {
             if (mounted) {
-              setState(() {
-                isLoading = false;
-                errorState = error;
-              });
+              // Check if it's a reconnect signal
+              if (error?.message == '__RECONNECT__') {
+                setState(() {
+                  isLoading = false;
+                });
+              } else {
+                setState(() {
+                  isLoading = false;
+                  errorState = error;
+                });
+              }
             }
           });
         },
@@ -209,10 +245,10 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
 
   // Common search logic
   void onSearchChanged(String query) {
-    // setState(() {
-    //   searchQuery = query;
-    //   filteredItems = filterItems(items, query);
-    // });
+    setState(() {
+      searchQuery = query;
+      filteredItems = filterItems(items, query);
+    });
   }
 
   // Server change detection
