@@ -533,29 +533,40 @@ class _ContainersScreenState extends State<ContainersScreen>
       final isConnectionError = _error!.contains('No SSH connection') || 
                                 _error!.contains('Connection timeout') ||
                                 _error!.contains('Failed to get containers: Exception: No SSH connection');
+      final isPermissionError = _error!.contains('Permission denied') || 
+                                _error!.contains('docker group');
       
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              isConnectionError ? Icons.cloud_off : Icons.error_outline,
+              isConnectionError ? Icons.cloud_off : 
+              isPermissionError ? Icons.lock_outline : 
+              Icons.error_outline,
               size: 64,
-              color: isConnectionError ? Colors.orange[400] : Colors.red[300],
+              color: isConnectionError ? Colors.orange[400] : 
+                     isPermissionError ? Colors.amber[600] :
+                     Colors.red[300],
             ),
             const SizedBox(height: 16),
             Text(
-              isConnectionError ? 'No Server Connection' : 'Failed to load containers',
+              isConnectionError ? 'No Server Connection' : 
+              isPermissionError ? 'Permission Issue' :
+              'Failed to load containers',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
-            Text(
-              isConnectionError 
-                ? 'Please connect to a server to view containers'
-                : _error!,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Text(
+                isConnectionError 
+                  ? 'Please connect to a server to view containers'
+                  : _error!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[600],
+                ),
               ),
             ),
             const SizedBox(height: 16),
