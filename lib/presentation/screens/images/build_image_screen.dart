@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/services/ssh_connection_service.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class BuildImageScreen extends StatefulWidget {
   const BuildImageScreen({super.key});
@@ -106,7 +107,7 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
           
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Successfully built $imageName:$tag'),
+              content: Text('images.build_success'.tr(args: [imageName, tag])),
               backgroundColor: Colors.green,
             ),
           );
@@ -124,8 +125,8 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
           _scrollToBottom();
           
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Build failed. Check logs for details.'),
+            SnackBar(
+              content: Text('images.build_failed'.tr()),
               backgroundColor: Colors.red,
             ),
           );
@@ -141,7 +142,7 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('common.error'.tr() + ': $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -153,7 +154,7 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Build Image'),
+        title: Text('images.build'.tr()),
       ),
       body: Form(
         key: _formKey,
@@ -283,7 +284,7 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
                         });
                       },
                       icon: const Icon(Icons.clear, size: 18),
-                      label: const Text('Clear'),
+                      label: Text('common.clear'.tr()),
                     ),
                 ],
               ),

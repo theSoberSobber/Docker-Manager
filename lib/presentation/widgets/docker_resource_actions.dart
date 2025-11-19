@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 /// Represents a Docker action that can be performed on a resource
 class DockerAction {
@@ -73,14 +74,14 @@ class DockerResourceActions extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Confirm ${action.label}'),
+          title: Text('actions.confirm_action'.tr(args: [action.label])),
           content: Text(
             'Are you sure you want to ${action.label.toLowerCase()} "$resourceName"?',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: Text('common.cancel'.tr()),
             ),
             ElevatedButton(
               onPressed: () {

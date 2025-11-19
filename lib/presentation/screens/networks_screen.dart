@@ -7,6 +7,7 @@ import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class NetworksScreen extends StatefulWidget {
   const NetworksScreen({super.key});
@@ -146,7 +147,7 @@ class _NetworksScreenState extends State<NetworksScreen>
           if (['bridge', 'host', 'none'].contains(network.name)) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Cannot delete system network "${network.name}"'),
+                content: Text('networks.cannot_delete_system'.tr(args: [network.name])),
                 backgroundColor: Colors.orange,
               ),
             );
@@ -157,17 +158,17 @@ class _NetworksScreenState extends State<NetworksScreen>
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Delete Network'),
-              content: Text('Are you sure you want to delete network "${network.name}"?\\n\\nThis action cannot be undone.'),
+              title: Text('networks.delete_title'.tr()),
+              content: Text('networks.delete_confirmation'.tr(args: [network.name])),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
+                  child: Text('common.cancel'.tr()),
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(true),
                   style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  child: const Text('Delete'),
+                  child: Text('common.delete'.tr()),
                 ),
               ],
             ),
@@ -202,7 +203,7 @@ class _NetworksScreenState extends State<NetworksScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('common.error'.tr() + ': $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -235,13 +236,13 @@ class _NetworksScreenState extends State<NetworksScreen>
         });
       }
       
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading networks...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('networks.loading'.tr()),
           ],
         ),
       );
@@ -272,7 +273,7 @@ class _NetworksScreenState extends State<NetworksScreen>
             ElevatedButton.icon(
               onPressed: _loadNetworks,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text('common.retry'.tr()),
             ),
           ],
         ),
@@ -280,13 +281,13 @@ class _NetworksScreenState extends State<NetworksScreen>
     }
 
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading networks...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('networks.loading'.tr()),
           ],
         ),
       );
@@ -308,7 +309,7 @@ class _NetworksScreenState extends State<NetworksScreen>
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
-            const Text('Pull down to refresh'),
+            Text('networks.pull_to_refresh'.tr()),
           ],
         ),
       );

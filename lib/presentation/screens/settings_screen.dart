@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../widgets/theme_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/services/ssh_connection_service.dart';
@@ -48,9 +49,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Settings saved'),
-          duration: Duration(seconds: 1),
+        SnackBar(
+          content: Text('settings.saved'.tr()),
+          duration: const Duration(seconds: 1),
         ),
       );
     }
@@ -66,9 +67,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Docker CLI path saved'),
-          duration: Duration(seconds: 1),
+        SnackBar(
+          content: Text('settings.docker_cli_saved'.tr()),
+          duration: const Duration(seconds: 1),
         ),
       );
     }
@@ -78,29 +79,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.warning_amber, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('System Prune'),
+            const Icon(Icons.warning_amber, color: Colors.orange),
+            const SizedBox(width: 8),
+            Text('settings.prune_title'.tr()),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'This will remove:',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 12),
-            Text('• All stopped containers'),
-            Text('• All dangling images'),
-            Text('• All unused networks'),
-            Text('• All unused volumes'),
-            Text('• All build cache'),
-            SizedBox(height: 16),
-            Text(
+            const SizedBox(height: 12),
+            Text('settings.prune_stopped_containers'.tr()),
+            Text('settings.prune_dangling_images'.tr()),
+            Text('settings.prune_unused_networks'.tr()),
+            Text('settings.prune_unused_volumes'.tr()),
+            Text('settings.prune_build_cache'.tr()),
+            const SizedBox(height: 16),
+            const Text(
               'This action cannot be undone!',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
@@ -112,14 +113,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text('common.cancel'.tr()),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Colors.red,
             ),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Prune System'),
+            child: Text('settings.prune_system'.tr()),
           ),
         ],
       ),
@@ -153,11 +154,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.green),
-                SizedBox(width: 8),
-                Text('Prune Complete'),
+                const Icon(Icons.check_circle, color: Colors.green),
+                const SizedBox(width: 8),
+                Text('settings.prune_complete'.tr()),
               ],
             ),
             content: SingleChildScrollView(
@@ -169,7 +170,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
+                child: Text('common.ok'.tr()),
               ),
             ],
           ),
@@ -185,11 +186,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.error, color: Colors.red),
-                SizedBox(width: 8),
-                Text('Prune Failed'),
+                const Icon(Icons.error, color: Colors.red),
+                const SizedBox(width: 8),
+                Text('settings.prune_failed'.tr()),
               ],
             ),
             content: Text(
@@ -199,7 +200,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
+                child: Text('common.ok'.tr()),
               ),
             ],
           ),
@@ -212,7 +213,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text('settings.title'.tr()),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: _isLoading
@@ -238,6 +239,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   'System',
                   Icons.brightness_auto,
                   ThemeMode.system,
+                ),
+                
+                const Divider(height: 32),
+                
+                // Language Section
+                _buildSectionHeader('Language'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: DropdownButtonFormField<String>(
+                    value: context.locale.languageCode == 'es' ? 'es' : 'en',
+                    decoration: InputDecoration(
+                      labelText: 'Select Language',
+                      prefixIcon: const Icon(Icons.language),
+                      border: const OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'en',
+                        child: Text('English'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'es',
+                        child: Text('Español'),
+                      ),
+                    ],
+                    onChanged: (String? value) async {
+                      if (value != null) {
+                        final locale = value == 'es' ? const Locale('es') : const Locale('en', 'US');
+                        await context.setLocale(locale);
+                        setState(() {});
+                        if (mounted) {
+                          final label = value == 'es' ? 'Español' : 'English';
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('settings.language_changed'.tr(args: [label])),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
                 ),
                 
                 const Divider(height: 32),
@@ -311,11 +354,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _buildLogLinesOption('100', '100 lines (fast)'),
-                      _buildLogLinesOption('500', '500 lines (recommended)'),
-                      _buildLogLinesOption('1000', '1000 lines (detailed)'),
-                      _buildLogLinesOption('5000', '5000 lines (may be slow)'),
-                      _buildLogLinesOption('all', 'All logs (risky)'),
+                      _buildLogLinesOption('100', 'settings.log_100'.tr()),
+                      _buildLogLinesOption('500', 'settings.log_500'.tr()),
+                      _buildLogLinesOption('1000', 'settings.log_1000'.tr()),
+                      _buildLogLinesOption('5000', 'settings.log_5000'.tr()),
+                      _buildLogLinesOption('all', 'settings.log_all'.tr()),
                     ],
                   ),
                 ),

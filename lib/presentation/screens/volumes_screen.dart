@@ -7,6 +7,7 @@ import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class VolumesScreen extends StatefulWidget {
   const VolumesScreen({super.key});
@@ -145,17 +146,17 @@ class _VolumesScreenState extends State<VolumesScreen>
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Delete Volume'),
-              content: Text('Are you sure you want to delete volume "${volume.volumeName}"?\\n\\nThis action cannot be undone.'),
+              title: Text('volumes.delete_title'.tr()),
+              content: Text('volumes.delete_confirmation'.tr(args: [volume.volumeName])),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
+                  child: Text('common.cancel'.tr()),
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(true),
                   style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  child: const Text('Delete'),
+                  child: Text('common.delete'.tr()),
                 ),
               ],
             ),
@@ -190,7 +191,7 @@ class _VolumesScreenState extends State<VolumesScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('common.error'.tr() + ': $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -223,13 +224,13 @@ class _VolumesScreenState extends State<VolumesScreen>
         });
       }
       
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading volumes...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('volumes.loading'.tr()),
           ],
         ),
       );
@@ -260,7 +261,7 @@ class _VolumesScreenState extends State<VolumesScreen>
             ElevatedButton.icon(
               onPressed: _loadVolumes,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text('common.retry'.tr()),
             ),
           ],
         ),
@@ -268,13 +269,13 @@ class _VolumesScreenState extends State<VolumesScreen>
     }
 
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading volumes...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('volumes.loading'.tr()),
           ],
         ),
       );
@@ -296,7 +297,7 @@ class _VolumesScreenState extends State<VolumesScreen>
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
-            const Text('Pull down to refresh'),
+            Text('volumes.pull_to_refresh'.tr()),
           ],
         ),
       );

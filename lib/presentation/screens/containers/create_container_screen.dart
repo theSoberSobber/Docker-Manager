@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../domain/models/docker_image.dart';
 import '../../../data/repositories/docker_repository_impl.dart';
 import '../../../data/services/ssh_connection_service.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class CreateContainerScreen extends StatefulWidget {
   const CreateContainerScreen({super.key});
@@ -72,7 +73,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load images: $e')),
+          SnackBar(content: Text('containers.failed_to_load_images'.tr(args: [e.toString()]))),
         );
       }
     }
@@ -190,7 +191,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an image')),
+        SnackBar(content: Text('containers.please_select_image'.tr())),
       );
       return;
     }
@@ -206,16 +207,16 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
       if (mounted) {
         if (result != null && result.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Container created successfully'),
+            SnackBar(
+              content: Text('containers.created_successfully'.tr()),
               backgroundColor: Colors.green,
             ),
           );
           Navigator.of(context).pop(true); // Return true to indicate success
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to create container'),
+            SnackBar(
+              content: Text('containers.failed_to_create'.tr()),
               backgroundColor: Colors.red,
             ),
           );
@@ -225,7 +226,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('common.error'.tr() + ': $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -243,7 +244,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Container'),
+        title: Text('containers.create'.tr()),
       ),
       body: _isLoadingImages
           ? const Center(child: CircularProgressIndicator())
@@ -387,7 +388,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                               TextButton.icon(
                                 onPressed: _addPortMapping,
                                 icon: const Icon(Icons.add),
-                                label: const Text('Add Port Mapping'),
+                                label: Text('containers.create_form.add_port_mapping'.tr()),
                               ),
                             ],
                           ),
@@ -448,7 +449,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                               TextButton.icon(
                                 onPressed: _addEnvVariable,
                                 icon: const Icon(Icons.add),
-                                label: const Text('Add Environment Variable'),
+                                label: Text('containers.create_form.add_env_variable'.tr()),
                               ),
                             ],
                           ),
@@ -509,7 +510,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                               TextButton.icon(
                                 onPressed: _addVolumeMount,
                                 icon: const Icon(Icons.add),
-                                label: const Text('Add Volume Mount'),
+                                label: Text('containers.create_form.add_volume_mount'.tr()),
                               ),
                             ],
                           ),
@@ -520,7 +521,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                       // Advanced Options
                       Card(
                         child: ExpansionTile(
-                          title: const Text('Advanced Options'),
+                          title: Text('containers.create_form.advanced_options'.tr()),
                           initiallyExpanded: _showAdvanced,
                           onExpansionChanged: (expanded) {
                             setState(() {
@@ -538,18 +539,18 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                                       labelText: 'Restart Policy',
                                       border: OutlineInputBorder(),
                                     ),
-                                    items: const [
+                                    items: [
                                       DropdownMenuItem(
-                                          value: 'no', child: Text('No')),
+                                          value: 'no', child: Text('containers.create_form.restart_no'.tr())),
                                       DropdownMenuItem(
                                           value: 'always',
-                                          child: Text('Always')),
+                                          child: Text('containers.create_form.restart_always'.tr())),
                                       DropdownMenuItem(
                                           value: 'unless-stopped',
-                                          child: Text('Unless Stopped')),
+                                          child: Text('containers.create_form.restart_unless_stopped'.tr())),
                                       DropdownMenuItem(
                                           value: 'on-failure',
-                                          child: Text('On Failure')),
+                                          child: Text('containers.create_form.restart_on_failure'.tr())),
                                     ],
                                     onChanged: (value) {
                                       setState(() {
@@ -596,17 +597,17 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                                       labelText: 'Network Mode',
                                       border: OutlineInputBorder(),
                                     ),
-                                    items: const [
+                                    items: [
                                       DropdownMenuItem(
                                           value: 'default',
-                                          child: Text('Default')),
+                                          child: Text('containers.create_form.network_default'.tr())),
                                       DropdownMenuItem(
                                           value: 'bridge',
-                                          child: Text('Bridge')),
+                                          child: Text('containers.create_form.network_bridge'.tr())),
                                       DropdownMenuItem(
-                                          value: 'host', child: Text('Host')),
+                                          value: 'host', child: Text('containers.create_form.network_host'.tr())),
                                       DropdownMenuItem(
-                                          value: 'none', child: Text('None')),
+                                          value: 'none', child: Text('containers.create_form.network_none'.tr())),
                                     ],
                                     onChanged: (value) {
                                       setState(() {
@@ -616,7 +617,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                                   ),
                                   const SizedBox(height: 12),
                                   SwitchListTile(
-                                    title: const Text('Privileged Mode'),
+                                    title: Text('containers.create_form.privileged_mode'.tr()),
                                     value: _privileged,
                                     onChanged: (value) {
                                       setState(() {
@@ -640,7 +641,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                               onPressed: _isCreating
                                   ? null
                                   : () => Navigator.of(context).pop(),
-                              child: const Text('Cancel'),
+                              child: Text('common.cancel'.tr()),
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -655,7 +656,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                                       child: CircularProgressIndicator(
                                           strokeWidth: 2),
                                     )
-                                  : const Text('Create & Start'),
+                                  : Text('containers.create_and_start'.tr()),
                             ),
                           ),
                         ],

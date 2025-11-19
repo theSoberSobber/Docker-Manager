@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/services/system_info_service.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class SystemInfoDialog extends StatefulWidget {
   const SystemInfoDialog({super.key});
@@ -55,7 +56,7 @@ class _SystemInfoDialogState extends State<SystemInfoDialog> {
             color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(width: 8),
-          const Expanded(child: Text('System Information')),
+          Expanded(child: Text('system_info.title'.tr())),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadSystemInfo,
@@ -76,7 +77,7 @@ class _SystemInfoDialogState extends State<SystemInfoDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
+          child: Text('common.close'.tr()),
         ),
       ],
     );
@@ -84,13 +85,13 @@ class _SystemInfoDialogState extends State<SystemInfoDialog> {
 
   Widget _buildContent() {
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading system information...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('system_info.loading'.tr()),
           ],
         ),
       );
@@ -123,8 +124,8 @@ class _SystemInfoDialogState extends State<SystemInfoDialog> {
     }
 
     if (_systemInfo == null) {
-      return const Center(
-        child: Text('No system information available'),
+      return Center(
+        child: Text('system_info.no_info'.tr()),
       );
     }
 

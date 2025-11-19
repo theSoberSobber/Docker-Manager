@@ -10,6 +10,7 @@ import 'shell_screen.dart';
 import 'settings_screen.dart';
 import 'server_list_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ContainersScreen extends StatefulWidget {
   const ContainersScreen({super.key});
@@ -331,7 +332,7 @@ class _ContainersScreenState extends State<ContainersScreen>
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 const SizedBox(width: 12),
-                Text('${action.label}...'),
+                Text('containers.action_in_progress'.tr(args: [action.label])),
               ],
             ),
             duration: const Duration(seconds: 2),
@@ -353,7 +354,7 @@ class _ContainersScreenState extends State<ContainersScreen>
                 children: [
                   const Icon(Icons.check_circle, color: Colors.white, size: 20),
                   const SizedBox(width: 12),
-                  Text('${action.label} completed successfully'),
+                  Text('containers.action_success'.tr(args: [action.label])),
                 ],
               ),
               backgroundColor: Colors.green,
@@ -372,7 +373,7 @@ class _ContainersScreenState extends State<ContainersScreen>
           // Command executed but no output
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${action.label} completed'),
+              content: Text('containers.action_completed'.tr(args: [action.label])),
               backgroundColor: Colors.blue,
               duration: const Duration(seconds: 2),
             ),
@@ -388,7 +389,7 @@ class _ContainersScreenState extends State<ContainersScreen>
               children: [
                 const Icon(Icons.error, color: Colors.white, size: 20),
                 const SizedBox(width: 12),
-                Expanded(child: Text('${action.label} failed: $e')),
+                Expanded(child: Text('containers.action_failed'.tr(args: [action.label, e.toString()]))),
               ],
             ),
             backgroundColor: Colors.red,
@@ -420,7 +421,7 @@ class _ContainersScreenState extends State<ContainersScreen>
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Choose Shell - ${container.names}'),
+          title: Text('containers.choose_shell'.tr(args: [container.names])),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -467,7 +468,7 @@ class _ContainersScreenState extends State<ContainersScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: Text('common.cancel'.tr()),
             ),
             ElevatedButton(
               onPressed: () {
@@ -477,7 +478,7 @@ class _ContainersScreenState extends State<ContainersScreen>
                   _openInteractiveShell(container, executable);
                 }
               },
-              child: const Text('Connect'),
+              child: Text('common.connect'.tr()),
             ),
           ],
         );
@@ -505,25 +506,25 @@ class _ContainersScreenState extends State<ContainersScreen>
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     
     if (!_hasTriedLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Initializing...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('containers.initializing'.tr()),
           ],
         ),
       );
     }
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading containers...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('containers.loading'.tr()),
           ],
         ),
       );
@@ -588,7 +589,7 @@ class _ContainersScreenState extends State<ContainersScreen>
                       );
                     },
                     icon: const Icon(Icons.dns),
-                    label: const Text('Connect to Server'),
+                    label: Text('connection.connect_to_server'.tr()),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton.icon(
@@ -601,13 +602,13 @@ class _ContainersScreenState extends State<ContainersScreen>
                       );
                     },
                     icon: const Icon(Icons.settings),
-                    label: const Text('Settings'),
+                    label: Text('common.settings'.tr()),
                   ),
                 ] else ...[
                   ElevatedButton.icon(
                     onPressed: _refreshContainers,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
+                    label: Text('common.retry'.tr()),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton.icon(
@@ -620,7 +621,7 @@ class _ContainersScreenState extends State<ContainersScreen>
                       );
                     },
                     icon: const Icon(Icons.settings),
-                    label: const Text('Settings'),
+                    label: Text('common.settings'.tr()),
                   ),
                 ],
               ],
@@ -660,7 +661,7 @@ class _ContainersScreenState extends State<ContainersScreen>
                 ElevatedButton.icon(
                   onPressed: _refreshContainers,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Refresh'),
+                  label: Text('common.refresh'.tr()),
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
@@ -673,7 +674,7 @@ class _ContainersScreenState extends State<ContainersScreen>
                     );
                   },
                   icon: const Icon(Icons.settings),
-                  label: const Text('Settings'),
+                  label: Text('common.settings'.tr()),
                 ),
               ],
             ),
@@ -758,7 +759,7 @@ class _ContainersScreenState extends State<ContainersScreen>
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: FilterChip(
-                label: Text('All (${_containers.length})'),
+                label: Text('containers.all_count'.tr(args: [_containers.length.toString()])),
                 selected: _selectedStack == null,
                 onSelected: (selected) {
                   if (selected) _onStackFilterChanged(null);
@@ -776,7 +777,7 @@ class _ContainersScreenState extends State<ContainersScreen>
                     children: [
                       const Icon(Icons.layers, size: 16),
                       const SizedBox(width: 4),
-                      Text('$stack ($count)'),
+                      Text('containers.stack_count'.tr(args: [stack, count.toString()])),
                     ],
                   ),
                   selected: _selectedStack == stack,
@@ -791,7 +792,7 @@ class _ContainersScreenState extends State<ContainersScreen>
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: FilterChip(
-                  label: Text('No Stack (${_containers.where((c) => !c.isPartOfStack).length})'),
+                  label: Text('containers.no_stack_count'.tr(args: [_containers.where((c) => !c.isPartOfStack).length.toString()])),
                   selected: _selectedStack == 'no-stack',
                   onSelected: (selected) {
                     _onStackFilterChanged(selected ? 'no-stack' : null);

@@ -7,6 +7,7 @@ import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ImagesScreen extends StatefulWidget {
   const ImagesScreen({super.key});
@@ -147,17 +148,17 @@ class _ImagesScreenState extends State<ImagesScreen>
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Delete Image'),
-              content: Text('Are you sure you want to delete image "${image.repository}:${image.tag}"?\\n\\nThis action cannot be undone.'),
+              title: Text('images.delete_title'.tr()),
+              content: Text('images.delete_confirmation'.tr(args: [image.repository, image.tag])),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
+                  child: Text('common.cancel'.tr()),
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(true),
                   style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  child: const Text('Delete'),
+                  child: Text('common.delete'.tr()),
                 ),
               ],
             ),
@@ -192,7 +193,7 @@ class _ImagesScreenState extends State<ImagesScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('common.error'.tr() + ': $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -225,13 +226,13 @@ class _ImagesScreenState extends State<ImagesScreen>
         });
       }
       
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading images...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('images.loading'.tr()),
           ],
         ),
       );
@@ -262,7 +263,7 @@ class _ImagesScreenState extends State<ImagesScreen>
             ElevatedButton.icon(
               onPressed: _loadImages,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text('common.retry'.tr()),
             ),
           ],
         ),
@@ -270,19 +271,19 @@ class _ImagesScreenState extends State<ImagesScreen>
     }
 
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading images...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('images.loading'.tr()),
           ],
         ),
       );
     }
 
-    if (_images.isEmpty) {
+    if (_filteredImages.isEmpty && _searchQuery.isNotEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -298,7 +299,7 @@ class _ImagesScreenState extends State<ImagesScreen>
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
-            const Text('Pull down to refresh'),
+            Text('images.pull_to_refresh'.tr()),
           ],
         ),
       );

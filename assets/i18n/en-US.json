@@ -1,0 +1,223 @@
+{
+  "app": {
+    "title": "Docker Manager"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "retry": "Retry",
+    "close": "Close",
+    "ok": "OK",
+    "refresh": "Refresh",
+    "settings": "Settings",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "confirm": "Confirm",
+    "add": "Add",
+    "save": "Save",
+    "clear": "Clear",
+    "connect": "Connect"
+  },
+  "connection": {
+    "please_connect": "Please connect to a server first",
+    "connect_to_server": "Connect to Server",
+    "failed_to_connect": "Could not connect to {}",
+    "selected_server": "Selected server: {}",
+    "failed_to_select": "Failed to select server: {}",
+    "failed_to_load": "Failed to load server: {}"
+  },
+  "navigation": {
+    "containers": "Containers",
+    "images": "Images",
+    "volumes": "Volumes",
+    "networks": "Networks"
+  },
+  "home": {
+    "pull_image": "Pull Image",
+    "build_image": "Build Image",
+    "host_shell": "Host Shell"
+  },
+  "servers": {
+    "title": "Docker Servers",
+    "add_server": "Add Docker Server",
+    "delete_server": "Delete Server",
+    "delete_confirm": "Are you sure you want to delete {}:{}?",
+    "added_successfully": "Server added successfully",
+    "deleted_successfully": "Server deleted successfully",
+    "failed_to_add": "Failed to add server: {}",
+    "failed_to_delete": "Failed to delete server: {}",
+    "failed_to_load": "Failed to load servers: {}",
+    "user_label": "User: {}"
+  },
+  "auth": {
+    "password": "Password",
+    "private_key": "Private Key"
+  },
+  "containers": {
+    "title": "Containers",
+    "create": "Create Container",
+    "loading": "Loading containers...",
+    "initializing": "Initializing...",
+    "no_containers": "No containers found",
+    "no_search_results": "No containers match your search",
+    "inspect_title": "Inspect Container - {}",
+    "delete_title": "Delete Container",
+    "delete_confirmation": "Are you sure you want to delete container \"{}\"?\n\nThis action cannot be undone.",
+    "created_successfully": "Container created successfully",
+    "failed_to_create": "Failed to create container",
+    "please_select_image": "Please select an image",
+    "failed_to_load_images": "Failed to load images: {}",
+    "create_and_start": "Create & Start",
+    "choose_shell": "Choose Shell - {}",
+    "all_count": "All ({})",
+    "no_stack_count": "No Stack ({})",
+    "stack_count": "{} ({})",
+    "action_completed": "{} completed",
+    "action_success": "{} completed successfully",
+    "action_failed": "{} failed: {}",
+    "action_in_progress": "{}...",
+    "pull_to_refresh": "Pull down to refresh",
+    "actions": {
+      "start": "Start",
+      "stop": "Stop",
+      "restart": "Restart",
+      "inspect": "Inspect",
+      "logs": "Logs",
+      "shell": "Shell",
+      "delete": "Delete"
+    },
+    "status": {
+      "running": "Running",
+      "exited": "Exited",
+      "created": "Created",
+      "paused": "Paused"
+    },
+    "create_form": {
+      "add_port_mapping": "Add Port Mapping",
+      "add_env_variable": "Add Environment Variable",
+      "add_volume_mount": "Add Volume Mount",
+      "advanced_options": "Advanced Options",
+      "restart_policy": "Restart Policy",
+      "restart_no": "No",
+      "restart_always": "Always",
+      "restart_unless_stopped": "Unless Stopped",
+      "restart_on_failure": "On Failure",
+      "network_mode": "Network Mode",
+      "network_default": "Default",
+      "network_bridge": "Bridge",
+      "network_host": "Host",
+      "network_none": "None",
+      "privileged_mode": "Privileged Mode"
+    }
+  },
+  "images": {
+    "title": "Images",
+    "pull": "Pull Image",
+    "build": "Build Image",
+    "loading": "Loading images...",
+    "no_images": "No images found",
+    "no_search_results": "No images match your search",
+    "inspect_title": "Inspect Image - {}",
+    "delete_title": "Delete Image",
+    "delete_confirmation": "Are you sure you want to delete image \"{}:{}\"?\n\nThis action cannot be undone.",
+    "pull_to_refresh": "Pull down to refresh",
+    "pulling": "Pulling Image",
+    "pulling_progress": "Pulling {}...",
+    "pull_success": "Successfully pulled {}",
+    "pull_failed": "Failed to pull image",
+    "build_success": "Successfully built {}:{}",
+    "build_failed": "Build failed. Check logs for details.",
+    "select_tag": "Select Tag for {}",
+    "loading_tags": "Loading tags...",
+    "no_tags_found": "No tags found for this image",
+    "failed_to_load_tags": "Failed to load tags: {}",
+    "tag_latest": "Latest",
+    "try_different_search": "Try a different search term",
+    "official_label": "Official",
+    "automated_label": "Automated",
+    "actions": {
+      "inspect": "Inspect",
+      "delete": "Delete",
+      "run": "Run"
+    }
+  },
+  "volumes": {
+    "title": "Volumes",
+    "loading": "Loading volumes...",
+    "no_volumes": "No volumes found",
+    "no_search_results": "No volumes match your search",
+    "inspect_title": "Inspect Volume - {}",
+    "delete_title": "Delete Volume",
+    "delete_confirmation": "Are you sure you want to delete volume \"{}\"?\n\nThis action cannot be undone.",
+    "pull_to_refresh": "Pull down to refresh",
+    "actions": {
+      "inspect": "Inspect",
+      "delete": "Delete"
+    }
+  },
+  "networks": {
+    "title": "Networks",
+    "loading": "Loading networks...",
+    "no_networks": "No networks found",
+    "no_search_results": "No networks match your search",
+    "inspect_title": "Inspect Network - {}",
+    "delete_title": "Delete Network",
+    "delete_confirmation": "Are you sure you want to delete network \"{}\"?\n\nThis action cannot be undone.",
+    "cannot_delete_system": "Cannot delete system network \"{}\"",
+    "pull_to_refresh": "Pull down to refresh",
+    "actions": {
+      "inspect": "Inspect",
+      "delete": "Delete"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "saved": "Settings saved",
+    "appearance": "Appearance",
+    "theme_light": "Light",
+    "theme_dark": "Dark",
+    "theme_system": "System",
+    "language": "Language",
+    "language_changed": "Language changed to {}",
+    "docker_config": "Docker Configuration",
+    "docker_cli_path": "Docker CLI Path",
+    "docker_cli_saved": "Docker CLI path saved",
+    "docker_cli_hint": "docker (default)",
+    "docker_cli_help": "Examples: docker, /usr/bin/docker, /usr/local/bin/podman",
+    "docker_cli_description": "Path to Docker CLI binary. Supports Docker, Podman, or custom installations.",
+    "logs": "Logs",
+    "default_log_lines": "Default log lines to display",
+    "log_lines_description": "Limiting log output prevents crashes on containers with large logs",
+    "log_100": "100 lines (fast)",
+    "log_500": "500 lines (recommended)",
+    "log_1000": "1000 lines (detailed)",
+    "log_5000": "5000 lines (may be slow)",
+    "log_all": "All logs (risky)",
+    "system_maintenance": "System Maintenance",
+    "clean_resources": "Clean up Docker resources",
+    "clean_description": "Remove unused containers, images, networks, volumes, and build cache",
+    "prune_system": "Prune System",
+    "prune_title": "System Prune",
+    "prune_warning": "This will remove:",
+    "prune_stopped_containers": "• All stopped containers",
+    "prune_dangling_images": "• All dangling images",
+    "prune_unused_networks": "• All unused networks",
+    "prune_unused_volumes": "• All unused volumes",
+    "prune_build_cache": "• All build cache",
+    "prune_complete": "Prune Complete",
+    "prune_failed": "Prune Failed"
+  },
+  "system_info": {
+    "title": "System Information",
+    "loading": "Loading system information...",
+    "no_info": "No system information available"
+  },
+  "operations": {
+    "executed_successfully": "Command executed successfully",
+    "error_occurred": "Error: {}"
+  },
+  "actions": {
+    "confirm_action": "Confirm {}"
+  }
+}

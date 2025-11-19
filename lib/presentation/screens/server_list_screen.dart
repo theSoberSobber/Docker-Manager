@@ -3,6 +3,7 @@ import '../../domain/models/server.dart';
 import '../../domain/repositories/server_repository.dart';
 import '../../data/repositories/server_repository_impl.dart';
 import '../widgets/add_server_dialog.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ServerListScreen extends StatefulWidget {
   final Function(Server)? onServerSelected;
@@ -52,7 +53,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load servers: $e')),
+          SnackBar(content: Text('servers.failed_to_load'.tr(args: [e.toString()]))),
         );
       }
     }
@@ -64,13 +65,13 @@ class _ServerListScreenState extends State<ServerListScreen> {
       await _loadServers(); // Refresh the list
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Server added successfully')),
+          SnackBar(content: Text('servers.added_successfully'.tr())),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add server: $e')),
+          SnackBar(content: Text('servers.failed_to_add'.tr(args: [e.toString()]))),
         );
       }
     }
@@ -82,13 +83,13 @@ class _ServerListScreenState extends State<ServerListScreen> {
       await _loadServers(); // Refresh the list
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Server deleted successfully')),
+          SnackBar(content: Text('servers.deleted_successfully'.tr())),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete server: $e')),
+          SnackBar(content: Text('servers.failed_to_delete'.tr(args: [e.toString()]))),
         );
       }
     }
@@ -112,12 +113,12 @@ class _ServerListScreenState extends State<ServerListScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Server'),
-        content: Text('Are you sure you want to delete ${server.ip}:${server.port}?'),
+        title: Text('servers.delete_server'.tr()),
+        content: Text('servers.delete_confirm'.tr(args: [server.ip, server.port.toString()])),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text('common.cancel'.tr()),
           ),
           ElevatedButton(
             onPressed: () {
@@ -125,7 +126,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
               _deleteServer(server.id);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+            child: Text('common.delete'.tr(), style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -137,7 +138,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Docker Servers'),
+        title: Text('servers.title'.tr()),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -204,7 +205,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
                               Text('${server.ip}:${server.port}'),
                               Row(
                                 children: [
-                                  Text('User: ${server.username}'),
+                                  Text('servers.user_label'.tr(args: [server.username])),
                                   if (isSelected) ...[
                                     const SizedBox(width: 8),
                                     Container(
