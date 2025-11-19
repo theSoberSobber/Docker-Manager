@@ -61,6 +61,10 @@ android {
 
     buildTypes {
         release {
+            // Disable code shrinking and obfuscation to prevent Play Store optimization issues
+            isMinifyEnabled = false
+            isShrinkResources = false
+            
             // Use release keystore if available, otherwise fall back to debug
             val keystorePropertiesFile = rootProject.file("keystore.properties")
             println("🔍 Looking for keystore.properties at: ${keystorePropertiesFile.absolutePath}")
