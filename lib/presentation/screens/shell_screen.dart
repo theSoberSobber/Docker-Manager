@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../data/services/interactive_shell_service.dart';
 import '../widgets/search_bar.dart';
+import '../../core/utils/docker_cli_config.dart';
 
 class ShellScreen extends StatefulWidget {
   final String title;
@@ -368,8 +368,7 @@ class _ShellScreenState extends State<ShellScreen> {
         final executable = widget.containerInfo!['executable'];
         
         // Get Docker CLI path from settings
-        final prefs = await SharedPreferences.getInstance();
-        final dockerCli = prefs.getString('dockerCliPath') ?? 'docker';
+        final dockerCli = await DockerCliConfig.getCliPath();
         
         // For container shells, we need to execute commands inside the container
         // We'll use docker exec for each command

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../domain/models/docker_image.dart';
-import '../../../data/repositories/docker_repository_impl.dart';
-import '../../../data/services/ssh_connection_service.dart';
+import '../../../domain/repositories/docker_repository.dart';
+import '../../../domain/services/container_creation_service.dart';
+import '../../../domain/services/container_creation_service.dart' as domain;
+import '../../../core/di/service_locator.dart';
 
 class CreateContainerScreen extends StatefulWidget {
   const CreateContainerScreen({super.key});
@@ -13,8 +15,8 @@ class CreateContainerScreen extends StatefulWidget {
 class _CreateContainerScreenState extends State<CreateContainerScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _sshService = SSHConnectionService();
-  final _dockerRepository = DockerRepositoryImpl();
+  late final DockerRepository _dockerRepository;
+  late final ContainerCreationService _containerCreationService;
 
   List<DockerImage> _availableImages = [];
   DockerImage? _selectedImage;
@@ -43,6 +45,8 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
   @override
   void initState() {
     super.initState();
+    _dockerRepository = getIt<DockerRepository>();
+    _containerCreationService = getIt<ContainerCreationService>();
     _loadImages();
   }
 
@@ -114,78 +118,6 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
     });
   }
 
-  String _buildDockerRunCommand() {
-    if (_selectedImage == null) return '';
-
-    final buffer = StringBuffer('docker run -d');
-
-    // Container name
-    if (_nameController.text.isNotEmpty) {
-      buffer.write(' --name ${_nameController.text}');
-    }
-
-    // Port mappings
-    for (final port in _portMappings) {
-      if (port.hostPort.isNotEmpty && port.containerPort.isNotEmpty) {
-        buffer.write(' -p ${port.hostPort}:${port.containerPort}');
-      }
-    }
-
-    // Environment variables
-    for (final env in _envVariables) {
-      if (env.key.isNotEmpty && env.value.isNotEmpty) {
-        buffer.write(' -e ${env.key}=${env.value}');
-      }
-    }
-
-    // Volume mounts
-    for (final volume in _volumeMounts) {
-      if (volume.hostPath.isNotEmpty && volume.containerPath.isNotEmpty) {
-        buffer.write(' -v ${volume.hostPath}:${volume.containerPath}');
-      }
-    }
-
-    // Restart policy
-    if (_restartPolicy != 'no') {
-      buffer.write(' --restart=$_restartPolicy');
-    }
-
-    // Working directory
-    if (_workDirController.text.isNotEmpty) {
-      buffer.write(' -w ${_workDirController.text}');
-    }
-
-    // Memory limit
-    if (_memoryController.text.isNotEmpty) {
-      buffer.write(' -m ${_memoryController.text}');
-    }
-
-    // CPU limit
-    if (_cpuController.text.isNotEmpty) {
-      buffer.write(' --cpus=${_cpuController.text}');
-    }
-
-    // Network mode
-    if (_networkMode != 'default') {
-      buffer.write(' --network=$_networkMode');
-    }
-
-    // Privileged
-    if (_privileged) {
-      buffer.write(' --privileged');
-    }
-
-    // Image
-    buffer.write(' ${_selectedImage!.repository}:${_selectedImage!.tag}');
-
-    // Command override
-    if (_commandController.text.isNotEmpty) {
-      buffer.write(' ${_commandController.text}');
-    }
-
-    return buffer.toString();
-  }
-
   Future<void> _createContainer() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedImage == null) {
@@ -200,26 +132,49 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
     });
 
     try {
-      final command = _buildDockerRunCommand();
-      final result = await _sshService.executeCommand(command);
+      // Convert local data structures to domain models
+      final portMappings = _portMappings
+          .where((p) => p.hostPort.isNotEmpty && p.containerPort.isNotEmpty)
+          .map((p) => domain.PortMapping(hostPort: p.hostPort, containerPort: p.containerPort))
+          .toList();
+
+      final envVars = _envVariables
+          .where((e) => e.key.isNotEmpty && e.value.isNotEmpty)
+          .map((e) => domain.EnvironmentVariable(key: e.key, value: e.value))
+          .toList();
+
+      final volumes = _volumeMounts
+          .where((v) => v.hostPath.isNotEmpty && v.containerPath.isNotEmpty)
+          .map((v) => domain.VolumeMount(hostPath: v.hostPath, containerPath: v.containerPath))
+          .toList();
+
+      final config = ContainerCreationConfig(
+        imageName: _selectedImage!.repository,
+        imageTag: _selectedImage!.tag,
+        containerName: _nameController.text.isEmpty ? null : _nameController.text,
+        portMappings: portMappings,
+        environmentVariables: envVars,
+        volumeMounts: volumes,
+        restartPolicy: _restartPolicy,
+        workingDirectory: _workDirController.text.isEmpty ? null : _workDirController.text,
+        memoryLimit: _memoryController.text.isEmpty ? null : _memoryController.text,
+        cpuLimit: _cpuController.text.isEmpty ? null : _cpuController.text,
+        networkMode: _networkMode,
+        privileged: _privileged,
+        commandOverride: _commandController.text.isEmpty ? null : _commandController.text,
+      );
+
+      // Use service to create container
+      final containerId = await _containerCreationService.createContainer(config);
 
       if (mounted) {
-        if (result != null && result.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Container created successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.of(context).pop(true); // Return true to indicate success
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to create container'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Container created: ${containerId.substring(0, 12)}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.of(context).pop(true); // Return true to indicate success
       }
     } catch (e) {
       if (mounted) {

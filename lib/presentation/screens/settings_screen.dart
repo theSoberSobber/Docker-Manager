@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/theme_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/services/ssh_connection_service.dart';
+import '../../core/utils/docker_cli_config.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -31,9 +32,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    final dockerPath = await DockerCliConfig.getCliPath();
+    
     setState(() {
       _defaultLogLines = prefs.getString('defaultLogLines') ?? '500';
-      _dockerCliPath = prefs.getString('dockerCliPath') ?? 'docker';
+      _dockerCliPath = dockerPath;
       _dockerPathController.text = _dockerCliPath;
       _isLoading = false;
     });
@@ -57,9 +60,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _saveDockerCliPath(String value) async {
-    final prefs = await SharedPreferences.getInstance();
     final path = value.trim().isEmpty ? 'docker' : value.trim();
-    await prefs.setString('dockerCliPath', path);
+    await DockerCliConfig.setCliPath(path);
+    
     setState(() {
       _dockerCliPath = path;
     });
@@ -139,8 +142,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final sshService = SSHConnectionService();
       
       // Get the configured Docker CLI path
-      final prefs = await SharedPreferences.getInstance();
-      final dockerCmd = prefs.getString('dockerCliPath') ?? 'docker';
+      final dockerCmd = await DockerCliConfig.getCliPath();
       
       final result = await sshService.executeCommand('$dockerCmd system prune -af --volumes');
       

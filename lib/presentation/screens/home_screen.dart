@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/server.dart';
 import '../../domain/repositories/server_repository.dart';
-import '../../data/repositories/server_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
+import '../../core/di/service_locator.dart';
 import '../widgets/theme_manager.dart';
 import '../widgets/system_info_dialog.dart';
 import '../widgets/speed_dial_fab.dart';
@@ -24,13 +24,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  final ServerRepository _serverRepository = ServerRepositoryImpl();
-  final SSHConnectionService _sshService = SSHConnectionService();
+  late final ServerRepository _serverRepository;
+  late final SSHConnectionService _sshService;
   int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    _serverRepository = getIt<ServerRepository>();
+    _sshService = getIt<SSHConnectionService>();
     WidgetsBinding.instance.addObserver(this);
     _loadLastUsedServer();
   }
@@ -55,43 +57,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       final lastUsedServer = await _serverRepository.getLastUsedServer();
 
-      // Auto-connect to last used server if available (silently)
+      // Auto-connect to last used server if available
       if (lastUsedServer != null) {
-        _connectToServerSilently(lastUsedServer);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load server: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _connectToServerSilently(Server server) async {
-    try {
-      final result = await _sshService.switchToServer(server);
-      
-      // Only show message if connection failed on startup
-      if (mounted && !result.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.warning, color: Colors.white, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text('Could not connect to ${server.name}'),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.orange,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        await _sshService.switchToServer(lastUsedServer);
       }
     } catch (e) {
       // Silent failure on startup
@@ -100,24 +68,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _selectServer(Server server) async {
     try {
-      // 1. Save server selection first
+      // 1. Save server selection to storage
       await _serverRepository.setLastUsedServerId(server.id);
       
-      // 2. Show selection message
+      // 2. Set the server in the singleton immediately (before connection attempt)
+      _sshService.currentServer = server;
+      
+      // 3. Set flag to indicate server was explicitly changed
+      _sshService.didServerChange = true;
+      
+      // 4. Force rebuild to recreate page widgets with new server context
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Selected server: ${server.name}'),
-            duration: const Duration(seconds: 1),
-          ),
-        );
+        setState(() {});
       }
-      
-      // 3. Small delay to show selection message, then connect
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      // 4. Connect to server (this will show connecting/connected/error messages)
-      await _connectToServerSilently(server);
       
     } catch (e) {
       if (mounted) {
@@ -132,10 +95,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   List<Widget> get _pages => [
-    const ContainersScreen(),
-    const ImagesScreen(),
-    const VolumesScreen(),
-    const NetworksScreen(),
+    ContainersScreen(),
+    ImagesScreen(),
+    VolumesScreen(),
+    NetworksScreen(),
   ];
 
   Widget? _buildFloatingActionButton() {

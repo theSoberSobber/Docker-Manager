@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../data/services/ssh_connection_service.dart';
+import '../../../domain/services/image_management_service.dart';
+import '../../../core/di/service_locator.dart';
 
 class BuildImageScreen extends StatefulWidget {
   const BuildImageScreen({super.key});
@@ -15,11 +16,17 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
   final _dockerfileController = TextEditingController(
     text: 'FROM busybox\nRUN echo "Hello from Docker Manager"',
   );
-  final _sshService = SSHConnectionService();
+  late final ImageManagementService _imageManagementService;
   
   bool _isBuilding = false;
   String _buildLogs = '';
   final ScrollController _logsScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _imageManagementService = getIt<ImageManagementService>();
+  }
 
   @override
   void dispose() {
@@ -53,49 +60,30 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
       final tag = _tagController.text.trim();
       final dockerfile = _dockerfileController.text;
 
-      // Create a temporary directory and Dockerfile on the server
-      final tempDir = '/tmp/docker_build_${DateTime.now().millisecondsSinceEpoch}';
-      final dockerfilePath = '$tempDir/Dockerfile';
-
-      // Create temp directory
-      await _sshService.executeCommand('mkdir -p $tempDir');
-
-      // Write Dockerfile content
-      // Escape single quotes in dockerfile content
-      final escapedDockerfile = dockerfile.replaceAll("'", "'\\''");
-      await _sshService.executeCommand("echo '$escapedDockerfile' > $dockerfilePath");
-
       setState(() {
-        _buildLogs += 'Created Dockerfile at $dockerfilePath\n';
         _buildLogs += 'Building image $imageName:$tag...\n\n';
       });
       _scrollToBottom();
 
-      // Build the image with streaming output
-      final buildCommand = 'docker build -t $imageName:$tag -f $dockerfilePath $tempDir';
-      
-      // For now, execute command and get output
-      // TODO: Implement streaming output
-      final result = await _sshService.executeCommand(buildCommand);
+      final config = ImageBuildConfig(
+        imageName: imageName,
+        tag: tag,
+        dockerfileContent: dockerfile,
+      );
+
+      // Use service to build image
+      final result = await _imageManagementService.buildImage(config);
 
       setState(() {
-        if (result != null && result.isNotEmpty) {
-          _buildLogs += result;
-        }
+        _buildLogs += result;
       });
       _scrollToBottom();
 
-      // Cleanup
-      await _sshService.executeCommand('rm -rf $tempDir');
-
       if (mounted) {
         // Check for success indicators in the output
-        // Modern BuildKit: "writing image sha256:" or "naming to"
-        // Legacy builder: "Successfully built"
-        final isSuccess = result != null && 
-                         (result.contains('Successfully built') || 
-                          result.contains('writing image sha256:') ||
-                          result.contains('naming to'));
+        final isSuccess = result.contains('Successfully built') || 
+                         result.contains('writing image sha256:') ||
+                         result.contains('naming to');
         
         if (isSuccess) {
           setState(() {

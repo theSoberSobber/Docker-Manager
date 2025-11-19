@@ -29,6 +29,7 @@ class SSHConnectionService {
   SSHClient? _currentConnection;
   Server? _currentServer;
   ConnectionStatus _status = ConnectionStatus.disconnected;
+  bool didServerChange = false;
 
   // Getters
   ConnectionStatus get status => _status;
@@ -36,11 +37,15 @@ class SSHConnectionService {
   bool get isConnected => _status == ConnectionStatus.connected;
   bool get isConnecting => _status == ConnectionStatus.connecting;
   SSHClient? get currentConnection => _currentConnection;
+  
+  // Setter for currentServer (used when server is selected before connection)
+  set currentServer(Server? server) => _currentServer = server;
 
   /// Connect to a server
   Future<SSHConnectionResult> connect(Server server) async {
     try {
       _status = ConnectionStatus.connecting;
+      _currentServer = server;  // Set server BEFORE attempting connection
       
       // Disconnect existing connection if any
       await disconnect();
@@ -70,7 +75,7 @@ class SSHConnectionService {
 
       // Store successful connection
       _currentConnection = client;
-      _currentServer = server;
+      // _currentServer already set at the beginning
       _status = ConnectionStatus.connected;
 
       return SSHConnectionResult(
@@ -80,7 +85,8 @@ class SSHConnectionService {
     } catch (e) {
       _status = ConnectionStatus.failed;
       _currentConnection = null;
-      _currentServer = null;
+      // Keep _currentServer so we know which server failed
+      // _currentServer = null;  // DON'T clear this!
 
       return SSHConnectionResult(
         success: false,
@@ -100,7 +106,8 @@ class SSHConnectionService {
     } catch (e) {
       // Ignore disconnect errors
     } finally {
-      _currentServer = null;
+      // Don't clear _currentServer - it's the source of truth
+      // _currentServer = null;
       _status = ConnectionStatus.disconnected;
     }
   }
