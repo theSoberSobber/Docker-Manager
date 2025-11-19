@@ -9,7 +9,7 @@ import 'shell_screen.dart';
 import 'base/base_resource_screen.dart';
 
 class ContainersScreen extends BaseResourceScreen<DockerContainer> {
-  const ContainersScreen({super.key});
+  ContainersScreen({super.key});
 
   @override
   State<ContainersScreen> createState() => _ContainersScreenState();

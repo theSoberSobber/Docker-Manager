@@ -6,7 +6,7 @@ import 'shell_screen.dart';
 import 'base/base_resource_screen.dart';
 
 class ImagesScreen extends BaseResourceScreen<DockerImage> {
-  const ImagesScreen({super.key});
+  ImagesScreen({super.key});
 
   @override
   State<ImagesScreen> createState() => _ImagesScreenState();

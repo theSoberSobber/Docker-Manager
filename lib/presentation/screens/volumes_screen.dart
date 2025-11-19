@@ -6,7 +6,7 @@ import 'shell_screen.dart';
 import 'base/base_resource_screen.dart';
 
 class VolumesScreen extends BaseResourceScreen<DockerVolume> {
-  const VolumesScreen({super.key});
+  VolumesScreen({super.key});
 
   @override
   State<VolumesScreen> createState() => _VolumesScreenState();

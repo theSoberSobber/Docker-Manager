@@ -6,7 +6,7 @@ import 'shell_screen.dart';
 import 'base/base_resource_screen.dart';
 
 class NetworksScreen extends BaseResourceScreen<DockerNetwork> {
-  const NetworksScreen({super.key});
+  NetworksScreen({super.key});
 
   @override
   State<NetworksScreen> createState() => _NetworksScreenState();

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:math';
 import '../../../data/services/ssh_connection_service.dart';
 import '../../../domain/models/server.dart';
 import '../../../domain/repositories/docker_repository.dart';
+import '../../../domain/repositories/server_repository.dart';
 import '../../../domain/services/docker_operations_service.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/utils/error_state.dart';
 import '../settings_screen.dart';
 
 /// Base class for all Docker resource screens (containers, images, volumes, networks)
@@ -19,24 +23,26 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
   late final SSHConnectionService sshService = getIt<SSHConnectionService>();
   late final DockerRepository dockerRepository = getIt<DockerRepository>();
   late final DockerOperationsService operationsService = getIt<DockerOperationsService>();
+  late final ServerRepository serverRepository = getIt<ServerRepository>();
   
   // State
   List<T> items = [];
   List<T> filteredItems = [];
   bool isLoading = false;
-  String? error;
+  ErrorState? errorState;
+  bool hasTriedConnecting = false;  // Track if we've attempted connection to prevent infinite retry loops
   bool hasTriedLoading = false;
   Server? lastKnownServer;
   String searchQuery = '';
 
   @override
-  bool get wantKeepAlive => true;
+  bool get wantKeepAlive => false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _startServerChangeDetection();
+    // _startServerChangeDetection();
   }
 
   @override
@@ -52,8 +58,116 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
   IconData getEmptyIcon();
   Widget buildItemCard(T item);
 
-  // Common loading logic
+  // Helper method to load items from Docker
+  // Returns ErrorState if failed, null if successful
+  // Does NOT modify isLoading state - caller handles that
+  Future<ErrorState?> _loadItems() async {
+    if (kDebugMode) {
+      print('[CHECK 2] Loading ${getResourceName()}...');
+    }
+    
+    try {
+      final fetchedItems = await fetchItems();
+      
+      if (kDebugMode) {
+        print('[CHECK 2] Loaded ${fetchedItems.length} ${getResourceName()}');
+      }
+      
+      if (mounted) {
+        items = fetchedItems;
+        filteredItems = filterItems(fetchedItems, searchQuery);
+        hasTriedLoading = true;
+      }
+      
+      return null; // Success
+    } catch (e) {
+      if (kDebugMode) {
+        print('[CHECK 2] Error loading ${getResourceName()}: $e');
+      }
+      
+      final errorMessage = e.toString();
+      
+      // Check if it's a connection error
+      if (_isConnectionError(errorMessage)) {
+        if (kDebugMode) {
+          print('[CHECK 2.1] Connection error detected - forcing reconnection');
+        }
+        
+        // Force reconnection by resetting flag AND keeping isLoading true
+        // Caller will call setState which triggers CHECK 1 on next build
+        if (mounted) {
+          hasTriedConnecting = false;
+          // Return special marker so caller knows to keep loading
+          return ErrorState.connection(
+            message: '__RECONNECT__', // Special marker
+            onRetry: null,
+          );
+        }
+      }
+      
+      // Check if it's a permission error
+      if (_isPermissionError(errorMessage)) {
+        if (kDebugMode) {
+          print('[CHECK 2.2] Permission error detected');
+        }
+        
+        return ErrorState.permission(
+          message: errorMessage,
+          onRetry: () {
+            setState(() {
+              errorState = null;
+              isLoading = true;
+              hasTriedLoading = false;
+            });
+          },
+        );
+      }
+      
+      // Other error - return error state
+      return ErrorState.general(
+        message: errorMessage,
+        onRetry: () {
+          setState(() {
+            errorState = null;
+            isLoading = true;
+          });
+          _loadItems().then((error) {
+            if (mounted) {
+              setState(() {
+                isLoading = false;
+                errorState = error;
+              });
+            }
+          });
+        },
+      );
+    }
+  }
+  
+  // Helper to detect connection errors
+  bool _isConnectionError(String error) {
+    final lowerError = error.toLowerCase();
+    return lowerError.contains('connection') ||
+           lowerError.contains('ssh') ||
+           lowerError.contains('timeout') ||
+           lowerError.contains('refused') ||
+           lowerError.contains('closed');
+  }
+
+  // Helper to detect permission errors
+  bool _isPermissionError(String error) {
+    final lowerError = error.toLowerCase();
+    return lowerError.contains('permission denied') ||
+           lowerError.contains('docker group') ||
+           lowerError.contains('dial unix') ||
+           lowerError.contains('cannot connect to docker daemon') ||
+           lowerError.contains('access denied');
+  }
+
+  // Common loading logic (deprecated - use _loadItems instead)
   Future<void> loadItems() async {
+    // COMMENTED OUT ALL LOGIC
+    /*
     if (!sshService.isConnected) {
       setState(() {
         error = 'No SSH connection available';
@@ -85,23 +199,26 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
         });
       }
     }
+    */
   }
 
   // Common refresh logic
   Future<void> refreshItems() async {
-    await loadItems();
+    // await loadItems();
   }
 
   // Common search logic
   void onSearchChanged(String query) {
-    setState(() {
-      searchQuery = query;
-      filteredItems = filterItems(items, query);
-    });
+    // setState(() {
+    //   searchQuery = query;
+    //   filteredItems = filterItems(items, query);
+    // });
   }
 
   // Server change detection
   void _startServerChangeDetection() {
+    // COMMENTED OUT
+    /*
     Future.delayed(const Duration(seconds: 1), () {
       if (!mounted) return;
       
@@ -124,15 +241,19 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
       
       _startServerChangeDetection();
     });
+    */
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // COMMENTED OUT
+    /*
     if (state == AppLifecycleState.resumed) {
       if (hasTriedLoading) {
         loadItems();
       }
     }
+    */
   }
 
   // Common UI building
@@ -140,15 +261,219 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
   Widget build(BuildContext context) {
     super.build(context);
     
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: refreshItems,
-        child: buildBody(context),
-      ),
-    );
+    // Debug toast with random number
+    if (kDebugMode) {
+      final randomNum = Random().nextInt(10000);
+      final serverName = sshService.currentServer?.name ?? 'NULL';
+      final isConnected = sshService.isConnected;
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('[DEBUG] ${getResourceName()} - Random: $randomNum | Server: $serverName | Connected: $isConnected | Loading: $isLoading'),
+              duration: const Duration(seconds: 3),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      });
+    }
+    
+    // CHECK 1: Server changed OR not connected - need to connect/load
+    final needsConnection = sshService.didServerChange || 
+                           (!sshService.isConnected && !hasTriedConnecting);
+    
+    // OR: Already connected but haven't tried loading yet (new screen instance)
+    final needsLoad = sshService.isConnected && !hasTriedLoading;
+    
+    if ((needsConnection || needsLoad) && !isLoading) {
+      if (kDebugMode) {
+        print('[CHECK 1.1] needsConnection: $needsConnection, needsLoad: $needsLoad');
+      }
+      
+      isLoading = true;
+      errorState = null;
+      
+      if (needsConnection) {
+        // Reset flags
+        sshService.didServerChange = false;
+        hasTriedConnecting = true;
+        
+        // Connect first, then load
+        _connectToServer().then((error) {
+          if (mounted) {
+            if (error != null) {
+              // Connection failed - stop loading and show error
+              setState(() {
+                isLoading = false;
+                errorState = error;
+              });
+            } else {
+              // Connection succeeded - load data
+              if (kDebugMode) {
+                print('[CHECK 1.4] Connection succeeded! Loading data...');
+              }
+              
+              _loadItems().then((error) {
+                if (mounted) {
+                  // Check if it's a reconnect signal
+                  if (error?.message == '__RECONNECT__') {
+                    // Reset loading to allow CHECK 1 to run again
+                    setState(() {
+                      isLoading = false;
+                    });
+                  } else {
+                    setState(() {
+                      isLoading = false;
+                      errorState = error;
+                    });
+                  }
+                }
+              });
+            }
+          }
+        });
+      } else {
+        // Already connected - just load data
+        if (kDebugMode) {
+          print('[CHECK 1.5] Already connected, loading data...');
+        }
+        
+        _loadItems().then((error) {
+          if (mounted) {
+            // Check if it's a reconnect signal
+            if (error?.message == '__RECONNECT__') {
+              // Reset loading to allow CHECK 1 to run again
+              setState(() {
+                isLoading = false;
+              });
+            } else {
+              setState(() {
+                isLoading = false;
+                errorState = error;
+              });
+            }
+          }
+        });
+      }
+    }
+    
+    // Show loading screen
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('[CHECK 1] Connecting to server...'),
+            ],
+          ),
+        ),
+      );
+    }
+    
+    // Show error screen
+    if (errorState != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                errorState!.icon,
+                size: errorState!.iconSize,
+                color: errorState!.iconColor,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                errorState!.headline,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  errorState!.message,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 24),
+              if (errorState!.onRetry != null)
+                ElevatedButton(
+                  onPressed: errorState!.onRetry,
+                  child: Text(errorState!.retryButtonText),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+    
+    // Success - show the actual content
+    return buildItemList(context);
+  }
+  
+  // Helper method to connect to server
+  // Returns ErrorState if failed, null if successful
+  // Does NOT modify isLoading state - caller handles that
+  Future<ErrorState?> _connectToServer() async {
+    if (kDebugMode) {
+      print('[CHECK 1.2] Starting connection - currentServer: ${sshService.currentServer?.name}');
+    }
+    
+    // If no current server, try to load last used server from storage
+    if (sshService.currentServer == null) {
+      if (kDebugMode) {
+        print('[CHECK 1.2.1] No current server, loading from storage...');
+      }
+      
+      final lastUsedServer = await serverRepository.getLastUsedServer();
+      
+      if (lastUsedServer == null) {
+        // No server in storage either - user needs to add one
+        return ErrorState.empty(
+          message: 'No server configured. Please add a server from the settings menu (top-right icon).',
+          onRetry: null, // No retry for this case
+        );
+      }
+      
+      // Set the loaded server as current
+      sshService.currentServer = lastUsedServer;
+      
+      if (kDebugMode) {
+        print('[CHECK 1.2.2] Loaded server from storage: ${lastUsedServer.name}');
+      }
+    }
+    
+    // Now we have a server, try to connect
+    final result = await sshService.connect(sshService.currentServer!);
+    
+    if (kDebugMode) {
+      print('[CHECK 1.3] Connection completed - ${result.success ? "SUCCESS" : "FAILED: ${result.error}"}');
+    }
+    
+    if (!result.success) {
+      return ErrorState.connection(
+        message: result.error ?? 'Unknown connection error',
+        onRetry: () {
+          setState(() {
+            errorState = null;
+            hasTriedConnecting = false;  // Reset flag to allow retry
+          });
+        },
+      );
+    }
+    
+    return null; // Success
   }
 
   Widget buildBody(BuildContext context) {
+    // COMMENTED OUT - NOT USED
+    return Container();
+    /*
     // Initial loading check
     if (!hasTriedLoading) {
       // Check if we can load immediately
@@ -205,10 +530,14 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
 
     // Success - show list
     return buildItemList(context);
+    */
   }
 
   // Provide default error state with permission handling
   Widget buildErrorState(BuildContext context) {
+    // COMMENTED OUT - NOT USED (we use errorState object now)
+    return Container();
+    /*
     final isConnectionError = error!.contains('No SSH connection') || 
                               error!.contains('Connection timeout');
     final isPermissionError = error!.contains('Permission denied') || 
@@ -272,6 +601,7 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
         ],
       ),
     );
+    */
   }
 
   Widget buildEmptyState(BuildContext context);
