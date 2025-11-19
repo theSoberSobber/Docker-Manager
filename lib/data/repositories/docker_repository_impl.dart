@@ -15,6 +15,40 @@ class DockerRepositoryImpl implements DockerRepository {
     return prefs.getString('dockerCliPath') ?? 'docker';
   }
 
+  /// Parse Docker error and provide user-friendly message
+  String _parseDockerError(dynamic error) {
+    final errorStr = error.toString().toLowerCase();
+    
+    // Check for permission/socket access errors
+    if (errorStr.contains('permission denied') || 
+        errorStr.contains('docker.sock') ||
+        errorStr.contains('connect: permission denied')) {
+      return 'Permission denied: Your user cannot access Docker.\n\n'
+             'Solution: Add your user to the docker group:\n'
+             'sudo usermod -aG docker \$USER\n'
+             'Then restart your SSH session or reboot.\n\n'
+             'See FAQ for platform-specific instructions.';
+    }
+    
+    // Check for Docker not found/installed
+    if (errorStr.contains('command not found') || 
+        errorStr.contains('docker: not found') ||
+        errorStr.contains('no such file or directory')) {
+      return 'Docker not found: Docker CLI is not installed or not in PATH.\n\n'
+             'Check your Docker installation or configure a custom Docker CLI path in Settings.';
+    }
+    
+    // Check for Docker daemon not running
+    if (errorStr.contains('cannot connect to the docker daemon') ||
+        errorStr.contains('is the docker daemon running')) {
+      return 'Docker daemon not running: The Docker service is not active.\n\n'
+             'Start Docker with: sudo systemctl start docker';
+    }
+    
+    // Return original error if no pattern matched
+    return error.toString();
+  }
+
   @override
   Future<List<DockerContainer>> getContainers() async {
     try {
@@ -33,9 +67,16 @@ class DockerRepositoryImpl implements DockerRepository {
         throw Exception('Docker ps command returned no output');
       }
 
+      // Check if the result contains error messages instead of container data
+      if (result.toLowerCase().contains('permission denied') ||
+          result.toLowerCase().contains('cannot connect to the docker daemon') ||
+          result.toLowerCase().contains('docker: not found')) {
+        throw Exception(result);
+      }
+
       return DockerContainer.parseDockerPsOutput(result);
     } catch (e) {
-      throw Exception('Failed to get containers: $e');
+      throw Exception(_parseDockerError(e));
     }
   }
 
@@ -76,7 +117,7 @@ class DockerRepositoryImpl implements DockerRepository {
       
       return statsMap;
     } catch (e) {
-      throw Exception('Failed to get container stats: $e');
+      throw Exception(_parseDockerError(e));
     }
   }
 
@@ -96,7 +137,7 @@ class DockerRepositoryImpl implements DockerRepository {
 
       return DockerImage.parseDockerImagesOutput(result);
     } catch (e) {
-      throw Exception('Failed to get images: $e');
+      throw Exception(_parseDockerError(e));
     }
   }
 
@@ -116,7 +157,7 @@ class DockerRepositoryImpl implements DockerRepository {
 
       return DockerVolume.parseDockerVolumeLsOutput(result);
     } catch (e) {
-      throw Exception('Failed to get volumes: $e');
+      throw Exception(_parseDockerError(e));
     }
   }
 
@@ -136,7 +177,7 @@ class DockerRepositoryImpl implements DockerRepository {
 
       return DockerNetwork.parseDockerNetworkLsOutput(result);
     } catch (e) {
-      throw Exception('Failed to get networks: $e');
+      throw Exception(_parseDockerError(e));
     }
   }
 }
