@@ -8,7 +8,6 @@ import '../../../domain/repositories/server_repository.dart';
 import '../../../domain/services/docker_operations_service.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/utils/error_state.dart';
-import '../settings_screen.dart';
 
 /// Base class for all Docker resource screens (containers, images, volumes, networks)
 /// Provides common functionality: loading, error handling, search, server change detection
@@ -249,35 +248,6 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
       searchQuery = query;
       filteredItems = filterItems(items, query);
     });
-  }
-
-  // Server change detection
-  void _startServerChangeDetection() {
-    // COMMENTED OUT
-    /*
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      
-      final currentServer = sshService.currentServer;
-      
-      if (currentServer != lastKnownServer) {
-        lastKnownServer = currentServer;
-        
-        // If server changed and we're connected, trigger a reload
-        if (currentServer != null && sshService.isConnected) {
-          if (!hasTriedLoading) {
-            // First time we detected a connection, load items
-            loadItems();
-          } else {
-            // Server switched, reload items
-            loadItems();
-          }
-        }
-      }
-      
-      _startServerChangeDetection();
-    });
-    */
   }
 
   @override
