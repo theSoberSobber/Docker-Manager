@@ -4,6 +4,7 @@ import '../../../domain/models/server.dart';
 import '../../../domain/repositories/docker_repository.dart';
 import '../../../domain/services/docker_operations_service.dart';
 import '../../../core/di/service_locator.dart';
+import '../settings_screen.dart';
 
 /// Base class for all Docker resource screens (containers, images, volumes, networks)
 /// Provides common functionality: loading, error handling, search, server change detection
@@ -206,7 +207,73 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
     return buildItemList(context);
   }
 
-  Widget buildErrorState(BuildContext context);
+  // Provide default error state with permission handling
+  Widget buildErrorState(BuildContext context) {
+    final isConnectionError = error!.contains('No SSH connection') || 
+                              error!.contains('Connection timeout');
+    final isPermissionError = error!.contains('Permission denied') || 
+                              error!.contains('docker group');
+    
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            isConnectionError ? Icons.cloud_off : 
+            isPermissionError ? Icons.lock_outline :
+            Icons.error_outline,
+            size: 64,
+            color: isConnectionError || isPermissionError ? Colors.orange[400] : Colors.red[300],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            isConnectionError ? 'Not Connected' : 
+            isPermissionError ? 'Permission Issue' :
+            'Error Loading ${getResourceName()}',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              error!,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (isConnectionError) ...[
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.settings),
+                  label: const Text('Settings'),
+                ),
+                const SizedBox(width: 12),
+              ],
+              ElevatedButton.icon(
+                onPressed: loadItems,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget buildEmptyState(BuildContext context);
   Widget buildNoSearchResultsState(BuildContext context);
   Widget buildItemList(BuildContext context);

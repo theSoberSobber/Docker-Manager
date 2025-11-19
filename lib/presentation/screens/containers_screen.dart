@@ -359,68 +359,6 @@ class _ContainersScreenState extends BaseResourceScreenState<DockerContainer, Co
   }
 
   @override
-  Widget buildErrorState(BuildContext context) {
-    final isConnectionError = error!.contains('No SSH connection') || 
-                              error!.contains('Connection timeout') ||
-                              error!.contains('Failed to get containers: Exception: No SSH connection');
-    
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            isConnectionError ? Icons.cloud_off : Icons.error_outline,
-            size: 64,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            isConnectionError ? 'Not Connected' : 'Error',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              error!,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (isConnectionError) ...[
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SettingsScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.settings),
-                  label: const Text('Settings'),
-                ),
-                const SizedBox(width: 12),
-              ],
-              ElevatedButton.icon(
-                onPressed: loadItems,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
   Widget buildEmptyState(BuildContext context) {
     return Center(
       child: Column(
