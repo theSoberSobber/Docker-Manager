@@ -41,7 +41,6 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // _startServerChangeDetection();
   }
 
   @override
@@ -201,45 +200,12 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
 
   // Common loading logic (deprecated - use _loadItems instead)
   Future<void> loadItems() async {
-    // COMMENTED OUT ALL LOGIC
-    /*
-    if (!sshService.isConnected) {
-      setState(() {
-        error = 'No SSH connection available';
-        isLoading = false;
-      });
-      return;
-    }
-
-    setState(() {
-      isLoading = true;
-      error = null;
-      hasTriedLoading = true;
-    });
-
-    try {
-      final fetchedItems = await fetchItems();
-      if (mounted) {
-        setState(() {
-          items = fetchedItems;
-          filteredItems = filterItems(fetchedItems, searchQuery);
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          error = e.toString();
-          isLoading = false;
-        });
-      }
-    }
-    */
+    // Empty - deprecated
   }
 
   // Common refresh logic
   Future<void> refreshItems() async {
-    // await loadItems();
+    // Empty - deprecated
   }
 
   // Common search logic
@@ -252,14 +218,7 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // COMMENTED OUT
-    /*
-    if (state == AppLifecycleState.resumed) {
-      if (hasTriedLoading) {
-        loadItems();
-      }
-    }
-    */
+    // Empty - deprecated
   }
 
   // Common UI building
@@ -477,137 +436,14 @@ abstract class BaseResourceScreenState<T, W extends BaseResourceScreen<T>>
   }
 
   Widget buildBody(BuildContext context) {
-    // COMMENTED OUT - NOT USED
+    // Empty - deprecated
     return Container();
-    /*
-    // Initial loading check
-    if (!hasTriedLoading) {
-      // Check if we can load immediately
-      if (mounted && sshService.isConnected) {
-        // Connection is ready, trigger load on next frame
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && !hasTriedLoading) {
-            loadItems();
-          }
-        });
-      }
-      // If connection not ready, _startServerChangeDetection will trigger load when it becomes ready
-      
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading...'),
-          ],
-        ),
-      );
-    }
-
-    // Error state
-    if (error != null) {
-      return buildErrorState(context);
-    }
-
-    // Loading state
-    if (isLoading) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text('Loading ${getResourceName()}...'),
-          ],
-        ),
-      );
-    }
-
-    // Empty state
-    if (items.isEmpty) {
-      return buildEmptyState(context);
-    }
-
-    // No search results
-    if (filteredItems.isEmpty && searchQuery.isNotEmpty) {
-      return buildNoSearchResultsState(context);
-    }
-
-    // Success - show list
-    return buildItemList(context);
-    */
   }
 
   // Provide default error state with permission handling
   Widget buildErrorState(BuildContext context) {
-    // COMMENTED OUT - NOT USED (we use errorState object now)
+    // Empty - deprecated
     return Container();
-    /*
-    final isConnectionError = error!.contains('No SSH connection') || 
-                              error!.contains('Connection timeout');
-    final isPermissionError = error!.contains('Permission denied') || 
-                              error!.contains('docker group');
-    
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            isConnectionError ? Icons.cloud_off : 
-            isPermissionError ? Icons.lock_outline :
-            Icons.error_outline,
-            size: 64,
-            color: isConnectionError || isPermissionError ? Colors.orange[400] : Colors.red[300],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            isConnectionError ? 'Not Connected' : 
-            isPermissionError ? 'Permission Issue' :
-            'Error Loading ${getResourceName()}',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              error!,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (isConnectionError) ...[
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SettingsScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.settings),
-                  label: const Text('Settings'),
-                ),
-                const SizedBox(width: 12),
-              ],
-              ElevatedButton.icon(
-                onPressed: loadItems,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-    */
   }
 
   Widget buildEmptyState(BuildContext context);
