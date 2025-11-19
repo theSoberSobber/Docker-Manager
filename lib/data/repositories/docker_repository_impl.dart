@@ -25,9 +25,8 @@ class DockerRepositoryImpl implements DockerRepository {
         errorStr.contains('connect: permission denied')) {
       return 'Permission denied: Your user cannot access Docker.\n\n'
              'Solution: Add your user to the docker group:\n'
-             'sudo usermod -aG docker \$USER\n'
-             'Then restart your SSH session or reboot.\n\n'
-             'See FAQ for platform-specific instructions.';
+             'sudo usermod -aG docker \$USER\n\n'
+             'Then close and reopen this app.';
     }
     
     // Check for Docker not found/installed
