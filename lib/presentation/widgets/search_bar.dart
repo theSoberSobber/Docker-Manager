@@ -68,7 +68,7 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
               ? IconButton(
                   icon: const Icon(Icons.clear),
                   onPressed: _clearSearch,
-                  tooltip: 'Clear search',
+                  tooltip: 'common.clear_search'.tr(),
                 )
               : null,
           border: InputBorder.none,
