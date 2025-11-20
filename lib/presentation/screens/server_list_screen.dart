@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../domain/models/server.dart';
 import '../../domain/repositories/server_repository.dart';
 import '../../data/repositories/server_repository_impl.dart';
-import '../widgets/add_server_dialog.dart';
+import 'add_server_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class ServerListScreen extends StatefulWidget {
@@ -77,6 +77,24 @@ class _ServerListScreenState extends State<ServerListScreen> {
     }
   }
 
+  Future<void> _updateServer(Server server) async {
+    try {
+      await _serverRepository.updateServer(server);
+      await _loadServers(); // Refresh the list
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Server updated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update server: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
   Future<void> _deleteServer(String serverId) async {
     try {
       await _serverRepository.deleteServer(serverId);
@@ -102,11 +120,28 @@ class _ServerListScreenState extends State<ServerListScreen> {
     }
   }
 
-  void _showAddServerDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AddServerDialog(onAdd: _addServer),
+  Future<void> _navigateToAddServer() async {
+    final server = await Navigator.of(context).push<Server>(
+      MaterialPageRoute(
+        builder: (context) => const AddServerScreen(),
+      ),
     );
+    
+    if (server != null) {
+      await _addServer(server);
+    }
+  }
+
+  Future<void> _navigateToEditServer(Server server) async {
+    final updatedServer = await Navigator.of(context).push<Server>(
+      MaterialPageRoute(
+        builder: (context) => AddServerScreen(server: server),
+      ),
+    );
+    
+    if (updatedServer != null) {
+      await _updateServer(updatedServer);
+    }
   }
 
   void _showDeleteConfirmation(Server server) {
@@ -243,8 +278,14 @@ class _ServerListScreenState extends State<ServerListScreen> {
                                 size: 16,
                               ),
                               IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () => _navigateToEditServer(server),
+                                tooltip: 'Edit Server',
+                              ),
+                              IconButton(
                                 icon: const Icon(Icons.delete, color: Colors.red),
                                 onPressed: () => _showDeleteConfirmation(server),
+                                tooltip: 'Delete Server',
                               ),
                             ],
                           ),
@@ -258,7 +299,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
                   ),
                 ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddServerDialog,
+        onPressed: _navigateToAddServer,
         child: const Icon(Icons.add),
       ),
     );

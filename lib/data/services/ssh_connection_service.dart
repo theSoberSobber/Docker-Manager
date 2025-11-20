@@ -169,6 +169,70 @@ class SSHConnectionService {
     }
   }
 
+  /// Test a new server connection WITHOUT affecting the current active connection
+  /// Creates a temporary isolated SSH client to test credentials and connectivity
+  Future<SSHConnectionResult> testServerConnection(Server server) async {
+    SSHClient? testClient;
+    
+    try {
+      // Create a completely separate SSH client for testing
+      SSHClient client;
+      
+      if (server.password != null && server.password!.isNotEmpty) {
+        // Password authentication
+        client = SSHClient(
+          await SSHSocket.connect(server.ip, server.port),
+          username: server.username,
+          onPasswordRequest: () => server.password!,
+        );
+      } else if (server.privateKey != null && server.privateKey!.isNotEmpty) {
+        // Private key authentication
+        client = SSHClient(
+          await SSHSocket.connect(server.ip, server.port),
+          username: server.username,
+          identities: [
+            ...SSHKeyPair.fromPem(server.privateKey!)
+          ],
+        );
+      } else {
+        throw Exception('No authentication method provided');
+      }
+
+      testClient = client;
+      
+      // Try to execute a simple command to verify the connection really works
+      final session = await client.execute('echo "test"');
+      final output = await session.stdout.cast<List<int>>().transform(utf8.decoder).join();
+      
+      // Close the test connection immediately
+      client.close();
+      
+      if (output.isNotEmpty) {
+        return SSHConnectionResult(
+          success: true,
+          status: ConnectionStatus.connected,
+        );
+      } else {
+        return SSHConnectionResult(
+          success: false,
+          error: 'Connection established but could not execute commands',
+          status: ConnectionStatus.failed,
+        );
+      }
+    } catch (e) {
+      // Try to close the test connection if it exists
+      try {
+        testClient?.close();
+      } catch (_) {}
+      
+      return SSHConnectionResult(
+        success: false,
+        error: e.toString(),
+        status: ConnectionStatus.failed,
+      );
+    }
+  }
+
   /// Smart server switching - only reconnect if different server
   Future<SSHConnectionResult> switchToServer(Server newServer) async {
     // If same server, just return current status
