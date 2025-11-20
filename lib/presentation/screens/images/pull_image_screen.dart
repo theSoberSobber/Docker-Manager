@@ -32,7 +32,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
     if (_searchController.text.trim().isEmpty) {
       if (mounted) {
         setState(() {
-          _searchError = 'Please enter a search term';
+          _searchError = 'images.please_enter_search_term'.tr();
         });
       }
       return;
@@ -228,10 +228,10 @@ class _PullImageScreenState extends State<PullImageScreen> {
                 // Registry URL
                 TextFormField(
                   controller: _registryController,
-                  decoration: const InputDecoration(
-                    labelText: 'Registry URL',
-                    hintText: 'hub.docker.com or custom registry',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: 'images.registry_url'.tr(),
+                    hintText: 'images.registry_hint'.tr(),
+                    border: const OutlineInputBorder(),
                     prefixIcon: Icon(Icons.cloud),
                   ),
                 ),
@@ -240,8 +240,8 @@ class _PullImageScreenState extends State<PullImageScreen> {
                 TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    labelText: 'Search images',
-                    hintText: 'e.g., ubuntu, nginx, postgres',
+                    labelText: 'images.search_images'.tr(),
+                    hintText: 'images.search_hint'.tr(),
                     border: const OutlineInputBorder(),
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: _searchController.text.isNotEmpty
@@ -275,7 +275,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.search),
-                    label: Text(_isSearching ? 'Searching...' : 'Search'),
+                    label: Text(_isSearching ? 'common.searching'.tr() : 'common.search'.tr()),
                   ),
                 ),
               ],
@@ -305,9 +305,9 @@ class _PullImageScreenState extends State<PullImageScreen> {
           children: [
             Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
             const SizedBox(height: 16),
-            const Text(
-              'Search Failed',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              'images.search_failed'.tr(),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Padding(
@@ -335,15 +335,15 @@ class _PullImageScreenState extends State<PullImageScreen> {
           children: [
             Icon(Icons.search, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            const Text(
-              'Search Docker Images',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              'images.search_docker_images'.tr(),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
-                'Enter an image name to search Docker Hub',
+                'images.enter_image_name'.tr(),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -359,9 +359,9 @@ class _PullImageScreenState extends State<PullImageScreen> {
           children: [
             Icon(Icons.image_not_supported, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            const Text(
-              'No Results Found',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              'images.no_results_found'.tr(),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text('images.try_different_search'.tr()),
@@ -425,7 +425,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
             trailing: IconButton(
               icon: const Icon(Icons.download),
               onPressed: () => _showTagSelectionDialog(image),
-              tooltip: 'Pull Image',
+              tooltip: 'common.pull_image'.tr(),
             ),
             onTap: () => _showTagSelectionDialog(image),
           ),

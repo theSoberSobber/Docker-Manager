@@ -165,18 +165,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               setState(() {});
             }
           },
-          tooltip: 'Create Container',
+          tooltip: 'common.create_container'.tr(),
           child: const Icon(Icons.add),
         );
       case 1: // Images tab - Speed Dial FAB
         return SpeedDialFAB(
           mainIcon: Icons.add,
-          mainTooltip: 'Image Actions',
+          mainTooltip: 'common.image_actions'.tr(),
           actions: [
             SpeedDialAction(
               icon: Icons.search,
-              label: 'pull_image'.tr(),
-              tooltip: 'Search and pull image from registry',
+              label: 'home.pull_image'.tr(),
+              tooltip: 'common.pull_image_tooltip'.tr(),
               onPressed: () async {
                 if (!_sshService.isConnected) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -200,8 +200,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             SpeedDialAction(
               icon: Icons.build,
-              label: 'build_image'.tr(),
-              tooltip: 'Build image from Dockerfile',
+              label: 'home.build_image'.tr(),
+              tooltip: 'common.build_image_tooltip'.tr(),
               onPressed: () async {
                 if (!_sshService.isConnected) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -255,17 +255,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 );
               }
             },
-            tooltip: 'System Information',
+            tooltip: 'common.system_information'.tr(),
           ),
           // Host Shell button
           IconButton(
             icon: const Icon(Icons.terminal),
+            tooltip: 'common.host_shell'.tr(),
             onPressed: () {
               if (_sshService.isConnected) {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => ShellScreen(
-                      title: 'host_shell'.tr(),
+                      title: 'home.host_shell'.tr(),
                       isInteractive: true,
                     ),
                   ),
@@ -279,7 +280,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 );
               }
             },
-            tooltip: 'Host Shell',
           ),
           // Theme toggle button
           IconButton(
@@ -306,7 +306,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _loadLastUsedServer();
               }
             },
-            tooltip: 'Servers',
+            tooltip: 'common.servers'.tr(),
           ),
         ],
       ),

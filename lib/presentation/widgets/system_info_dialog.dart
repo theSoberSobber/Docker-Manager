@@ -60,7 +60,7 @@ class _SystemInfoDialogState extends State<SystemInfoDialog> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadSystemInfo,
-            tooltip: 'Refresh',
+            tooltip: 'common.refresh'.tr(),
           ),
         ],
       ),
@@ -133,21 +133,21 @@ class _SystemInfoDialogState extends State<SystemInfoDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildInfoSection('Host Information', [
-            _buildInfoRow('Hostname', _systemInfo!.hostname, Icons.dns),
-            _buildInfoRow('OS', _systemInfo!.osInfo, Icons.computer),
-            _buildInfoRow('Kernel', _systemInfo!.kernelInfo, Icons.settings),
+          _buildInfoSection('system_info.host_information'.tr(), [
+            _buildInfoRow('system_info.hostname'.tr(), _systemInfo!.hostname, Icons.dns),
+            _buildInfoRow('system_info.os'.tr(), _systemInfo!.osInfo, Icons.computer),
+            _buildInfoRow('system_info.kernel'.tr(), _systemInfo!.kernelInfo, Icons.settings),
           ]),
           const SizedBox(height: 16),
-          _buildInfoSection('Performance', [
-            _buildInfoRow('Uptime', _systemInfo!.uptime, Icons.schedule),
-            _buildInfoRow('Load Average', _systemInfo!.loadAverage, Icons.trending_up),
+          _buildInfoSection('system_info.performance'.tr(), [
+            _buildInfoRow('system_info.uptime'.tr(), _systemInfo!.uptime, Icons.schedule),
+            _buildInfoRow('system_info.load_average'.tr(), _systemInfo!.loadAverage, Icons.trending_up),
           ]),
           const SizedBox(height: 16),
-          _buildInfoSection('Hardware', [
-            _buildInfoRow('CPU', _systemInfo!.cpuInfo, Icons.memory),
-            _buildInfoRow('Memory', _systemInfo!.memoryInfo, Icons.storage),
-            _buildInfoRow('Disk', _systemInfo!.diskInfo, Icons.storage),
+          _buildInfoSection('system_info.hardware'.tr(), [
+            _buildInfoRow('system_info.cpu'.tr(), _systemInfo!.cpuInfo, Icons.memory),
+            _buildInfoRow('system_info.memory'.tr(), _systemInfo!.memoryInfo, Icons.storage),
+            _buildInfoRow('system_info.disk'.tr(), _systemInfo!.diskInfo, Icons.storage),
           ]),
         ],
       ),

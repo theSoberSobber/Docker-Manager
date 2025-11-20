@@ -257,12 +257,12 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                           size: 64, color: Colors.grey[400]),
                       const SizedBox(height: 16),
                       Text(
-                        'No images available',
+                        'containers.no_images_available'.tr(),
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Pull or build an image first to create containers',
+                      Text(
+                        'containers.pull_or_build_first'.tr(),
                       ),
                     ],
                   ),
@@ -273,16 +273,16 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                     padding: const EdgeInsets.all(16),
                     children: [
                       // Image Selection
-                      _buildSectionTitle('Image Selection'),
+                      _buildSectionTitle('containers.create_form.image_selection'.tr()),
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: DropdownButtonFormField<DockerImage>(
                             value: _selectedImage,
                             isExpanded: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Select Image',
-                              border: OutlineInputBorder(),
+                            decoration: InputDecoration(
+                              labelText: 'containers.create_form.select_image'.tr(),
+                              border: const OutlineInputBorder(),
                             ),
                             items: _availableImages.map((image) {
                               return DropdownMenuItem(
@@ -304,7 +304,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                       const SizedBox(height: 16),
 
                       // Container Name
-                      _buildSectionTitle('Container Configuration'),
+                      _buildSectionTitle('containers.create_form.container_configuration'.tr()),
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -312,16 +312,16 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                             children: [
                               TextFormField(
                                 controller: _nameController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Container Name (optional)',
-                                  hintText: 'Auto-generated if empty',
-                                  border: OutlineInputBorder(),
+                                decoration: InputDecoration(
+                                  labelText: 'containers.create_form.container_name'.tr(),
+                                  hintText: 'containers.create_form.auto_generated'.tr(),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 validator: (value) {
                                   if (value != null && value.isNotEmpty) {
                                     if (!RegExp(r'^[a-zA-Z0-9][a-zA-Z0-9_.-]*$')
                                         .hasMatch(value)) {
-                                      return 'Invalid container name format';
+                                      return 'containers.create_form.invalid_name_format'.tr();
                                     }
                                   }
                                   return null;
@@ -334,7 +334,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                       const SizedBox(height: 16),
 
                       // Port Mappings
-                      _buildSectionTitle('Port Mappings'),
+                      _buildSectionTitle('containers.create_form.port_mappings'.tr()),
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -350,9 +350,9 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                                       Expanded(
                                         child: TextFormField(
                                           initialValue: port.hostPort,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Host Port',
-                                            border: OutlineInputBorder(),
+                                          decoration: InputDecoration(
+                                            labelText: 'containers.create_form.host_port'.tr(),
+                                            border: const OutlineInputBorder(),
                                           ),
                                           keyboardType: TextInputType.number,
                                           onChanged: (value) {
@@ -366,9 +366,9 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                                       Expanded(
                                         child: TextFormField(
                                           initialValue: port.containerPort,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Container Port',
-                                            border: OutlineInputBorder(),
+                                          decoration: InputDecoration(
+                                            labelText: 'containers.create_form.container_port'.tr(),
+                                            border: const OutlineInputBorder(),
                                           ),
                                           keyboardType: TextInputType.number,
                                           onChanged: (value) {
@@ -397,7 +397,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                       const SizedBox(height: 16),
 
                       // Environment Variables
-                      _buildSectionTitle('Environment Variables'),
+                      _buildSectionTitle('containers.create_form.environment_variables'.tr()),
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -413,9 +413,9 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                                       Expanded(
                                         child: TextFormField(
                                           initialValue: env.key,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Key',
-                                            border: OutlineInputBorder(),
+                                          decoration: InputDecoration(
+                                            labelText: 'containers.create_form.key'.tr(),
+                                            border: const OutlineInputBorder(),
                                           ),
                                           onChanged: (value) {
                                             env.key = value;
@@ -428,9 +428,9 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                                       Expanded(
                                         child: TextFormField(
                                           initialValue: env.value,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Value',
-                                            border: OutlineInputBorder(),
+                                          decoration: InputDecoration(
+                                            labelText: 'containers.create_form.value'.tr(),
+                                            border: const OutlineInputBorder(),
                                           ),
                                           onChanged: (value) {
                                             env.value = value;
@@ -458,7 +458,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                       const SizedBox(height: 16),
 
                       // Volume Mounts
-                      _buildSectionTitle('Volume Mounts'),
+                      _buildSectionTitle('containers.create_form.volume_mounts'.tr()),
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -474,9 +474,9 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                                       Expanded(
                                         child: TextFormField(
                                           initialValue: volume.hostPath,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Host Path',
-                                            border: OutlineInputBorder(),
+                                          decoration: InputDecoration(
+                                            labelText: 'containers.create_form.host_path'.tr(),
+                                            border: const OutlineInputBorder(),
                                           ),
                                           onChanged: (value) {
                                             volume.hostPath = value;
@@ -489,9 +489,9 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                                       Expanded(
                                         child: TextFormField(
                                           initialValue: volume.containerPath,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Container Path',
-                                            border: OutlineInputBorder(),
+                                          decoration: InputDecoration(
+                                            labelText: 'containers.create_form.container_path'.tr(),
+                                            border: const OutlineInputBorder(),
                                           ),
                                           onChanged: (value) {
                                             volume.containerPath = value;
@@ -535,9 +535,9 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                                 children: [
                                   DropdownButtonFormField<String>(
                                     value: _restartPolicy,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Restart Policy',
-                                      border: OutlineInputBorder(),
+                                    decoration: InputDecoration(
+                                      labelText: 'containers.create_form.restart_policy_label'.tr(),
+                                      border: const OutlineInputBorder(),
                                     ),
                                     items: [
                                       DropdownMenuItem(
@@ -561,41 +561,41 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
                                   const SizedBox(height: 12),
                                   TextFormField(
                                     controller: _workDirController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Working Directory',
-                                      border: OutlineInputBorder(),
+                                    decoration: InputDecoration(
+                                      labelText: 'containers.create_form.working_directory'.tr(),
+                                      border: const OutlineInputBorder(),
                                     ),
                                   ),
                                   const SizedBox(height: 12),
                                   TextFormField(
                                     controller: _commandController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Command Override',
-                                      border: OutlineInputBorder(),
+                                    decoration: InputDecoration(
+                                      labelText: 'containers.create_form.command_override'.tr(),
+                                      border: const OutlineInputBorder(),
                                     ),
                                   ),
                                   const SizedBox(height: 12),
                                   TextFormField(
                                     controller: _memoryController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Memory Limit (e.g., 512m)',
-                                      border: OutlineInputBorder(),
+                                    decoration: InputDecoration(
+                                      labelText: 'containers.create_form.memory_limit'.tr(),
+                                      border: const OutlineInputBorder(),
                                     ),
                                   ),
                                   const SizedBox(height: 12),
                                   TextFormField(
                                     controller: _cpuController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'CPU Limit (e.g., 0.5)',
-                                      border: OutlineInputBorder(),
+                                    decoration: InputDecoration(
+                                      labelText: 'containers.create_form.cpu_limit'.tr(),
+                                      border: const OutlineInputBorder(),
                                     ),
                                   ),
                                   const SizedBox(height: 12),
                                   DropdownButtonFormField<String>(
                                     value: _networkMode,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Network Mode',
-                                      border: OutlineInputBorder(),
+                                    decoration: InputDecoration(
+                                      labelText: 'containers.create_form.network_mode_label'.tr(),
+                                      border: const OutlineInputBorder(),
                                     ),
                                     items: [
                                       DropdownMenuItem(

@@ -309,7 +309,7 @@ class _ImagesScreenState extends State<ImagesScreen>
       return Column(
         children: [
           SearchBarWithSettings(
-            hintText: 'Search images by repository, tag, or ID...',
+            hintText: 'common.search_images_hint'.tr(),
             onSearchChanged: _onSearchChanged,
           ),
           Expanded(
@@ -346,7 +346,7 @@ class _ImagesScreenState extends State<ImagesScreen>
     return Column(
       children: [
         SearchBarWithSettings(
-          hintText: 'Search images by repository, tag, or ID...',
+          hintText: 'common.search_images_hint'.tr(),
           onSearchChanged: _onSearchChanged,
         ),
         Expanded(
@@ -417,12 +417,12 @@ class _ImagesScreenState extends State<ImagesScreen>
                 DockerResourceActions(
                   actions: [
                     DockerAction(
-                      label: 'Inspect',
+                      label: 'actions.inspect',
                       icon: Icons.info_outline,
                       command: 'docker image inspect',
                     ),
                     DockerAction(
-                      label: 'Delete',
+                      label: 'common.delete',
                       icon: Icons.delete_outline,
                       command: 'docker image rm',
                       isDestructive: true,

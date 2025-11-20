@@ -90,9 +90,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'This will remove:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            Text(
+              'settings.prune_warning'.tr(),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Text('settings.prune_stopped_containers'.tr()),
@@ -101,9 +101,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text('settings.prune_unused_volumes'.tr()),
             Text('settings.prune_build_cache'.tr()),
             const SizedBox(height: 16),
-            const Text(
-              'This action cannot be undone!',
-              style: TextStyle(
+            Text(
+              'settings.prune_cannot_undo'.tr(),
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Colors.red,
               ),
@@ -221,22 +221,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
           : ListView(
               children: [
                 // Appearance Section
-                _buildSectionHeader('Appearance'),
+                _buildSectionHeader('settings.appearance'.tr()),
                 _buildThemeOption(
                   context,
-                  'Light',
+                  'settings.theme_light'.tr(),
                   Icons.light_mode,
                   ThemeMode.light,
                 ),
                 _buildThemeOption(
                   context,
-                  'Dark',
+                  'settings.theme_dark'.tr(),
                   Icons.dark_mode,
                   ThemeMode.dark,
                 ),
                 _buildThemeOption(
                   context,
-                  'System',
+                  'settings.theme_system'.tr(),
                   Icons.brightness_auto,
                   ThemeMode.system,
                 ),
@@ -244,13 +244,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Divider(height: 32),
                 
                 // Language Section
-                _buildSectionHeader('Language'),
+                _buildSectionHeader('settings.language'.tr()),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: DropdownButtonFormField<String>(
                     value: context.locale.languageCode == 'es' ? 'es' : 'en',
                     decoration: InputDecoration(
-                      labelText: 'Select Language',
+                      labelText: 'settings.select_language'.tr(),
                       prefixIcon: const Icon(Icons.language),
                       border: const OutlineInputBorder(),
                     ),
@@ -286,23 +286,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Divider(height: 32),
                 
                 // Docker Configuration Section
-                _buildSectionHeader('Docker Configuration'),
+                _buildSectionHeader('settings.docker_config'.tr()),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Docker CLI Path',
-                        style: TextStyle(
+                      Text(
+                        'settings.docker_cli_path'.tr(),
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Path to Docker CLI binary. Supports Docker, Podman, or custom installations.',
-                        style: TextStyle(
+                      Text(
+                        'settings.docker_cli_description'.tr(),
+                        style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                         ),
@@ -311,8 +311,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       TextField(
                         controller: _dockerPathController,
                         decoration: InputDecoration(
-                          hintText: 'docker (default)',
-                          helperText: 'Examples: docker, /usr/bin/docker, /usr/local/bin/podman',
+                          hintText: 'settings.docker_cli_hint'.tr(),
+                          helperText: 'settings.docker_cli_help'.tr(),
                           helperMaxLines: 2,
                           border: const OutlineInputBorder(),
                           suffixIcon: IconButton(
@@ -320,7 +320,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             onPressed: () {
                               _saveDockerCliPath(_dockerPathController.text);
                             },
-                            tooltip: 'Save',
+                            tooltip: 'common.save'.tr(),
                           ),
                         ),
                         onSubmitted: _saveDockerCliPath,
@@ -332,23 +332,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Divider(height: 32),
                 
                 // Logs Section
-                _buildSectionHeader('Logs'),
+                _buildSectionHeader('settings.logs'.tr()),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Default log lines to display',
-                        style: TextStyle(
+                      Text(
+                        'settings.default_log_lines'.tr(),
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Limiting log output prevents crashes on containers with large logs',
-                        style: TextStyle(
+                      Text(
+                        'settings.log_lines_description'.tr(),
+                        style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                         ),
@@ -366,23 +366,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Divider(height: 32),
                 
                 // System Maintenance Section
-                _buildSectionHeader('System Maintenance'),
+                _buildSectionHeader('settings.system_maintenance'.tr()),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Clean up Docker resources',
-                        style: TextStyle(
+                      Text(
+                        'settings.clean_resources'.tr(),
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Remove unused containers, images, networks, volumes, and build cache',
-                        style: TextStyle(
+                      Text(
+                        'settings.clean_description'.tr(),
+                        style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                         ),
@@ -406,7 +406,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                 )
                               : const Icon(Icons.delete_sweep),
-                          label: Text(_isPruning ? 'Pruning...' : 'System Prune'),
+                          label: Text(_isPruning ? 'settings.pruning'.tr() : 'settings.prune_system'.tr()),
                         ),
                       ),
                     ],

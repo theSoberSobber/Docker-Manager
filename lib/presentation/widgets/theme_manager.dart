@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ThemeManager extends ChangeNotifier {
   static final ThemeManager _instance = ThemeManager._internal();
@@ -42,11 +43,11 @@ class ThemeManager extends ChangeNotifier {
   String get themeLabel {
     switch (_themeMode) {
       case ThemeMode.light:
-        return 'Light Theme';
+        return 'common.light_theme'.tr();
       case ThemeMode.dark:
-        return 'Dark Theme';
+        return 'common.dark_theme'.tr();
       case ThemeMode.system:
-        return 'System Theme';
+        return 'common.system_theme'.tr();
     }
   }
 }

@@ -267,7 +267,7 @@ class _ContainersScreenState extends State<ContainersScreen>
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => ShellScreen(
-                title: 'Logs - ${container.names}',
+                title: '${('common.logs').tr()} - ${container.names}',
                 command: command,
               ),
             ),
@@ -687,7 +687,7 @@ class _ContainersScreenState extends State<ContainersScreen>
       return Column(
         children: [
           SearchBarWithSettings(
-            hintText: 'Search containers by name, image, status, or ID...',
+            hintText: 'common.search_containers_hint'.tr(),
             onSearchChanged: _onSearchChanged,
           ),
           Expanded(
@@ -724,7 +724,7 @@ class _ContainersScreenState extends State<ContainersScreen>
     return Column(
       children: [
         SearchBarWithSettings(
-          hintText: 'Search containers by name, image, status, or ID...',
+          hintText: 'common.search_containers_hint'.tr(),
           onSearchChanged: _onSearchChanged,
         ),
         _buildStackFilterChips(),
@@ -877,7 +877,7 @@ class _ContainersScreenState extends State<ContainersScreen>
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              isRunning ? 'Running' : 'Stopped',
+                              isRunning ? 'common.running'.tr() : 'common.stopped'.tr(),
                               style: TextStyle(
                                 color: statusColor,
                                 fontWeight: FontWeight.w500,
@@ -901,15 +901,15 @@ class _ContainersScreenState extends State<ContainersScreen>
             const SizedBox(height: 12),
             
             // Container details
-            _buildDetailRow('ID', container.id.length > 12 
+            _buildDetailRow('common.id'.tr(), container.id.length > 12 
                 ? '${container.id.substring(0, 12)}...' 
                 : container.id),
-            _buildDetailRow('Image', container.image),
-            _buildDetailRow('Command', container.command),
-            _buildDetailRow('Created', container.created),
-            _buildDetailRow('Status', container.status),
+            _buildDetailRow('common.image'.tr(), container.image),
+            _buildDetailRow('common.command'.tr(), container.command),
+            _buildDetailRow('common.created'.tr(), container.created),
+            _buildDetailRow('common.status'.tr(), container.status),
             if (container.ports.isNotEmpty)
-              _buildDetailRow('Ports', container.ports.join(', ')),
+              _buildDetailRow('common.ports'.tr(), container.ports.join(', ')),
             
             // Container stats (show for running containers)
             if (isRunning) ...[
@@ -927,28 +927,28 @@ class _ContainersScreenState extends State<ContainersScreen>
                           Expanded(
                             child: _buildStatColumn(
                               icon: Icons.speed,
-                              label: 'CPU',
+                              label: 'containers.stats.cpu'.tr(),
                               value: container.cpuPerc ?? 'N/A',
                             ),
                           ),
                           Expanded(
                             child: _buildStatColumn(
                               icon: Icons.memory,
-                              label: 'Memory',
+                              label: 'containers.stats.memory'.tr(),
                               value: container.memPerc ?? 'N/A',
                             ),
                           ),
                           Expanded(
                             child: _buildStatColumn(
                               icon: Icons.cloud_queue,
-                              label: 'Network',
+                              label: 'containers.stats.network'.tr(),
                               value: container.netIO ?? 'N/A',
                             ),
                           ),
                           Expanded(
                             child: _buildStatColumn(
                               icon: Icons.format_list_numbered,
-                              label: 'PIDs',
+                              label: 'containers.stats.pids'.tr(),
                               value: container.pids ?? 'N/A',
                             ),
                           ),

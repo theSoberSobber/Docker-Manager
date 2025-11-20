@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../data/services/interactive_shell_service.dart';
 import '../widgets/search_bar.dart';
@@ -430,7 +431,7 @@ class _ShellScreenState extends State<ShellScreen> {
             // Mode toggle button
             IconButton(
               icon: Icon(_useInteractiveMode ? Icons.terminal : Icons.code),
-              tooltip: _useInteractiveMode ? 'Switch to Command Mode' : 'Switch to Interactive Mode',
+              tooltip: _useInteractiveMode ? ('common.switch_to_command_mode').tr() : ('common.switch_to_interactive_mode').tr(),
               onPressed: () {
                 setState(() {
                   _useInteractiveMode = !_useInteractiveMode;
@@ -442,12 +443,12 @@ class _ShellScreenState extends State<ShellScreen> {
             if (_interactiveShell.isActive) ...[
               IconButton(
                 icon: const Icon(Icons.stop),
-                tooltip: 'Send Ctrl+C',
+                tooltip: ('common.send_ctrl_c').tr(),
                 onPressed: () => _interactiveShell.sendInterrupt(),
               ),
               IconButton(
                 icon: const Icon(Icons.exit_to_app),
-                tooltip: 'Send Ctrl+D (EOF)',
+                tooltip: ('common.send_ctrl_d').tr(),
                 onPressed: () => _interactiveShell.sendEOF(),
               ),
             ],
@@ -470,7 +471,7 @@ class _ShellScreenState extends State<ShellScreen> {
             onPressed: () {
               _copyOutput();
             },
-            tooltip: 'Copy output',
+            tooltip: ('common.copy_output').tr(),
           ),
         ],
       ),
@@ -481,7 +482,7 @@ class _ShellScreenState extends State<ShellScreen> {
             Column(
               children: [
                 CustomSearchBar(
-                  hintText: 'Search in output...',
+                  hintText: ('common.search_in_output').tr(),
                   onSearchChanged: _onSearchChanged,
                   onClear: _clearSearch,
                 ),
@@ -491,7 +492,7 @@ class _ShellScreenState extends State<ShellScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     color: Theme.of(context).primaryColor.withOpacity(0.1),
                     child: Text(
-                      'Showing ${_filteredOutput.length} of ${_output.length} lines',
+                      ('common.showing_lines').tr(args: [_filteredOutput.length.toString(), _output.length.toString()]),
                       style: TextStyle(
                         color: Theme.of(context).primaryColor,
                         fontSize: 12,
@@ -606,10 +607,10 @@ class _ShellScreenState extends State<ShellScreen> {
                     child: TextField(
                       controller: _inputController,
                       style: const TextStyle(fontFamily: 'monospace'),
-                      decoration: const InputDecoration(
-                        hintText: 'Enter command...',
+                      decoration: InputDecoration(
+                        hintText: ('common.enter_command').tr(),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                       ),
                       onSubmitted: _executeCommand,
                     ),

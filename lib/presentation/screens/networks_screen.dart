@@ -319,7 +319,7 @@ class _NetworksScreenState extends State<NetworksScreen>
       return Column(
         children: [
           SearchBarWithSettings(
-            hintText: 'Search networks by name, driver, or ID...',
+            hintText: 'common.search_networks_hint'.tr(),
             onSearchChanged: _onSearchChanged,
           ),
           Expanded(
@@ -356,7 +356,7 @@ class _NetworksScreenState extends State<NetworksScreen>
     return Column(
       children: [
         SearchBarWithSettings(
-          hintText: 'Search networks by name, driver, or ID...',
+          hintText: 'common.search_networks_hint'.tr(),
           onSearchChanged: _onSearchChanged,
         ),
         Expanded(
@@ -409,13 +409,13 @@ class _NetworksScreenState extends State<NetworksScreen>
                 DockerResourceActions(
                   actions: [
                     DockerAction(
-                      label: 'Inspect',
+                      label: 'actions.inspect',
                       icon: Icons.info_outline,
                       command: 'docker network inspect',
                     ),
                     if (!isSystemNetwork)
                       DockerAction(
-                        label: 'Delete',
+                        label: 'common.delete',
                         icon: Icons.delete_outline,
                         command: 'docker network rm',
                         isDestructive: true,

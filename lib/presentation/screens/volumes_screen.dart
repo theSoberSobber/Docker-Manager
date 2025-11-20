@@ -307,7 +307,7 @@ class _VolumesScreenState extends State<VolumesScreen>
       return Column(
         children: [
           SearchBarWithSettings(
-            hintText: 'Search volumes by name or driver...',
+            hintText: 'common.search_volumes_hint'.tr(),
             onSearchChanged: _onSearchChanged,
           ),
           Expanded(
@@ -344,7 +344,7 @@ class _VolumesScreenState extends State<VolumesScreen>
     return Column(
       children: [
         SearchBarWithSettings(
-          hintText: 'Search volumes by name or driver...',
+          hintText: 'common.search_volumes_hint'.tr(),
           onSearchChanged: _onSearchChanged,
         ),
         Expanded(
@@ -395,12 +395,12 @@ class _VolumesScreenState extends State<VolumesScreen>
                 DockerResourceActions(
                   actions: [
                     DockerAction(
-                      label: 'Inspect',
+                      label: 'actions.inspect',
                       icon: Icons.info_outline,
                       command: 'docker volume inspect',
                     ),
                     DockerAction(
-                      label: 'Delete',
+                      label: 'common.delete',
                       icon: Icons.delete_outline,
                       command: 'docker volume rm',
                       isDestructive: true,
