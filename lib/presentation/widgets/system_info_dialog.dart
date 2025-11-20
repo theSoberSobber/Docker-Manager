@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/services/system_info_service.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class SystemInfoDialog extends StatefulWidget {
   const SystemInfoDialog({super.key});
@@ -55,11 +56,11 @@ class _SystemInfoDialogState extends State<SystemInfoDialog> {
             color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(width: 8),
-          const Expanded(child: Text('System Information')),
+          Expanded(child: Text('system_info.title'.tr())),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadSystemInfo,
-            tooltip: 'Refresh',
+            tooltip: 'common.refresh'.tr(),
           ),
         ],
       ),
@@ -76,7 +77,7 @@ class _SystemInfoDialogState extends State<SystemInfoDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
+          child: Text('common.close'.tr()),
         ),
       ],
     );
@@ -84,13 +85,13 @@ class _SystemInfoDialogState extends State<SystemInfoDialog> {
 
   Widget _buildContent() {
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading system information...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('system_info.loading'.tr()),
           ],
         ),
       );
@@ -123,8 +124,8 @@ class _SystemInfoDialogState extends State<SystemInfoDialog> {
     }
 
     if (_systemInfo == null) {
-      return const Center(
-        child: Text('No system information available'),
+      return Center(
+        child: Text('system_info.no_info'.tr()),
       );
     }
 
@@ -132,21 +133,21 @@ class _SystemInfoDialogState extends State<SystemInfoDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildInfoSection('Host Information', [
-            _buildInfoRow('Hostname', _systemInfo!.hostname, Icons.dns),
-            _buildInfoRow('OS', _systemInfo!.osInfo, Icons.computer),
-            _buildInfoRow('Kernel', _systemInfo!.kernelInfo, Icons.settings),
+          _buildInfoSection('system_info.host_information'.tr(), [
+            _buildInfoRow('system_info.hostname'.tr(), _systemInfo!.hostname, Icons.dns),
+            _buildInfoRow('system_info.os'.tr(), _systemInfo!.osInfo, Icons.computer),
+            _buildInfoRow('system_info.kernel'.tr(), _systemInfo!.kernelInfo, Icons.settings),
           ]),
           const SizedBox(height: 16),
-          _buildInfoSection('Performance', [
-            _buildInfoRow('Uptime', _systemInfo!.uptime, Icons.schedule),
-            _buildInfoRow('Load Average', _systemInfo!.loadAverage, Icons.trending_up),
+          _buildInfoSection('system_info.performance'.tr(), [
+            _buildInfoRow('system_info.uptime'.tr(), _systemInfo!.uptime, Icons.schedule),
+            _buildInfoRow('system_info.load_average'.tr(), _systemInfo!.loadAverage, Icons.trending_up),
           ]),
           const SizedBox(height: 16),
-          _buildInfoSection('Hardware', [
-            _buildInfoRow('CPU', _systemInfo!.cpuInfo, Icons.memory),
-            _buildInfoRow('Memory', _systemInfo!.memoryInfo, Icons.storage),
-            _buildInfoRow('Disk', _systemInfo!.diskInfo, Icons.storage),
+          _buildInfoSection('system_info.hardware'.tr(), [
+            _buildInfoRow('system_info.cpu'.tr(), _systemInfo!.cpuInfo, Icons.memory),
+            _buildInfoRow('system_info.memory'.tr(), _systemInfo!.memoryInfo, Icons.storage),
+            _buildInfoRow('system_info.disk'.tr(), _systemInfo!.diskInfo, Icons.storage),
           ]),
         ],
       ),

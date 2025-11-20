@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/server.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class AddServerDialog extends StatefulWidget {
   final Function(Server) onAdd;
@@ -54,7 +55,7 @@ class _AddServerDialogState extends State<AddServerDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add Docker Server'),
+      title: Text('servers.add_server'.tr()),
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -160,7 +161,7 @@ class _AddServerDialogState extends State<AddServerDialog> {
                                       });
                                     },
                                   ),
-                                  const Text('Password'),
+                                  Text('auth.password'.tr()),
                                 ],
                               ),
                             ),
@@ -184,7 +185,7 @@ class _AddServerDialogState extends State<AddServerDialog> {
                                       });
                                     },
                                   ),
-                                  const Text('Private Key'),
+                                  Text('auth.private_key'.tr()),
                                 ],
                               ),
                             ),
@@ -222,11 +223,11 @@ class _AddServerDialogState extends State<AddServerDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text('common.cancel'.tr()),
         ),
         ElevatedButton(
           onPressed: _submit,
-          child: const Text('Add Server'),
+          child: Text('common.add'.tr() + ' Server'),
         ),
       ],
     );

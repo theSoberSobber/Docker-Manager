@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/services/ssh_connection_service.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class BuildImageScreen extends StatefulWidget {
   const BuildImageScreen({super.key});
@@ -106,7 +107,7 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
           
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Successfully built $imageName:$tag'),
+              content: Text('images.build_success'.tr(args: [imageName, tag])),
               backgroundColor: Colors.green,
             ),
           );
@@ -124,8 +125,8 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
           _scrollToBottom();
           
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Build failed. Check logs for details.'),
+            SnackBar(
+              content: Text('images.build_failed'.tr()),
               backgroundColor: Colors.red,
             ),
           );
@@ -141,7 +142,7 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('common.error'.tr() + ': $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -153,7 +154,7 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Build Image'),
+        title: Text('images.build'.tr()),
       ),
       body: Form(
         key: _formKey,
@@ -163,18 +164,18 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
             // Image Name
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Image Name',
-                hintText: 'my-custom-image',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: 'images.image_name'.tr(),
+                hintText: 'images.image_name_hint'.tr(),
+                border: const OutlineInputBorder(),
                 prefixIcon: Icon(Icons.image),
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return 'Please enter an image name';
+                  return 'images.please_enter_image_name'.tr();
                 }
                 if (!RegExp(r'^[a-z0-9][a-z0-9_.-]*$').hasMatch(value.trim())) {
-                  return 'Invalid image name format';
+                  return 'images.invalid_image_name_format'.tr();
                 }
                 return null;
               },
@@ -185,19 +186,19 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
             // Tag
             TextFormField(
               controller: _tagController,
-              decoration: const InputDecoration(
-                labelText: 'Tag',
-                hintText: 'latest',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: 'images.tag'.tr(),
+                hintText: 'images.tag_hint'.tr(),
+                border: const OutlineInputBorder(),
                 prefixIcon: Icon(Icons.label),
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a tag';
+                  return 'images.please_enter_tag'.tr();
                 }
                 if (!RegExp(r'^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$')
                     .hasMatch(value.trim())) {
-                  return 'Invalid tag format';
+                  return 'images.invalid_tag_format'.tr();
                 }
                 return null;
               },
@@ -207,7 +208,7 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
 
             // Dockerfile Editor
             Text(
-              'Dockerfile',
+              'images.dockerfile'.tr(),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -220,10 +221,10 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
               ),
               child: TextFormField(
                 controller: _dockerfileController,
-                decoration: const InputDecoration(
-                  hintText: 'FROM busybox\nRUN echo "hello"',
+                decoration: InputDecoration(
+                  hintText: 'images.dockerfile_hint'.tr(),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(12),
+                  contentPadding: const EdgeInsets.all(12),
                 ),
                 maxLines: 12,
                 style: const TextStyle(
@@ -232,10 +233,10 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter Dockerfile content';
+                    return 'images.please_enter_dockerfile'.tr();
                   }
                   if (!value.toUpperCase().contains('FROM')) {
-                    return 'Dockerfile must contain a FROM instruction';
+                    return 'images.dockerfile_must_have_from'.tr();
                   }
                   return null;
                 },
@@ -259,7 +260,7 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
                         ),
                       )
                     : const Icon(Icons.build),
-                label: Text(_isBuilding ? 'Building...' : 'Build Image'),
+                label: Text(_isBuilding ? 'images.building'.tr() : 'images.build_image_button'.tr()),
               ),
             ),
             const SizedBox(height: 24),
@@ -269,7 +270,7 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
               Row(
                 children: [
                   Text(
-                    'Build Logs',
+                    'images.build_logs'.tr(),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -283,7 +284,7 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
                         });
                       },
                       icon: const Icon(Icons.clear, size: 18),
-                      label: const Text('Clear'),
+                      label: Text('common.clear'.tr()),
                     ),
                 ],
               ),

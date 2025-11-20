@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 /// Represents a Docker action that can be performed on a resource
 class DockerAction {
@@ -34,7 +35,7 @@ class DockerResourceActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<DockerAction>(
       icon: const Icon(Icons.more_vert),
-      tooltip: 'Actions for $resourceName',
+      tooltip: 'common.actions_for'.tr(args: [resourceName]),
       onSelected: (action) {
         if (action.isDestructive) {
           _showConfirmationDialog(context, action);
@@ -55,7 +56,7 @@ class DockerResourceActions extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  action.label,
+                  action.label.tr(),
                   style: TextStyle(
                     color: action.color,
                   ),
@@ -73,14 +74,14 @@ class DockerResourceActions extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Confirm ${action.label}'),
+          title: Text('actions.confirm_action'.tr(args: [action.label.tr()])),
           content: Text(
-            'Are you sure you want to ${action.label.toLowerCase()} "$resourceName"?',
+            'Are you sure you want to ${action.label.tr().toLowerCase()} "$resourceName"?',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: Text('common.cancel'.tr()),
             ),
             ElevatedButton(
               onPressed: () {
@@ -91,7 +92,7 @@ class DockerResourceActions extends StatelessWidget {
                 backgroundColor: action.color ?? Colors.red,
               ),
               child: Text(
-                action.label,
+                action.label.tr(),
                 style: const TextStyle(color: Colors.white),
               ),
             ),
@@ -107,12 +108,12 @@ class ContainerActions {
   static List<DockerAction> getActions(bool isRunning) {
     final List<DockerAction> actions = [
       const DockerAction(
-        label: 'Logs',
+        label: 'actions.logs',
         icon: Icons.article,
         command: 'docker logs',
       ),
       const DockerAction(
-        label: 'Inspect',
+        label: 'actions.inspect',
         icon: Icons.info,
         command: 'docker inspect',
       ),
@@ -121,19 +122,19 @@ class ContainerActions {
     if (isRunning) {
       actions.addAll([
         const DockerAction(
-          label: 'Stop',
+          label: 'actions.stop',
           icon: Icons.stop,
           command: 'docker stop',
           color: Colors.red,
         ),
         const DockerAction(
-          label: 'Restart',
+          label: 'actions.restart',
           icon: Icons.refresh,
           command: 'docker restart',
           color: Colors.orange,
         ),
         const DockerAction(
-          label: 'Shell',
+          label: 'actions.shell',
           icon: Icons.terminal,
           command: 'docker exec -it',
         ),
@@ -141,13 +142,13 @@ class ContainerActions {
     } else {
       actions.addAll([
         const DockerAction(
-          label: 'Start',
+          label: 'actions.start',
           icon: Icons.play_arrow,
           command: 'docker start',
           color: Colors.green,
         ),
         const DockerAction(
-          label: 'Remove',
+          label: 'actions.remove',
           icon: Icons.delete,
           command: 'docker rm',
           color: Colors.red,
@@ -165,17 +166,17 @@ class ImageActions {
   static List<DockerAction> getActions() {
     return [
       const DockerAction(
-        label: 'Inspect',
+        label: 'actions.inspect',
         icon: Icons.info,
         command: 'docker inspect',
       ),
       const DockerAction(
-        label: 'History',
+        label: 'actions.history',
         icon: Icons.history,
         command: 'docker history',
       ),
       const DockerAction(
-        label: 'Remove',
+        label: 'actions.remove',
         icon: Icons.delete,
         command: 'docker rmi',
         color: Colors.red,
@@ -190,12 +191,12 @@ class VolumeActions {
   static List<DockerAction> getActions() {
     return [
       const DockerAction(
-        label: 'Inspect',
+        label: 'actions.inspect',
         icon: Icons.info,
         command: 'docker volume inspect',
       ),
       const DockerAction(
-        label: 'Remove',
+        label: 'actions.remove',
         icon: Icons.delete,
         command: 'docker volume rm',
         color: Colors.red,
@@ -210,12 +211,12 @@ class NetworkActions {
   static List<DockerAction> getActions() {
     return [
       const DockerAction(
-        label: 'Inspect',
+        label: 'actions.inspect',
         icon: Icons.info,
         command: 'docker network inspect',
       ),
       const DockerAction(
-        label: 'Remove',
+        label: 'actions.remove',
         icon: Icons.delete,
         command: 'docker network rm',
         color: Colors.red,

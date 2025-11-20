@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/services/docker_registry_service.dart';
 import '../../../data/services/ssh_connection_service.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class PullImageScreen extends StatefulWidget {
   const PullImageScreen({super.key});
@@ -31,7 +32,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
     if (_searchController.text.trim().isEmpty) {
       if (mounted) {
         setState(() {
-          _searchError = 'Please enter a search term';
+          _searchError = 'images.please_enter_search_term'.tr();
         });
       }
       return;
@@ -71,16 +72,16 @@ class _PullImageScreenState extends State<PullImageScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
+      builder: (context) => Center(
         child: Card(
           child: Padding(
-            padding: EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Loading tags...'),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('images.loading_tags'.tr()),
               ],
             ),
           ),
@@ -96,7 +97,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
 
       if (tags.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No tags found for this image')),
+          SnackBar(content: Text('images.no_tags_found'.tr())),
         );
         return;
       }
@@ -105,7 +106,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
       final selectedTag = await showDialog<String>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('Select Tag for ${image.name}'),
+          title: Text('images.select_tag'.tr(args: [image.name])),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView.builder(
@@ -117,7 +118,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
                   title: Text(tag),
                   trailing: tag == 'latest'
                       ? Chip(
-                          label: const Text('Latest'),
+                          label: Text('images.tag_latest'.tr()),
                           backgroundColor: Colors.blue.withOpacity(0.2),
                         )
                       : null,
@@ -129,7 +130,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: Text('common.cancel'.tr()),
             ),
           ],
         ),
@@ -143,7 +144,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
       Navigator.of(context).pop(); // Close loading dialog
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to load tags: $e'),
+          content: Text('images.failed_to_load_tags'.tr(args: [e.toString()])),
           backgroundColor: Colors.red,
         ),
       );
@@ -158,13 +159,13 @@ class _PullImageScreenState extends State<PullImageScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Pulling Image'),
+        title: Text('images.pulling'.tr()),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const CircularProgressIndicator(),
             const SizedBox(height: 16),
-            Text('Pulling $fullImageName...'),
+            Text('images.pulling_progress'.tr(args: [fullImageName])),
             const SizedBox(height: 8),
             const Text(
               'This may take a while depending on the image size.',
@@ -186,15 +187,15 @@ class _PullImageScreenState extends State<PullImageScreen> {
       if (result != null && result.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully pulled $fullImageName'),
+            content: Text('images.pull_success'.tr(args: [fullImageName])),
             backgroundColor: Colors.green,
           ),
         );
         Navigator.of(context).pop(true); // Return to images screen
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to pull image'),
+          SnackBar(
+            content: Text('images.pull_failed'.tr()),
             backgroundColor: Colors.red,
           ),
         );
@@ -204,7 +205,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
       Navigator.of(context).pop(); // Close loading dialog
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text('common.error'.tr() + ': $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -215,7 +216,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pull Image'),
+        title: Text('images.pull'.tr()),
       ),
       body: Column(
         children: [
@@ -227,10 +228,10 @@ class _PullImageScreenState extends State<PullImageScreen> {
                 // Registry URL
                 TextFormField(
                   controller: _registryController,
-                  decoration: const InputDecoration(
-                    labelText: 'Registry URL',
-                    hintText: 'hub.docker.com or custom registry',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: 'images.registry_url'.tr(),
+                    hintText: 'images.registry_hint'.tr(),
+                    border: const OutlineInputBorder(),
                     prefixIcon: Icon(Icons.cloud),
                   ),
                 ),
@@ -239,8 +240,8 @@ class _PullImageScreenState extends State<PullImageScreen> {
                 TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    labelText: 'Search images',
-                    hintText: 'e.g., ubuntu, nginx, postgres',
+                    labelText: 'images.search_images'.tr(),
+                    hintText: 'images.search_hint'.tr(),
                     border: const OutlineInputBorder(),
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: _searchController.text.isNotEmpty
@@ -274,7 +275,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.search),
-                    label: Text(_isSearching ? 'Searching...' : 'Search'),
+                    label: Text(_isSearching ? 'common.searching'.tr() : 'common.search'.tr()),
                   ),
                 ),
               ],
@@ -304,9 +305,9 @@ class _PullImageScreenState extends State<PullImageScreen> {
           children: [
             Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
             const SizedBox(height: 16),
-            const Text(
-              'Search Failed',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              'images.search_failed'.tr(),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Padding(
@@ -320,7 +321,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
             ElevatedButton.icon(
               onPressed: _searchImages,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text('common.retry'.tr()),
             ),
           ],
         ),
@@ -334,15 +335,15 @@ class _PullImageScreenState extends State<PullImageScreen> {
           children: [
             Icon(Icons.search, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            const Text(
-              'Search Docker Images',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              'images.search_docker_images'.tr(),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
-                'Enter an image name to search Docker Hub',
+                'images.enter_image_name'.tr(),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -358,12 +359,12 @@ class _PullImageScreenState extends State<PullImageScreen> {
           children: [
             Icon(Icons.image_not_supported, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            const Text(
-              'No Results Found',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              'images.no_results_found'.tr(),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text('Try a different search term'),
+            Text('images.try_different_search'.tr()),
           ],
         ),
       );
@@ -388,7 +389,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
                 ),
                 if (image.isOfficial)
                   Chip(
-                    label: const Text('Official', style: TextStyle(fontSize: 10)),
+                    label: Text('images.official_label'.tr(), style: const TextStyle(fontSize: 10)),
                     backgroundColor: Colors.blue.withOpacity(0.2),
                     padding: EdgeInsets.zero,
                   ),
@@ -415,7 +416,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
                       const SizedBox(width: 12),
                       Icon(Icons.settings, size: 14, color: Colors.grey[600]),
                       const SizedBox(width: 4),
-                      const Text('Automated'),
+                      Text('images.automated_label'.tr()),
                     ],
                   ],
                 ),
@@ -424,7 +425,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
             trailing: IconButton(
               icon: const Icon(Icons.download),
               onPressed: () => _showTagSelectionDialog(image),
-              tooltip: 'Pull Image',
+              tooltip: 'common.pull_image'.tr(),
             ),
             onTap: () => _showTagSelectionDialog(image),
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../domain/models/server.dart';
 import '../../domain/repositories/server_repository.dart';
 import '../../data/repositories/server_repository_impl.dart';
@@ -63,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load server: $e'),
+            content: Text('failed_to_load'.tr(args: [e.toString()])),
             backgroundColor: Colors.red,
           ),
         );
@@ -84,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 const Icon(Icons.warning, color: Colors.white, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text('Could not connect to ${server.name}'),
+                  child: Text('failed_to_connect'.tr(args: [server.name])),
                 ),
               ],
             ),
@@ -107,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Selected server: ${server.name}'),
+            content: Text('selected_server'.tr(args: [server.name])),
             duration: const Duration(seconds: 1),
           ),
         );
@@ -123,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to select server: $e'),
+            content: Text('failed_to_select'.tr(args: [e.toString()])),
             backgroundColor: Colors.red,
           ),
         );
@@ -145,8 +146,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           onPressed: () async {
             if (!_sshService.isConnected) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Please connect to a server first'),
+                SnackBar(
+                  content: Text('please_connect'.tr()),
                   backgroundColor: Colors.orange,
                 ),
               );
@@ -164,23 +165,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               setState(() {});
             }
           },
-          tooltip: 'Create Container',
+          tooltip: 'common.create_container'.tr(),
           child: const Icon(Icons.add),
         );
       case 1: // Images tab - Speed Dial FAB
         return SpeedDialFAB(
           mainIcon: Icons.add,
-          mainTooltip: 'Image Actions',
+          mainTooltip: 'common.image_actions'.tr(),
           actions: [
             SpeedDialAction(
               icon: Icons.search,
-              label: 'Pull Image',
-              tooltip: 'Search and pull image from registry',
+              label: 'home.pull_image'.tr(),
+              tooltip: 'common.pull_image_tooltip'.tr(),
               onPressed: () async {
                 if (!_sshService.isConnected) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please connect to a server first'),
+                    SnackBar(
+                      content: Text('please_connect'.tr()),
                       backgroundColor: Colors.orange,
                     ),
                   );
@@ -199,13 +200,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             SpeedDialAction(
               icon: Icons.build,
-              label: 'Build Image',
-              tooltip: 'Build image from Dockerfile',
+              label: 'home.build_image'.tr(),
+              tooltip: 'common.build_image_tooltip'.tr(),
               onPressed: () async {
                 if (!_sshService.isConnected) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please connect to a server first'),
+                    SnackBar(
+                      content: Text('please_connect'.tr()),
                       backgroundColor: Colors.orange,
                     ),
                   );
@@ -234,7 +235,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Docker Manager'),
+        title: Text('app.title'.tr()),
         actions: [
           // System Info button
           IconButton(
@@ -247,38 +248,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please connect to a server first'),
+                  SnackBar(
+                    content: Text('please_connect'.tr()),
                     backgroundColor: Colors.orange,
                   ),
                 );
               }
             },
-            tooltip: 'System Information',
+            tooltip: 'common.system_information'.tr(),
           ),
           // Host Shell button
           IconButton(
             icon: const Icon(Icons.terminal),
+            tooltip: 'common.host_shell'.tr(),
             onPressed: () {
               if (_sshService.isConnected) {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => const ShellScreen(
-                      title: 'Host Shell',
+                    builder: (context) => ShellScreen(
+                      title: 'home.host_shell'.tr(),
                       isInteractive: true,
                     ),
                   ),
                 );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please connect to a server first'),
+                  SnackBar(
+                    content: Text('please_connect'.tr()),
                     backgroundColor: Colors.orange,
                   ),
                 );
               }
             },
-            tooltip: 'Host Shell',
           ),
           // Theme toggle button
           IconButton(
@@ -305,7 +306,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _loadLastUsedServer();
               }
             },
-            tooltip: 'Servers',
+            tooltip: 'common.servers'.tr(),
           ),
         ],
       ),
@@ -319,22 +320,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             _currentIndex = index;
           });
         },
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.inventory_2_outlined),
-            label: 'Containers',
+            icon: const Icon(Icons.inventory_2_outlined),
+            label: 'navigation.containers'.tr(),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.layers_outlined),
-            label: 'Images',
+            icon: const Icon(Icons.layers_outlined),
+            label: 'navigation.images'.tr(),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.dns_outlined),
-            label: 'Volumes',
+            icon: const Icon(Icons.dns_outlined),
+            label: 'navigation.volumes'.tr(),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.account_tree_outlined),
-            label: 'Networks',
+            icon: const Icon(Icons.account_tree_outlined),
+            label: 'navigation.networks'.tr(),
           ),
         ],
       ),

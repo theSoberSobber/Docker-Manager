@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class CustomSearchBar extends StatefulWidget {
   final String hintText;
@@ -67,7 +68,7 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
               ? IconButton(
                   icon: const Icon(Icons.clear),
                   onPressed: _clearSearch,
-                  tooltip: 'Clear search',
+                  tooltip: 'common.clear_search'.tr(),
                 )
               : null,
           border: InputBorder.none,
