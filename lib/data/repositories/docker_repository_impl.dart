@@ -97,7 +97,8 @@ class DockerRepositoryImpl implements DockerRepository {
       final dockerCli = await _getDockerCliPath();
 
       // Get stats for all running containers
-      final command = '''$dockerCli stats --no-stream --format '{{.Container}}|{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}' ''';
+      // Use {{.ID}} instead of {{.Container}} to ensure we match by container ID
+      final command = '''$dockerCli stats --no-stream --format '{{.ID}}|{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}' ''';
       final result = await _sshService.executeCommand(command);
       
       if (result == null || result.trim().isEmpty) {
@@ -136,7 +137,10 @@ class DockerRepositoryImpl implements DockerRepository {
       }
 
       final dockerCli = await _getDockerCliPath();
-      final result = await _sshService.executeCommand('$dockerCli images');
+      // Use --format for machine-readable output to avoid parsing warnings
+      final result = await _sshService.executeCommand(
+        '$dockerCli images --format "{{.Repository}}|||{{.Tag}}|||{{.ID}}|||{{.CreatedSince}}|||{{.Size}}"'
+      );
       
       if (result == null) {
         throw Exception('Docker images command returned no output');
@@ -156,7 +160,10 @@ class DockerRepositoryImpl implements DockerRepository {
       }
 
       final dockerCli = await _getDockerCliPath();
-      final result = await _sshService.executeCommand('$dockerCli volume ls');
+      // Use --format for machine-readable output
+      final result = await _sshService.executeCommand(
+        '$dockerCli volume ls --format "{{.Driver}}|||{{.Name}}"'
+      );
       
       if (result == null) {
         throw Exception('Docker volume ls command returned no output');
@@ -176,7 +183,10 @@ class DockerRepositoryImpl implements DockerRepository {
       }
 
       final dockerCli = await _getDockerCliPath();
-      final result = await _sshService.executeCommand('$dockerCli network ls');
+      // Use --format for machine-readable output
+      final result = await _sshService.executeCommand(
+        '$dockerCli network ls --format "{{.ID}}|||{{.Name}}|||{{.Driver}}|||{{.Scope}}"'
+      );
       
       if (result == null) {
         throw Exception('Docker network ls command returned no output');

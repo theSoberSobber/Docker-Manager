@@ -1,4 +1,6 @@
 class DockerImage {
+  static const _lsDelimiter = '|||';
+  
   final String repository;
   final String tag;
   final String imageId;
@@ -14,7 +16,27 @@ class DockerImage {
   });
 
   factory DockerImage.fromDockerImagesLine(String line) {
-    // Docker images output format: REPOSITORY   TAG       IMAGE ID       CREATED       SIZE
+    // Check if this is the new format (with ||| delimiter)
+    if (line.contains(_lsDelimiter)) {
+      final parts = line.split(_lsDelimiter);
+      
+      if (parts.length < 5) {
+        throw FormatException(
+          'Invalid docker images line format (expected at least 5 parts, got ${parts.length}): $line',
+        );
+      }
+
+      // Take first 4 parts as-is, join any remaining into size (edge case)
+      return DockerImage(
+        repository: parts[0].trim(),
+        tag: parts[1].trim(),
+        imageId: parts[2].trim(),
+        created: parts[3].trim(),
+        size: parts.sublist(4).join(_lsDelimiter).trim(),
+      );
+    }
+    
+    // Fallback to old format (split by 2+ spaces) for backwards compatibility
     final parts = line.split(RegExp(r'\s{2,}')); // Split by 2+ spaces
     
     if (parts.length < 5) {
@@ -34,8 +56,18 @@ class DockerImage {
     final lines = output.split('\n');
     if (lines.isEmpty) return [];
 
-    // Skip header line and empty lines
-    final dataLines = lines.skip(1).where((line) => line.trim().isNotEmpty);
+    // With --format, there's no header line. Just skip empty lines and warnings.
+    // Also detect and skip header if present (for backward compatibility)
+    final dataLines = lines.where((line) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) return false;
+      if (trimmed.toLowerCase().contains('warning:')) return false;
+      if (trimmed.toLowerCase().contains('for machine')) return false;
+      // Skip header line (starts with REPOSITORY or contains IMAGE ID)
+      if (trimmed.toUpperCase().startsWith('REPOSITORY') || 
+          trimmed.toUpperCase().contains('IMAGE ID')) return false;
+      return true;
+    });
     
     return dataLines
         .map((line) {
