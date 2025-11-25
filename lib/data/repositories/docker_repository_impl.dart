@@ -97,7 +97,8 @@ class DockerRepositoryImpl implements DockerRepository {
       final dockerCli = await _getDockerCliPath();
 
       // Get stats for all running containers
-      final command = '''$dockerCli stats --no-stream --format '{{.Container}}|{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}' ''';
+      // Use {{.ID}} instead of {{.Container}} to ensure we match by container ID
+      final command = '''$dockerCli stats --no-stream --format '{{.ID}}|{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}' ''';
       final result = await _sshService.executeCommand(command);
       
       if (result == null || result.trim().isEmpty) {
