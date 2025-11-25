@@ -182,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('connection.please_connect'.tr()),
-                        backgroundColor: Colors.orange,e,
+                        backgroundColor: Colors.orange,
                     ),
                   );
                   return;
