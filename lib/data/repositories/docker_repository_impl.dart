@@ -136,7 +136,10 @@ class DockerRepositoryImpl implements DockerRepository {
       }
 
       final dockerCli = await _getDockerCliPath();
-      final result = await _sshService.executeCommand('$dockerCli images');
+      // Use --format for machine-readable output to avoid parsing warnings
+      final result = await _sshService.executeCommand(
+        '$dockerCli images --format "{{.Repository}}|||{{.Tag}}|||{{.ID}}|||{{.CreatedSince}}|||{{.Size}}"'
+      );
       
       if (result == null) {
         throw Exception('Docker images command returned no output');
