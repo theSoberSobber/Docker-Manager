@@ -20,6 +20,7 @@ class _AddServerScreenState extends State<AddServerScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _privateKeyController = TextEditingController();
+  final _dockerCliPathController = TextEditingController();
   final SSHConnectionService _sshService = SSHConnectionService();
   bool _usePassword = true;
   bool _isTesting = false;
@@ -42,6 +43,10 @@ class _AddServerScreenState extends State<AddServerScreen> {
     _portController.text = server.port.toString();
     _usernameController.text = server.username;
     
+    if (server.dockerCliPath != null && server.dockerCliPath!.isNotEmpty) {
+      _dockerCliPathController.text = server.dockerCliPath!;
+    }
+    
     if (server.password != null && server.password!.isNotEmpty) {
       _usePassword = true;
       _passwordController.text = server.password!;
@@ -59,6 +64,7 @@ class _AddServerScreenState extends State<AddServerScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     _privateKeyController.dispose();
+    _dockerCliPathController.dispose();
     super.dispose();
   }
 
@@ -75,6 +81,9 @@ class _AddServerScreenState extends State<AddServerScreen> {
             : null,
         privateKey: !_usePassword && _privateKeyController.text.trim().isNotEmpty 
             ? _privateKeyController.text.trim() 
+            : null,
+        dockerCliPath: _dockerCliPathController.text.trim().isNotEmpty
+            ? _dockerCliPathController.text.trim()
             : null,
       );
       Navigator.of(context).pop(server);
@@ -169,7 +178,10 @@ class _AddServerScreenState extends State<AddServerScreen> {
             onPressed: _submit,
             child: Text(
               (_isEditMode ? 'common.save'.tr() : 'common.add'.tr()).toUpperCase(),
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onPrimary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -250,6 +262,18 @@ class _AddServerScreenState extends State<AddServerScreen> {
                 }
                 return null;
               },
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _dockerCliPathController,
+              decoration: InputDecoration(
+                labelText: 'servers.docker_cli_path'.tr(),
+                hintText: 'servers.docker_cli_path_hint'.tr(),
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.terminal),
+                helperText: 'servers.docker_cli_path_helper'.tr(),
+                helperMaxLines: 2,
+              ),
             ),
             const SizedBox(height: 24),
             Card(

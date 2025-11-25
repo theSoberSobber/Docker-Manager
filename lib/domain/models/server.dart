@@ -6,6 +6,7 @@ class Server {
   final String username;
   final String? password;
   final String? privateKey;
+  final String? dockerCliPath; // Optional: if null, uses global setting
 
   Server({
     required this.id,
@@ -15,6 +16,7 @@ class Server {
     required this.username,
     this.password,
     this.privateKey,
+    this.dockerCliPath,
   });
 
   // Convert Server to JSON
@@ -27,6 +29,7 @@ class Server {
       'username': username,
       'password': password,
       'privateKey': privateKey,
+      'dockerCliPath': dockerCliPath,
     };
   }
 
@@ -40,6 +43,7 @@ class Server {
       username: json['username'] as String,
       password: json['password'] as String?,
       privateKey: json['privateKey'] as String?,
+      dockerCliPath: json['dockerCliPath'] as String?,
     );
   }
 
@@ -52,6 +56,7 @@ class Server {
     String? username,
     String? password,
     String? privateKey,
+    String? dockerCliPath,
   }) {
     return Server(
       id: id ?? this.id,
@@ -61,6 +66,7 @@ class Server {
       username: username ?? this.username,
       password: password ?? this.password,
       privateKey: privateKey ?? this.privateKey,
+      dockerCliPath: dockerCliPath ?? this.dockerCliPath,
     );
   }
 

@@ -3,14 +3,22 @@ import '../../domain/models/docker_image.dart';
 import '../../domain/models/docker_volume.dart';
 import '../../domain/models/docker_network.dart';
 import '../../domain/repositories/docker_repository.dart';
+import '../../domain/models/server.dart';
 import '../services/ssh_connection_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DockerRepositoryImpl implements DockerRepository {
   final SSHConnectionService _sshService = SSHConnectionService();
 
-  /// Get the configured Docker CLI path from settings
+  /// Get the Docker CLI path: uses per-server path if set, otherwise falls back to global setting
   Future<String> _getDockerCliPath() async {
+    // First try to get per-server docker path
+    final Server? currentServer = _sshService.currentServer;
+    if (currentServer?.dockerCliPath != null && currentServer!.dockerCliPath!.isNotEmpty) {
+      return currentServer.dockerCliPath!;
+    }
+    
+    // Fall back to global setting
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('dockerCliPath') ?? 'docker';
   }
