@@ -12,8 +12,24 @@ class DockerNetwork {
   });
 
   factory DockerNetwork.fromDockerNetworkLsLine(String line) {
-    // Docker network ls output format: NETWORK ID   NAME      DRIVER    SCOPE
-    final parts = line.split(RegExp(r'\s{2,}')); // Split by 2+ spaces
+    // Check if this is the new format (with ||| delimiter)
+    if (line.contains('|||')) {
+      final parts = line.split('|||');
+      
+      if (parts.length < 4) {
+        throw FormatException('Invalid docker network ls line format: $line');
+      }
+
+      return DockerNetwork(
+        networkId: parts[0].trim(),
+        name: parts[1].trim(),
+        driver: parts[2].trim(),
+        scope: parts[3].trim(),
+      );
+    }
+    
+    // Fallback to old format (split by 2+ spaces) for backwards compatibility
+    final parts = line.split(RegExp(r'\s{2,}'));
     
     if (parts.length < 4) {
       throw FormatException('Invalid docker network ls line format: $line');
@@ -31,8 +47,12 @@ class DockerNetwork {
     final lines = output.split('\n');
     if (lines.isEmpty) return [];
 
-    // Skip header line and empty lines
-    final dataLines = lines.skip(1).where((line) => line.trim().isNotEmpty);
+    // With --format, there's no header line. Just skip empty lines and warnings.
+    final dataLines = lines.where((line) => 
+      line.trim().isNotEmpty && 
+      !line.toLowerCase().contains('warning:') &&
+      !line.toLowerCase().contains('for machine')
+    );
     
     return dataLines
         .map((line) {

@@ -159,7 +159,10 @@ class DockerRepositoryImpl implements DockerRepository {
       }
 
       final dockerCli = await _getDockerCliPath();
-      final result = await _sshService.executeCommand('$dockerCli volume ls');
+      // Use --format for machine-readable output
+      final result = await _sshService.executeCommand(
+        '$dockerCli volume ls --format "{{.Driver}}|||{{.Name}}"'
+      );
       
       if (result == null) {
         throw Exception('Docker volume ls command returned no output');
@@ -179,7 +182,10 @@ class DockerRepositoryImpl implements DockerRepository {
       }
 
       final dockerCli = await _getDockerCliPath();
-      final result = await _sshService.executeCommand('$dockerCli network ls');
+      // Use --format for machine-readable output
+      final result = await _sshService.executeCommand(
+        '$dockerCli network ls --format "{{.ID}}|||{{.Name}}|||{{.Driver}}|||{{.Scope}}"'
+      );
       
       if (result == null) {
         throw Exception('Docker network ls command returned no output');
