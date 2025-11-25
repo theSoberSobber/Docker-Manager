@@ -178,7 +178,10 @@ class _AddServerScreenState extends State<AddServerScreen> {
             onPressed: _submit,
             child: Text(
               (_isEditMode ? 'common.save'.tr() : 'common.add'.tr()).toUpperCase(),
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onPrimary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
