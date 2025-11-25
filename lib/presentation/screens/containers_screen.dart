@@ -45,7 +45,7 @@ class _ContainersScreenState extends State<ContainersScreen>
     // If no connection exists on init, mark as tried to avoid showing "initializing"
     if (!_sshService.isConnected && !_sshService.isConnecting) {
       _hasTriedLoading = true;
-      _error = 'No SSH connection available. Please connect to a server first.';
+      _error = 'connection.please_connect'.tr();
     }
     // Start a periodic check to detect server changes
     _startServerChangeDetection();
@@ -103,7 +103,7 @@ class _ContainersScreenState extends State<ContainersScreen>
       setState(() {
         _hasTriedLoading = true;
         _isLoading = false;
-        _error = 'No SSH connection available. Please connect to a server first.';
+        _error = 'connection.please_connect'.tr();
       });
       return;
     }
@@ -152,6 +152,7 @@ class _ContainersScreenState extends State<ContainersScreen>
   }
 
   Future<void> _loadContainers() async {
+    final loadingForServerId = _sshService.currentServer?.id;
     setState(() {
       _isLoading = true;
       _error = null;
@@ -160,12 +161,17 @@ class _ContainersScreenState extends State<ContainersScreen>
     try {
       final containers = await _dockerRepository.getContainers();
       
+      // Only update if still on the same server
+      if (!mounted || _sshService.currentServer?.id != loadingForServerId) {
+        return;
+      }
+      
       // Show containers immediately without stats
       setState(() {
         _containers = containers;
         _filteredContainers = _filterContainers(containers, _searchQuery);
         _isLoading = false;
-        _lastLoadedServerId = _sshService.currentServer?.id; // Mark that we loaded data for this server
+        _lastLoadedServerId = loadingForServerId; // Mark that we loaded data for this server
       });
       
       // Fetch stats asynchronously in the background
