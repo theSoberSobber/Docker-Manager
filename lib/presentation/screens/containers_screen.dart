@@ -139,14 +139,14 @@ class _ContainersScreenState extends State<ContainersScreen>
       if (!connectionSucceeded && mounted) {
         setState(() {
           _isLoading = false;
-          _error = 'Connection timeout. Please try again or check your server connection.';
+          _error = 'connection.timeout'.tr();
         });
       }
     } else {
       // No connection
       setState(() {
         _isLoading = false;
-        _error = 'No SSH connection available. Please connect to a server first.';
+        _error = 'connection.no_connection'.tr();
       });
     }
   }
@@ -559,8 +559,13 @@ class _ContainersScreenState extends State<ContainersScreen>
     }
 
     if (_error != null) {
+      // Check for connection-related errors using both English text (for exceptions)
+      // and localized keys (for user-set errors)
       final isConnectionError = _error!.contains('No SSH connection') || 
                                 _error!.contains('Connection timeout') ||
+                                _error!.contains('connection.timeout') ||
+                                _error!.contains('connection.no_connection') ||
+                                _error!.contains('connection.please_connect') ||
                                 _error!.contains('Failed to get containers: Exception: No SSH connection');
       final isPermissionError = _error!.contains('Permission denied') || 
                                 _error!.contains('docker group');

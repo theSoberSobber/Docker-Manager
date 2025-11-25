@@ -62,7 +62,9 @@
     "failed_to_connect": "Could not connect to {}",
     "selected_server": "Selected server: {}",
     "failed_to_select": "Failed to select server: {}",
-    "failed_to_load": "Failed to load server: {}"
+    "failed_to_load": "Failed to load server: {}",
+    "timeout": "Connection timeout. Please try again or check your server connection.",
+    "no_connection": "No SSH connection available. Please connect to a server first."
   },
   "navigation": {
     "containers": "Containers",
