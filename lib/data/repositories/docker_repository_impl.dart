@@ -96,12 +96,9 @@ class DockerRepositoryImpl implements DockerRepository {
 
       final dockerCli = await _getDockerCliPath();
 
-      // Get stats for all running containers - use longer timeout as stats can take time
+      // Get stats for all running containers
       final command = '''$dockerCli stats --no-stream --format '{{.Container}}|{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}' ''';
-      final result = await _sshService.executeCommand(
-        command,
-        timeout: const Duration(seconds: 30),
-      );
+      final result = await _sshService.executeCommand(command);
       
       if (result == null || result.trim().isEmpty) {
         return {}; // No running containers
