@@ -358,6 +358,7 @@
   },
   "actions": {
     "confirm_action": "Confirm {}",
+    "confirm_message": "Are you sure you want to {} \"{}\"?",
     "logs": "Logs",
     "inspect": "Inspect",
     "stop": "Stop",

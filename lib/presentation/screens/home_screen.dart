@@ -64,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('failed_to_load'.tr(args: [e.toString()])),
+            content: Text('connection.failed_to_load'.tr(args: [e.toString()])),
             backgroundColor: Colors.red,
           ),
         );
@@ -124,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('failed_to_select'.tr(args: [e.toString()])),
+            content: Text('connection.failed_to_select'.tr(args: [e.toString()])),
             backgroundColor: Colors.red,
           ),
         );
@@ -147,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             if (!_sshService.isConnected) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('please_connect'.tr()),
+                  content: Text('connection.please_connect'.tr()),
                   backgroundColor: Colors.orange,
                 ),
               );
@@ -179,10 +179,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               tooltip: 'common.pull_image_tooltip'.tr(),
               onPressed: () async {
                 if (!_sshService.isConnected) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('please_connect'.tr()),
-                      backgroundColor: Colors.orange,
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('connection.please_connect'.tr()),
+                        backgroundColor: Colors.orange,e,
                     ),
                   );
                   return;
@@ -206,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 if (!_sshService.isConnected) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('please_connect'.tr()),
+                      content: Text('connection.please_connect'.tr()),
                       backgroundColor: Colors.orange,
                     ),
                   );
@@ -249,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('please_connect'.tr()),
+                    content: Text('connection.please_connect'.tr()),
                     backgroundColor: Colors.orange,
                   ),
                 );
@@ -274,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('please_connect'.tr()),
+                    content: Text('connection.please_connect'.tr()),
                     backgroundColor: Colors.orange,
                   ),
                 );
