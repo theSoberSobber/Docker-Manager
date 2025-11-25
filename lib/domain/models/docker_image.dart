@@ -1,4 +1,6 @@
 class DockerImage {
+  static const _lsDelimiter = '|||';
+  
   final String repository;
   final String tag;
   final String imageId;
@@ -15,19 +17,22 @@ class DockerImage {
 
   factory DockerImage.fromDockerImagesLine(String line) {
     // Check if this is the new format (with ||| delimiter)
-    if (line.contains('|||')) {
-      final parts = line.split('|||');
+    if (line.contains(_lsDelimiter)) {
+      final parts = line.split(_lsDelimiter);
       
-      if (parts.length != 5) {
-        throw FormatException('Invalid docker images line format (expected 5 parts, got ${parts.length}): $line');
+      if (parts.length < 5) {
+        throw FormatException(
+          'Invalid docker images line format (expected at least 5 parts, got ${parts.length}): $line',
+        );
       }
 
+      // Take first 4 parts as-is, join any remaining into size (edge case)
       return DockerImage(
         repository: parts[0].trim(),
         tag: parts[1].trim(),
         imageId: parts[2].trim(),
         created: parts[3].trim(),
-        size: parts[4].trim(),
+        size: parts.sublist(4).join(_lsDelimiter).trim(),
       );
     }
     

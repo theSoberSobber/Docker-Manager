@@ -1,4 +1,6 @@
 class DockerVolume {
+  static const _lsDelimiter = '|||';
+  
   final String driver;
   final String volumeName;
 
@@ -9,16 +11,22 @@ class DockerVolume {
 
   factory DockerVolume.fromDockerVolumeLsLine(String line) {
     // Check if this is the new format (with ||| delimiter)
-    if (line.contains('|||')) {
-      final parts = line.split('|||');
+    if (line.contains(_lsDelimiter)) {
+      final parts = line.split(_lsDelimiter);
       
-      if (parts.length != 2) {
-        throw FormatException('Invalid docker volume ls line format (expected 2 parts, got ${parts.length}): $line');
+      if (parts.length < 2) {
+        throw FormatException(
+          'Invalid docker volume ls line format (expected at least 2 parts, got ${parts.length}): $line',
+        );
       }
 
+      final driver = parts.first.trim();
+      // Rejoin any extra parts into volume name (handles edge case of ||| in name)
+      final volumeName = parts.sublist(1).join(_lsDelimiter).trim();
+
       return DockerVolume(
-        driver: parts[0].trim(),
-        volumeName: parts[1].trim(),
+        driver: driver,
+        volumeName: volumeName,
       );
     }
     

@@ -1,4 +1,6 @@
 class DockerNetwork {
+  static const _lsDelimiter = '|||';
+  
   final String networkId;
   final String name;
   final String driver;
@@ -13,18 +15,21 @@ class DockerNetwork {
 
   factory DockerNetwork.fromDockerNetworkLsLine(String line) {
     // Check if this is the new format (with ||| delimiter)
-    if (line.contains('|||')) {
-      final parts = line.split('|||');
+    if (line.contains(_lsDelimiter)) {
+      final parts = line.split(_lsDelimiter);
       
-      if (parts.length != 4) {
-        throw FormatException('Invalid docker network ls line format (expected 4 parts, got ${parts.length}): $line');
+      if (parts.length < 4) {
+        throw FormatException(
+          'Invalid docker network ls line format (expected at least 4 parts, got ${parts.length}): $line',
+        );
       }
 
+      // Take first 3 parts as-is, join any remaining into scope (edge case)
       return DockerNetwork(
         networkId: parts[0].trim(),
         name: parts[1].trim(),
         driver: parts[2].trim(),
-        scope: parts[3].trim(),
+        scope: parts.sublist(3).join(_lsDelimiter).trim(),
       );
     }
     
