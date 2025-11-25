@@ -57,9 +57,8 @@ class _ContainersScreenState extends State<ContainersScreen>
       
       final currentServer = _sshService.currentServer;
       
-      // If server changed or connection status changed, reload
-      if (_lastKnownServer?.id != currentServer?.id || 
-          (!_hasTriedLoading && _sshService.isConnected)) {
+      // Only reload if server actually changed (not just checking connection status)
+      if (_lastKnownServer?.id != currentServer?.id) {
         _lastKnownServer = currentServer;
         _hasTriedLoading = false; // Reset to allow reload
         _checkConnectionAndLoad();
