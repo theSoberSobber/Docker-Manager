@@ -85,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 const Icon(Icons.warning, color: Colors.white, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text('failed_to_connect'.tr(args: [server.name])),
+                  child: Text('connection.failed_to_connect'.tr(args: [server.name])),
                 ),
               ],
             ),
@@ -108,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('selected_server'.tr(args: [server.name])),
+            content: Text('connection.selected_server'.tr(args: [server.name])),
             duration: const Duration(seconds: 1),
           ),
         );

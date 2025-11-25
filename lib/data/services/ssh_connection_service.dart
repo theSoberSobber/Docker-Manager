@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:dartssh2/dartssh2.dart';
 import '../../domain/models/server.dart';
 
@@ -107,13 +108,18 @@ class SSHConnectionService {
 
   /// Execute a command on the connected server
   /// Automatically reconnects and retries once if connection is stale
-  Future<String?> executeCommand(String command, {bool isRetry = false}) async {
+  Future<String?> executeCommand(String command, {bool isRetry = false, Duration timeout = const Duration(seconds: 10)}) async {
     if (!isConnected || _currentConnection == null) {
       throw Exception('No active SSH connection');
     }
 
     try {
-      final result = await _currentConnection!.run(command);
+      final result = await _currentConnection!.run(command).timeout(
+        timeout,
+        onTimeout: () {
+          throw TimeoutException('Command timed out after ${timeout.inSeconds} seconds');
+        },
+      );
       return utf8.decode(result);
     } catch (e) {
       // Check if this is a connection-related error
@@ -138,7 +144,7 @@ class SSHConnectionService {
           
           if (reconnectResult.success) {
             // Reconnection successful, retry the command once
-            return await executeCommand(command, isRetry: true);
+            return await executeCommand(command, isRetry: true, timeout: timeout);
           } else {
             // Reconnection failed
             throw Exception('Connection lost and reconnection failed: ${reconnectResult.error}');

@@ -29,6 +29,7 @@ class _ContainersScreenState extends State<ContainersScreen>
   String? _error;
   bool _hasTriedLoading = false;
   Server? _lastKnownServer;
+  String? _lastLoadedServerId; // Track which server we loaded data for
   String _searchQuery = '';
   String? _selectedStack; // null means "All", "no-stack" means containers without stack
 
@@ -39,6 +40,8 @@ class _ContainersScreenState extends State<ContainersScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Initialize with current server to avoid false detection of server change
+    _lastKnownServer = _sshService.currentServer;
     // Start a periodic check to detect server changes
     _startServerChangeDetection();
   }
@@ -57,10 +60,11 @@ class _ContainersScreenState extends State<ContainersScreen>
       
       final currentServer = _sshService.currentServer;
       
-      // Only reload if server actually changed (not just checking connection status)
+      // Only reload if server actually changed
       if (_lastKnownServer?.id != currentServer?.id) {
         _lastKnownServer = currentServer;
-        _hasTriedLoading = false; // Reset to allow reload
+        _lastLoadedServerId = null; // Clear loaded server to trigger reload
+        _hasTriedLoading = false;
         _checkConnectionAndLoad();
       }
       
@@ -73,7 +77,9 @@ class _ContainersScreenState extends State<ContainersScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     // This gets called when the tab becomes visible
-    if (!_hasTriedLoading && mounted) {
+    // Only load if we haven't loaded for the current server yet
+    final currentServerId = _sshService.currentServer?.id;
+    if (!_hasTriedLoading && mounted && _lastLoadedServerId != currentServerId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _checkConnectionAndLoad();
@@ -143,6 +149,7 @@ class _ContainersScreenState extends State<ContainersScreen>
         _containers = containers;
         _filteredContainers = _filterContainers(containers, _searchQuery);
         _isLoading = false;
+        _lastLoadedServerId = _sshService.currentServer?.id; // Mark that we loaded data for this server
       });
       
       // Fetch stats asynchronously in the background
