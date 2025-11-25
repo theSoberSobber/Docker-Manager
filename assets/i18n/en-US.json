@@ -107,6 +107,8 @@
     "password_helper": "Enter your SSH password (leave empty if using key-based auth)",
     "private_key_hint": "Paste your private key here...",
     "private_key_helper": "Paste your SSH private key (leave empty if using password)",
+    "passphrase_hint": "Enter passphrase if your key is encrypted",
+    "passphrase_helper": "Passphrase to decrypt your private key (optional, leave empty if key is not encrypted)",
     "auth_method": "Authentication Method",
     "test_connection": "Test Connection",
     "testing": "Testing...",
@@ -123,7 +125,8 @@
   },
   "auth": {
     "password": "Password",
-    "private_key": "Private Key"
+    "private_key": "Private Key",
+    "passphrase": "Passphrase (Optional)"
   },
   "containers": {
     "title": "Containers",
