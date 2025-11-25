@@ -6,6 +6,8 @@ import '../../domain/repositories/docker_repository.dart';
 import '../../domain/models/server.dart';
 import '../services/ssh_connection_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
+import '../../main.dart';
 
 class DockerRepositoryImpl implements DockerRepository {
   final SSHConnectionService _sshService = SSHConnectionService();
@@ -99,7 +101,26 @@ class DockerRepositoryImpl implements DockerRepository {
       // Get stats for all running containers
       // Use {{.ID}} instead of {{.Container}} to ensure we match by container ID
       final command = '''$dockerCli stats --no-stream --format '{{.ID}}|{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}' ''';
+      
+      // DEBUG: Show command being executed
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text('Executing: $command'),
+          backgroundColor: Colors.blue,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      
       final result = await _sshService.executeCommand(command);
+      
+      // DEBUG: Show command output
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text('Stats output: ${result ?? "null"}'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 5),
+        ),
+      );
       
       if (result == null || result.trim().isEmpty) {
         return {}; // No running containers
@@ -125,6 +146,14 @@ class DockerRepositoryImpl implements DockerRepository {
       
       return statsMap;
     } catch (e) {
+      // DEBUG: Show error
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text('Stats error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
       throw Exception(_parseDockerError(e));
     }
   }
@@ -138,8 +167,26 @@ class DockerRepositoryImpl implements DockerRepository {
 
       final dockerCli = await _getDockerCliPath();
       // Use --format for machine-readable output to avoid parsing warnings
-      final result = await _sshService.executeCommand(
-        '$dockerCli images --format "{{.Repository}}|||{{.Tag}}|||{{.ID}}|||{{.CreatedSince}}|||{{.Size}}"'
+      final command = '$dockerCli images --format "{{.Repository}}|||{{.Tag}}|||{{.ID}}|||{{.CreatedSince}}|||{{.Size}}"';
+      
+      // DEBUG: Show command being executed
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text('Executing: $command'),
+          backgroundColor: Colors.blue,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      
+      final result = await _sshService.executeCommand(command);
+      
+      // DEBUG: Show command output
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text('Images output: ${result ?? "null"}'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 5),
+        ),
       );
       
       if (result == null) {
@@ -148,6 +195,14 @@ class DockerRepositoryImpl implements DockerRepository {
 
       return DockerImage.parseDockerImagesOutput(result);
     } catch (e) {
+      // DEBUG: Show error
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text('Images error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
       throw Exception(_parseDockerError(e));
     }
   }

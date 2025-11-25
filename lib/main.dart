@@ -3,6 +3,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/widgets/theme_manager.dart';
 
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
@@ -27,6 +29,7 @@ class MyApp extends StatelessWidget {
       builder: (context, child) {
         return MaterialApp(
           title: 'Docker Manager',
+          scaffoldMessengerKey: scaffoldMessengerKey,
           localizationsDelegates: context.localizationDelegates,
           supportedLocales: context.supportedLocales,
           locale: context.locale,
