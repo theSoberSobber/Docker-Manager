@@ -559,13 +559,18 @@ class _ContainersScreenState extends State<ContainersScreen>
     }
 
     if (_error != null) {
+      // Get localized connection error messages for comparison
+      final timeoutMsg = 'connection.timeout'.tr();
+      final noConnectionMsg = 'connection.no_connection'.tr();
+      final pleaseConnectMsg = 'connection.please_connect'.tr();
+      
       // Check for connection-related errors using both English text (for exceptions)
-      // and localized keys (for user-set errors)
+      // and localized messages (for user-set errors)
       final isConnectionError = _error!.contains('No SSH connection') || 
                                 _error!.contains('Connection timeout') ||
-                                _error!.contains('connection.timeout') ||
-                                _error!.contains('connection.no_connection') ||
-                                _error!.contains('connection.please_connect') ||
+                                _error == timeoutMsg ||
+                                _error == noConnectionMsg ||
+                                _error == pleaseConnectMsg ||
                                 _error!.contains('Failed to get containers: Exception: No SSH connection');
       final isPermissionError = _error!.contains('Permission denied') || 
                                 _error!.contains('docker group');
