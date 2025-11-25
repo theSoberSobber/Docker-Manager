@@ -61,7 +61,10 @@ class SSHConnectionService {
           await SSHSocket.connect(server.ip, server.port),
           username: server.username,
           identities: [
-            ...SSHKeyPair.fromPem(server.privateKey!)
+            ...SSHKeyPair.fromPem(
+              server.privateKey!,
+              server.passphrase, // Pass passphrase directly, not as callback
+            )
           ],
         );
       } else {
@@ -191,7 +194,10 @@ class SSHConnectionService {
           await SSHSocket.connect(server.ip, server.port),
           username: server.username,
           identities: [
-            ...SSHKeyPair.fromPem(server.privateKey!)
+            ...SSHKeyPair.fromPem(
+              server.privateKey!,
+              server.passphrase, // Pass passphrase directly, not as callback
+            )
           ],
         );
       } else {

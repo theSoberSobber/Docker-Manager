@@ -106,7 +106,9 @@
     "docker_cli_path_helper": "Ruta personalizada al CLI de docker/podman. Dejar vacío para usar la configuración global.",
     "password_helper": "Ingrese su contraseña SSH (dejar vacío si usa autenticación basada en clave)",
     "private_key_hint": "Pegue su clave privada aquí...",
-    "private_key_helper": "Pegue su clave privada SSH (déjelo vacío si usa contraseña)",
+    "private_key_helper": "Pegue su clave privada SSH (dejar vacío si usa contraseña)",
+    "passphrase_hint": "Ingrese la frase de contraseña si su clave está cifrada",
+    "passphrase_helper": "Frase de contraseña para descifrar su clave privada (opcional, dejar vacío si la clave no está cifrada)",
     "auth_method": "Método de Autenticación",
     "test_connection": "Probar Conexión",
     "testing": "Probando...",
@@ -123,7 +125,8 @@
   },
   "auth": {
     "password": "Contraseña",
-    "private_key": "Clave Privada"
+    "private_key": "Clave Privada",
+    "passphrase": "Frase de Contraseña (Opcional)"
   },
   "containers": {
     "title": "Contenedores",

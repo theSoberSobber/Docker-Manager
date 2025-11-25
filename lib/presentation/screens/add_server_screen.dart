@@ -20,6 +20,7 @@ class _AddServerScreenState extends State<AddServerScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _privateKeyController = TextEditingController();
+  final _passphraseController = TextEditingController();
   final _dockerCliPathController = TextEditingController();
   final SSHConnectionService _sshService = SSHConnectionService();
   bool _usePassword = true;
@@ -53,6 +54,9 @@ class _AddServerScreenState extends State<AddServerScreen> {
     } else if (server.privateKey != null && server.privateKey!.isNotEmpty) {
       _usePassword = false;
       _privateKeyController.text = server.privateKey!;
+      if (server.passphrase != null && server.passphrase!.isNotEmpty) {
+        _passphraseController.text = server.passphrase!;
+      }
     }
   }
 
@@ -64,6 +68,7 @@ class _AddServerScreenState extends State<AddServerScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     _privateKeyController.dispose();
+    _passphraseController.dispose();
     _dockerCliPathController.dispose();
     super.dispose();
   }
@@ -81,6 +86,9 @@ class _AddServerScreenState extends State<AddServerScreen> {
             : null,
         privateKey: !_usePassword && _privateKeyController.text.trim().isNotEmpty 
             ? _privateKeyController.text.trim() 
+            : null,
+        passphrase: !_usePassword && _passphraseController.text.trim().isNotEmpty
+            ? _passphraseController.text.trim()
             : null,
         dockerCliPath: _dockerCliPathController.text.trim().isNotEmpty
             ? _dockerCliPathController.text.trim()
@@ -146,6 +154,9 @@ class _AddServerScreenState extends State<AddServerScreen> {
             : null,
         privateKey: !_usePassword && _privateKeyController.text.trim().isNotEmpty 
             ? _privateKeyController.text.trim() 
+            : null,
+        passphrase: !_usePassword && _passphraseController.text.trim().isNotEmpty
+            ? _passphraseController.text.trim()
             : null,
       );
 
@@ -381,6 +392,21 @@ class _AddServerScreenState extends State<AddServerScreen> {
                   }
                   return null;
                 },
+              ),
+            if (!_usePassword)
+              const SizedBox(height: 16),
+            if (!_usePassword)
+              TextFormField(
+                controller: _passphraseController,
+                decoration: InputDecoration(
+                  labelText: 'auth.passphrase'.tr(),
+                  hintText: 'servers.passphrase_hint'.tr(),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.password),
+                  helperText: 'servers.passphrase_helper'.tr(),
+                  helperMaxLines: 2,
+                ),
+                obscureText: true,
               ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
