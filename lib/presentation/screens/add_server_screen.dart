@@ -163,7 +163,7 @@ class _AddServerScreenState extends State<AddServerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditMode ? 'servers.add_server'.tr() : 'servers.add_server'.tr()),
+        title: Text(_isEditMode ? 'servers.edit_server'.tr() : 'servers.add_server'.tr()),
         actions: [
           TextButton(
             onPressed: _submit,
@@ -332,6 +332,12 @@ class _AddServerScreenState extends State<AddServerScreen> {
                   helperMaxLines: 2,
                 ),
                 obscureText: true,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'servers.error_password_required'.tr();
+                  }
+                  return null;
+                },
               )
             else
               TextFormField(
@@ -345,6 +351,12 @@ class _AddServerScreenState extends State<AddServerScreen> {
                   helperMaxLines: 2,
                 ),
                 maxLines: 6,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'servers.error_private_key_required'.tr();
+                  }
+                  return null;
+                },
               ),
             const SizedBox(height: 24),
             ElevatedButton.icon(

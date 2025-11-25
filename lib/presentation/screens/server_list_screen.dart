@@ -83,13 +83,13 @@ class _ServerListScreenState extends State<ServerListScreen> {
       await _loadServers(); // Refresh the list
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Server updated successfully')),
+          SnackBar(content: Text('servers.updated_successfully'.tr())),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update server: ${e.toString()}')),
+          SnackBar(content: Text('servers.failed_to_update'.tr(args: [e.toString()]))),
         );
       }
     }

@@ -203,11 +203,12 @@ class SSHConnectionService {
       // Try to execute a simple command to verify the connection really works
       final session = await client.execute('echo "test"');
       final output = await session.stdout.cast<List<int>>().transform(utf8.decoder).join();
+      final exitCode = session.exitCode;
       
       // Close the test connection immediately
       client.close();
       
-      if (output.isNotEmpty) {
+      if (exitCode == 0 && output.trim() == 'test') {
         return SSHConnectionResult(
           success: true,
           status: ConnectionStatus.connected,
