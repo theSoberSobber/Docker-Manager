@@ -190,7 +190,9 @@ class _AddServerScreenState extends State<AddServerScreen> {
             child: Text(
               (_isEditMode ? 'common.save'.tr() : 'common.add'.tr()).toUpperCase(),
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onPrimary,
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.white 
+                    : Theme.of(context).colorScheme.primary,
                 fontWeight: FontWeight.bold,
               ),
             ),
