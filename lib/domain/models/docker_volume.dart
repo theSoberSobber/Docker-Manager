@@ -12,8 +12,8 @@ class DockerVolume {
     if (line.contains('|||')) {
       final parts = line.split('|||');
       
-      if (parts.length < 2) {
-        throw FormatException('Invalid docker volume ls line format: $line');
+      if (parts.length != 2) {
+        throw FormatException('Invalid docker volume ls line format (expected 2 parts, got ${parts.length}): $line');
       }
 
       return DockerVolume(
@@ -40,11 +40,17 @@ class DockerVolume {
     if (lines.isEmpty) return [];
 
     // With --format, there's no header line. Just skip empty lines and warnings.
-    final dataLines = lines.where((line) => 
-      line.trim().isNotEmpty && 
-      !line.toLowerCase().contains('warning:') &&
-      !line.toLowerCase().contains('for machine')
-    );
+    // Also detect and skip header if present (for backward compatibility)
+    final dataLines = lines.where((line) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) return false;
+      if (trimmed.toLowerCase().contains('warning:')) return false;
+      if (trimmed.toLowerCase().contains('for machine')) return false;
+      // Skip header line (starts with DRIVER or contains VOLUME NAME)
+      if (trimmed.toUpperCase().startsWith('DRIVER') || 
+          trimmed.toUpperCase().contains('VOLUME NAME')) return false;
+      return true;
+    });
     
     return dataLines
         .map((line) {

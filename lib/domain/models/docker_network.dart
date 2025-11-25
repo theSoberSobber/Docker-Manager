@@ -16,8 +16,8 @@ class DockerNetwork {
     if (line.contains('|||')) {
       final parts = line.split('|||');
       
-      if (parts.length < 4) {
-        throw FormatException('Invalid docker network ls line format: $line');
+      if (parts.length != 4) {
+        throw FormatException('Invalid docker network ls line format (expected 4 parts, got ${parts.length}): $line');
       }
 
       return DockerNetwork(
@@ -48,11 +48,19 @@ class DockerNetwork {
     if (lines.isEmpty) return [];
 
     // With --format, there's no header line. Just skip empty lines and warnings.
-    final dataLines = lines.where((line) => 
-      line.trim().isNotEmpty && 
-      !line.toLowerCase().contains('warning:') &&
-      !line.toLowerCase().contains('for machine')
-    );
+    // Also detect and skip header if present (for backward compatibility)
+    final dataLines = lines.where((line) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) return false;
+      if (trimmed.toLowerCase().contains('warning:')) return false;
+      if (trimmed.toLowerCase().contains('for machine')) return false;
+      // Skip header line (starts with NETWORK ID or contains NAME/DRIVER/SCOPE)
+      if (trimmed.toUpperCase().startsWith('NETWORK ID') || 
+          (trimmed.toUpperCase().contains('NAME') && 
+           trimmed.toUpperCase().contains('DRIVER') && 
+           trimmed.toUpperCase().contains('SCOPE'))) return false;
+      return true;
+    });
     
     return dataLines
         .map((line) {
