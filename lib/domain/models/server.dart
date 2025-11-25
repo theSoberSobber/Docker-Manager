@@ -6,6 +6,7 @@ class Server {
   final String username;
   final String? password;
   final String? privateKey;
+  final String? passphrase; // Passphrase for encrypted private keys
   final String? dockerCliPath; // Optional: if null, uses global setting
 
   Server({
@@ -16,6 +17,7 @@ class Server {
     required this.username,
     this.password,
     this.privateKey,
+    this.passphrase,
     this.dockerCliPath,
   });
 
@@ -29,6 +31,7 @@ class Server {
       'username': username,
       'password': password,
       'privateKey': privateKey,
+      'passphrase': passphrase,
       'dockerCliPath': dockerCliPath,
     };
   }
@@ -43,6 +46,7 @@ class Server {
       username: json['username'] as String,
       password: json['password'] as String?,
       privateKey: json['privateKey'] as String?,
+      passphrase: json['passphrase'] as String?,
       dockerCliPath: json['dockerCliPath'] as String?,
     );
   }
@@ -56,6 +60,7 @@ class Server {
     String? username,
     String? password,
     String? privateKey,
+    String? passphrase,
     String? dockerCliPath,
   }) {
     return Server(
@@ -66,6 +71,7 @@ class Server {
       username: username ?? this.username,
       password: password ?? this.password,
       privateKey: privateKey ?? this.privateKey,
+      passphrase: passphrase ?? this.passphrase,
       dockerCliPath: dockerCliPath ?? this.dockerCliPath,
     );
   }
