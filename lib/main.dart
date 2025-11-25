@@ -3,6 +3,9 @@ import 'package:easy_localization/easy_localization.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/widgets/theme_manager.dart';
 
+// Global key for showing toasts from anywhere
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
@@ -70,6 +73,7 @@ class MyApp extends StatelessWidget {
             ),
           ),
           themeMode: ThemeManager().themeMode,
+          scaffoldMessengerKey: scaffoldMessengerKey,
           home: const HomeScreen(),
         );
       },

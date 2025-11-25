@@ -6,6 +6,8 @@ import '../../domain/repositories/docker_repository.dart';
 import '../../domain/models/server.dart';
 import '../services/ssh_connection_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
+import '../../main.dart';
 
 class DockerRepositoryImpl implements DockerRepository {
   final SSHConnectionService _sshService = SSHConnectionService();
@@ -103,6 +105,15 @@ class DockerRepositoryImpl implements DockerRepository {
         timeout: const Duration(seconds: 30),
       );
       
+      // DEBUG: Show actual command output
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text('[STATS OUTPUT] ${result ?? "null"}'),
+          duration: const Duration(seconds: 5),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      
       if (result == null || result.trim().isEmpty) {
         return {}; // No running containers
       }
@@ -127,6 +138,14 @@ class DockerRepositoryImpl implements DockerRepository {
       
       return statsMap;
     } catch (e) {
+      // DEBUG: Show error
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text('[STATS ERROR] ${e.toString()}'),
+          duration: const Duration(seconds: 5),
+          backgroundColor: Colors.red,
+        ),
+      );
       throw Exception(_parseDockerError(e));
     }
   }
@@ -141,12 +160,29 @@ class DockerRepositoryImpl implements DockerRepository {
       final dockerCli = await _getDockerCliPath();
       final result = await _sshService.executeCommand('$dockerCli images');
       
+      // DEBUG: Show actual command output
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text('[IMAGES OUTPUT] ${result ?? "null"}'),
+          duration: const Duration(seconds: 5),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      
       if (result == null) {
         throw Exception('Docker images command returned no output');
       }
 
       return DockerImage.parseDockerImagesOutput(result);
     } catch (e) {
+      // DEBUG: Show error
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text('[IMAGES ERROR] ${e.toString()}'),
+          duration: const Duration(seconds: 5),
+          backgroundColor: Colors.red,
+        ),
+      );
       throw Exception(_parseDockerError(e));
     }
   }

@@ -114,13 +114,31 @@ class SSHConnectionService {
     }
 
     try {
+      // DEBUG: Log command execution for testing
+      if (command.contains('docker images') || command.contains('docker stats')) {
+        print('[DEBUG] Executing: $command');
+        print('[DEBUG] Timeout: ${timeout.inSeconds}s');
+      }
+      
       final result = await _currentConnection!.run(command).timeout(
         timeout,
         onTimeout: () {
+          if (command.contains('docker images') || command.contains('docker stats')) {
+            print('[DEBUG] Command TIMED OUT after ${timeout.inSeconds}s: $command');
+          }
           throw TimeoutException('Command timed out after ${timeout.inSeconds} seconds');
         },
       );
-      return utf8.decode(result);
+      final output = utf8.decode(result);
+      
+      // DEBUG: Log command completion for testing
+      if (command.contains('docker images') || command.contains('docker stats')) {
+        print('[DEBUG] Command completed successfully');
+        print('[DEBUG] Output length: ${output.length} chars');
+        print('[DEBUG] First 100 chars: ${output.substring(0, output.length > 100 ? 100 : output.length)}');
+      }
+      
+      return output;
     } catch (e) {
       // Check if this is a connection-related error
       final errorString = e.toString().toLowerCase();
