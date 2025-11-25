@@ -475,17 +475,19 @@ class _ShellScreenState extends State<ShellScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Search bar
-          if (!_isLoading)
-            Column(
-              children: [
-                CustomSearchBar(
-                  hintText: ('common.search_in_output').tr(),
-                  onSearchChanged: _onSearchChanged,
-                  onClear: _clearSearch,
-                ),
+      body: SafeArea(
+        bottom: true,
+        child: Column(
+          children: [
+            // Search bar
+            if (!_isLoading)
+              Column(
+                children: [
+                  CustomSearchBar(
+                    hintText: ('common.search_in_output').tr(),
+                    onSearchChanged: _onSearchChanged,
+                    onClear: _clearSearch,
+                  ),
                 if (_isSearching)
                   Container(
                     width: double.infinity,
@@ -622,7 +624,8 @@ class _ShellScreenState extends State<ShellScreen> {
                 ],
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
