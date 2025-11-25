@@ -1,4 +1,6 @@
 class DockerVolume {
+  static const _lsDelimiter = '|||';
+  
   final String driver;
   final String volumeName;
 
@@ -8,8 +10,28 @@ class DockerVolume {
   });
 
   factory DockerVolume.fromDockerVolumeLsLine(String line) {
-    // Docker volume ls output format: DRIVER    VOLUME NAME
-    final parts = line.split(RegExp(r'\s{2,}')); // Split by 2+ spaces
+    // Check if this is the new format (with ||| delimiter)
+    if (line.contains(_lsDelimiter)) {
+      final parts = line.split(_lsDelimiter);
+      
+      if (parts.length < 2) {
+        throw FormatException(
+          'Invalid docker volume ls line format (expected at least 2 parts, got ${parts.length}): $line',
+        );
+      }
+
+      final driver = parts.first.trim();
+      // Rejoin any extra parts into volume name (handles edge case of ||| in name)
+      final volumeName = parts.sublist(1).join(_lsDelimiter).trim();
+
+      return DockerVolume(
+        driver: driver,
+        volumeName: volumeName,
+      );
+    }
+    
+    // Fallback to old format (split by 2+ spaces) for backwards compatibility
+    final parts = line.split(RegExp(r'\s{2,}'));
     
     if (parts.length < 2) {
       throw FormatException('Invalid docker volume ls line format: $line');
@@ -25,8 +47,18 @@ class DockerVolume {
     final lines = output.split('\n');
     if (lines.isEmpty) return [];
 
-    // Skip header line and empty lines
-    final dataLines = lines.skip(1).where((line) => line.trim().isNotEmpty);
+    // With --format, there's no header line. Just skip empty lines and warnings.
+    // Also detect and skip header if present (for backward compatibility)
+    final dataLines = lines.where((line) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) return false;
+      if (trimmed.toLowerCase().contains('warning:')) return false;
+      if (trimmed.toLowerCase().contains('for machine')) return false;
+      // Skip header line (starts with DRIVER or contains VOLUME NAME)
+      if (trimmed.toUpperCase().startsWith('DRIVER') || 
+          trimmed.toUpperCase().contains('VOLUME NAME')) return false;
+      return true;
+    });
     
     return dataLines
         .map((line) {

@@ -1,4 +1,6 @@
 class DockerNetwork {
+  static const _lsDelimiter = '|||';
+  
   final String networkId;
   final String name;
   final String driver;
@@ -12,8 +14,27 @@ class DockerNetwork {
   });
 
   factory DockerNetwork.fromDockerNetworkLsLine(String line) {
-    // Docker network ls output format: NETWORK ID   NAME      DRIVER    SCOPE
-    final parts = line.split(RegExp(r'\s{2,}')); // Split by 2+ spaces
+    // Check if this is the new format (with ||| delimiter)
+    if (line.contains(_lsDelimiter)) {
+      final parts = line.split(_lsDelimiter);
+      
+      if (parts.length < 4) {
+        throw FormatException(
+          'Invalid docker network ls line format (expected at least 4 parts, got ${parts.length}): $line',
+        );
+      }
+
+      // Take first 3 parts as-is, join any remaining into scope (edge case)
+      return DockerNetwork(
+        networkId: parts[0].trim(),
+        name: parts[1].trim(),
+        driver: parts[2].trim(),
+        scope: parts.sublist(3).join(_lsDelimiter).trim(),
+      );
+    }
+    
+    // Fallback to old format (split by 2+ spaces) for backwards compatibility
+    final parts = line.split(RegExp(r'\s{2,}'));
     
     if (parts.length < 4) {
       throw FormatException('Invalid docker network ls line format: $line');
@@ -31,8 +52,20 @@ class DockerNetwork {
     final lines = output.split('\n');
     if (lines.isEmpty) return [];
 
-    // Skip header line and empty lines
-    final dataLines = lines.skip(1).where((line) => line.trim().isNotEmpty);
+    // With --format, there's no header line. Just skip empty lines and warnings.
+    // Also detect and skip header if present (for backward compatibility)
+    final dataLines = lines.where((line) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) return false;
+      if (trimmed.toLowerCase().contains('warning:')) return false;
+      if (trimmed.toLowerCase().contains('for machine')) return false;
+      // Skip header line (starts with NETWORK ID or contains NAME/DRIVER/SCOPE)
+      if (trimmed.toUpperCase().startsWith('NETWORK ID') || 
+          (trimmed.toUpperCase().contains('NAME') && 
+           trimmed.toUpperCase().contains('DRIVER') && 
+           trimmed.toUpperCase().contains('SCOPE'))) return false;
+      return true;
+    });
     
     return dataLines
         .map((line) {
