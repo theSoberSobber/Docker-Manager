@@ -42,6 +42,11 @@ class _ContainersScreenState extends State<ContainersScreen>
     WidgetsBinding.instance.addObserver(this);
     // Initialize with current server to avoid false detection of server change
     _lastKnownServer = _sshService.currentServer;
+    // If no connection exists on init, mark as tried to avoid showing "initializing"
+    if (!_sshService.isConnected && !_sshService.isConnecting) {
+      _hasTriedLoading = true;
+      _error = 'No SSH connection available. Please connect to a server first.';
+    }
     // Start a periodic check to detect server changes
     _startServerChangeDetection();
   }
@@ -91,6 +96,17 @@ class _ContainersScreenState extends State<ContainersScreen>
   /// Check if SSH is connected before loading
   Future<void> _checkConnectionAndLoad() async {
     if (!mounted) return;
+    
+    // Check connection status first before setting loading state
+    if (!_sshService.isConnected && !_sshService.isConnecting) {
+      // No connection at all - show error immediately without loading state
+      setState(() {
+        _hasTriedLoading = true;
+        _isLoading = false;
+        _error = 'No SSH connection available. Please connect to a server first.';
+      });
+      return;
+    }
     
     setState(() {
       _hasTriedLoading = true;
