@@ -327,7 +327,7 @@ class _VolumesScreenState extends State<VolumesScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'shell.try_different_search'.tr(),
+                    'common.try_different_search'.tr(),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[600],

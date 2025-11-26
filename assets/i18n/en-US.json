@@ -50,7 +50,8 @@
     "build_image_tooltip": "Build image from Dockerfile",
     "host_shell": "Host Shell",
     "actions_for": "Actions for {}",
-    "pull_image": "Pull Image"
+    "pull_image": "Pull Image",
+    "try_different_search": "Try a different search term"
   },
   "connection": {
     "please_connect": "Please connect to a server first",
@@ -156,7 +157,8 @@
       "cpu": "CPU",
       "memory": "Memory",
       "network": "Network",
-      "pids": "PIDs"
+      "pids": "PIDs",
+      "loading": "Loading stats..."
     },
     "create_form": {
       "image_selection": "Image Selection",

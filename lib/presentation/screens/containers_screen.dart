@@ -139,14 +139,14 @@ class _ContainersScreenState extends State<ContainersScreen>
       if (!connectionSucceeded && mounted) {
         setState(() {
           _isLoading = false;
-          _error = 'connection.timeout'.tr();
+          _error = 'connection.timeout';
         });
       }
     } else {
       // No connection
       setState(() {
         _isLoading = false;
-        _error = 'connection.no_connection'.tr();
+        _error = 'connection.no_connection';
       });
     }
   }
@@ -740,7 +740,7 @@ class _ContainersScreenState extends State<ContainersScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'shell.try_different_search'.tr(),
+                    'common.try_different_search'.tr(),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[600],
