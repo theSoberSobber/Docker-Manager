@@ -29,6 +29,7 @@ class _ContainersScreenState extends State<ContainersScreen>
   String? _error;
   bool _hasTriedLoading = false;
   Server? _lastKnownServer;
+  String? _lastLoadedServerId; // Track which server we loaded data for
   String _searchQuery = '';
   String? _selectedStack; // null means "All", "no-stack" means containers without stack
 
@@ -39,6 +40,13 @@ class _ContainersScreenState extends State<ContainersScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Initialize with current server to avoid false detection of server change
+    _lastKnownServer = _sshService.currentServer;
+    // If no connection exists on init, mark as tried to avoid showing "initializing"
+    if (!_sshService.isConnected && !_sshService.isConnecting) {
+      _hasTriedLoading = true;
+      _error = 'connection.please_connect'.tr();
+    }
     // Start a periodic check to detect server changes
     _startServerChangeDetection();
   }
@@ -57,11 +65,11 @@ class _ContainersScreenState extends State<ContainersScreen>
       
       final currentServer = _sshService.currentServer;
       
-      // If server changed or connection status changed, reload
-      if (_lastKnownServer?.id != currentServer?.id || 
-          (!_hasTriedLoading && _sshService.isConnected)) {
+      // Only reload if server actually changed
+      if (_lastKnownServer?.id != currentServer?.id) {
         _lastKnownServer = currentServer;
-        _hasTriedLoading = false; // Reset to allow reload
+        _lastLoadedServerId = null; // Clear loaded server to trigger reload
+        _hasTriedLoading = false;
         _checkConnectionAndLoad();
       }
       
@@ -74,7 +82,9 @@ class _ContainersScreenState extends State<ContainersScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     // This gets called when the tab becomes visible
-    if (!_hasTriedLoading && mounted) {
+    // Only load if we haven't loaded for the current server yet
+    final currentServerId = _sshService.currentServer?.id;
+    if (!_hasTriedLoading && mounted && _lastLoadedServerId != currentServerId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _checkConnectionAndLoad();
@@ -86,6 +96,17 @@ class _ContainersScreenState extends State<ContainersScreen>
   /// Check if SSH is connected before loading
   Future<void> _checkConnectionAndLoad() async {
     if (!mounted) return;
+    
+    // Check connection status first before setting loading state
+    if (!_sshService.isConnected && !_sshService.isConnecting) {
+      // No connection at all - show error immediately without loading state
+      setState(() {
+        _hasTriedLoading = true;
+        _isLoading = false;
+        _error = 'connection.please_connect'.tr();
+      });
+      return;
+    }
     
     setState(() {
       _hasTriedLoading = true;
@@ -118,19 +139,20 @@ class _ContainersScreenState extends State<ContainersScreen>
       if (!connectionSucceeded && mounted) {
         setState(() {
           _isLoading = false;
-          _error = 'Connection timeout. Please try again or check your server connection.';
+          _error = 'connection.timeout'.tr();
         });
       }
     } else {
       // No connection
       setState(() {
         _isLoading = false;
-        _error = 'No SSH connection available. Please connect to a server first.';
+        _error = 'connection.no_connection'.tr();
       });
     }
   }
 
   Future<void> _loadContainers() async {
+    final loadingForServerId = _sshService.currentServer?.id;
     setState(() {
       _isLoading = true;
       _error = null;
@@ -139,11 +161,17 @@ class _ContainersScreenState extends State<ContainersScreen>
     try {
       final containers = await _dockerRepository.getContainers();
       
+      // Only update if still on the same server
+      if (!mounted || _sshService.currentServer?.id != loadingForServerId) {
+        return;
+      }
+      
       // Show containers immediately without stats
       setState(() {
         _containers = containers;
         _filteredContainers = _filterContainers(containers, _searchQuery);
         _isLoading = false;
+        _lastLoadedServerId = loadingForServerId; // Mark that we loaded data for this server
       });
       
       // Fetch stats asynchronously in the background
@@ -531,8 +559,18 @@ class _ContainersScreenState extends State<ContainersScreen>
     }
 
     if (_error != null) {
+      // Get localized connection error messages for comparison
+      final timeoutMsg = 'connection.timeout'.tr();
+      final noConnectionMsg = 'connection.no_connection'.tr();
+      final pleaseConnectMsg = 'connection.please_connect'.tr();
+      
+      // Check for connection-related errors using both English text (for exceptions)
+      // and localized messages (for user-set errors)
       final isConnectionError = _error!.contains('No SSH connection') || 
                                 _error!.contains('Connection timeout') ||
+                                _error == timeoutMsg ||
+                                _error == noConnectionMsg ||
+                                _error == pleaseConnectMsg ||
                                 _error!.contains('Failed to get containers: Exception: No SSH connection');
       final isPermissionError = _error!.contains('Permission denied') || 
                                 _error!.contains('docker group');

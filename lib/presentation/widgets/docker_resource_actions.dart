@@ -76,7 +76,7 @@ class DockerResourceActions extends StatelessWidget {
         return AlertDialog(
           title: Text('actions.confirm_action'.tr(args: [action.label.tr()])),
           content: Text(
-            'Are you sure you want to ${action.label.tr().toLowerCase()} "$resourceName"?',
+            'actions.confirm_message'.tr(args: [action.label.tr().toLowerCase(), resourceName]),
           ),
           actions: [
             TextButton(

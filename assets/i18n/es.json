@@ -62,7 +62,9 @@
     "failed_to_connect": "No se pudo conectar a {}",
     "selected_server": "Servidor seleccionado: {}",
     "failed_to_select": "Error al seleccionar el servidor: {}",
-    "failed_to_load": "Error al cargar el servidor: {}"
+    "failed_to_load": "Error al cargar el servidor: {}",
+    "timeout": "Tiempo de conexión agotado. Por favor, inténtelo de nuevo o verifique la conexión del servidor.",
+    "no_connection": "No hay conexión SSH disponible. Por favor, conéctese primero a un servidor."
   },
   "navigation": {
     "containers": "Contenedores",
@@ -361,6 +363,7 @@
   },
   "actions": {
     "confirm_action": "Confirmar {}",
+    "confirm_message": "¿Estás seguro de que quieres {} \"{}\"?",
     "logs": "Registros",
     "inspect": "Inspeccionar",
     "stop": "Detener",
