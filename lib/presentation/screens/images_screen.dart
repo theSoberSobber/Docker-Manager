@@ -181,7 +181,7 @@ class _ImagesScreenState extends State<ImagesScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result?.isNotEmpty == true ? result! : 'Command executed successfully'),
+            content: Text(result?.isNotEmpty == true ? result! : 'operations.executed_successfully'.tr()),
             backgroundColor: Colors.green,
           ),
         );
@@ -329,7 +329,7 @@ class _ImagesScreenState extends State<ImagesScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Try a different search term',
+                    'shell.try_different_search'.tr(),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[600],

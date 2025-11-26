@@ -404,7 +404,7 @@ class _ShellScreenState extends State<ShellScreen> {
             children: [
               Icon(Icons.check_circle, color: Colors.green),
               const SizedBox(width: 8),
-              Text(_isSearching ? 'Filtered output copied to clipboard' : 'Output copied to clipboard'),
+              Text(_isSearching ? 'shell.filtered_output_copied'.tr() : 'shell.output_copied'.tr()),
             ],
           ),
           duration: const Duration(seconds: 2),
@@ -413,7 +413,7 @@ class _ShellScreenState extends State<ShellScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_isSearching ? 'No matching lines found' : 'No output to copy'),
+          content: Text(_isSearching ? 'shell.no_matching_lines'.tr() : 'shell.no_output_to_copy'.tr()),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -545,7 +545,7 @@ class _ShellScreenState extends State<ShellScreen> {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'No matching lines found',
+                                'shell.no_matching_lines'.tr(),
                                 style: TextStyle(
                                   color: Theme.of(context).brightness == Brightness.dark 
                                       ? const Color(0xFFE6EDF3)
@@ -555,7 +555,7 @@ class _ShellScreenState extends State<ShellScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Try a different search term',
+                                'shell.try_different_search'.tr(),
                                 style: TextStyle(
                                   color: Theme.of(context).brightness == Brightness.dark 
                                       ? const Color(0xFFE6EDF3)

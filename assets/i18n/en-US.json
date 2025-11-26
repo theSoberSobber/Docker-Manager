@@ -372,5 +372,12 @@
     "start": "Start",
     "remove": "Remove",
     "history": "History"
+  },
+  "shell": {
+    "output_copied": "Output copied to clipboard",
+    "filtered_output_copied": "Filtered output copied to clipboard",
+    "no_output_to_copy": "No output to copy",
+    "no_matching_lines": "No matching lines found",
+    "try_different_search": "Try a different search term"
   }
 }
