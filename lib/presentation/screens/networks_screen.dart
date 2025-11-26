@@ -135,7 +135,7 @@ class _NetworksScreenState extends State<NetworksScreen>
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => ShellScreen(
-                title: 'Inspect Network - ${network.name}',
+                title: 'networks.inspect_title'.tr(args: [network.name]),
                 command: command,
               ),
             ),
@@ -260,7 +260,7 @@ class _NetworksScreenState extends State<NetworksScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'Failed to load networks',
+              'networks.failed_to_load'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
@@ -305,7 +305,7 @@ class _NetworksScreenState extends State<NetworksScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'No networks found',
+              'networks.no_networks'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
@@ -334,7 +334,7 @@ class _NetworksScreenState extends State<NetworksScreen>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No networks match your search',
+                    'networks.no_search_results'.tr(),
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),

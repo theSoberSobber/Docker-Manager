@@ -134,7 +134,7 @@ class _VolumesScreenState extends State<VolumesScreen>
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => ShellScreen(
-                title: 'Inspect Volume - ${volume.volumeName}',
+                title: 'volumes.inspect_title'.tr(args: [volume.volumeName]),
                 command: command,
               ),
             ),
@@ -248,7 +248,7 @@ class _VolumesScreenState extends State<VolumesScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'Failed to load volumes',
+              'volumes.failed_to_load'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
@@ -293,7 +293,7 @@ class _VolumesScreenState extends State<VolumesScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'No volumes found',
+              'volumes.no_volumes'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
@@ -322,7 +322,7 @@ class _VolumesScreenState extends State<VolumesScreen>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No volumes match your search',
+                    'volumes.no_search_results'.tr(),
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),

@@ -136,7 +136,7 @@ class _ImagesScreenState extends State<ImagesScreen>
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => ShellScreen(
-                title: 'Inspect Image - ${image.repository}:${image.tag}',
+                title: 'images.inspect_title'.tr(args: ['${image.repository}:${image.tag}']),
                 command: command,
               ),
             ),
@@ -250,7 +250,7 @@ class _ImagesScreenState extends State<ImagesScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'Failed to load images',
+              'images.failed_to_load'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
@@ -295,7 +295,7 @@ class _ImagesScreenState extends State<ImagesScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'No images found',
+              'images.no_images'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
@@ -324,7 +324,7 @@ class _ImagesScreenState extends State<ImagesScreen>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No images match your search',
+                    'images.no_search_results'.tr(),
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),

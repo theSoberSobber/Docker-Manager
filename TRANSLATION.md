@@ -29,7 +29,7 @@ Docker Manager uses the `easy_localization` package for internationalization. Tr
 - Use `\n` for line breaks
 - Preserve technical terms where appropriate (Container, Docker, etc.)
 
-**Structure:** Files use nested objects by feature (`app`, `common`, `connection`, `navigation`, `servers`, `containers`, `images`, `volumes`, `networks`, `system`, `settings`)
+**Structure:** Files use nested objects by feature (`app`, `common`, `connection`, `navigation`, `servers`, `containers`, `images`, `volumes`, `networks`, `system_info`, `settings`, `operations`, `actions`, `shell`)
 
 **Example:**
 ```json
@@ -46,4 +46,4 @@ Docker Manager uses the `easy_localization` package for internationalization. Tr
 
 ## Questions?
 
-Feel free to tag me anytime on the issue you have opened. Thank you so much for helping me make the app more accessible!
+You can tag me on the issue if you have any questions. Thank you for helping make the app more accessible!

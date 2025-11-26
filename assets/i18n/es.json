@@ -10,10 +10,7 @@
     "ok": "OK",
     "refresh": "Actualizar",
     "settings": "Configuración",
-    "loading": "Cargando...",
     "error": "Error",
-    "success": "Éxito",
-    "confirm": "Confirmar",
     "add": "Agregar",
     "save": "Guardar",
     "clear": "Limpiar",
@@ -41,7 +38,6 @@
     "send_ctrl_d": "Enviar Ctrl+D (EOF)",
     "showing_lines": "Mostrando {} de {} líneas",
     "logs": "Registros",
-    "clear_output": "Limpiar salida",
     "clear_search": "Limpiar búsqueda",
     "system_information": "Información del Sistema",
     "servers": "Servidores",
@@ -64,7 +60,9 @@
     "failed_to_select": "Error al seleccionar el servidor: {}",
     "failed_to_load": "Error al cargar el servidor: {}",
     "timeout": "Tiempo de conexión agotado. Por favor, inténtelo de nuevo o verifique la conexión del servidor.",
-    "no_connection": "No hay conexión SSH disponible. Por favor, conéctese primero a un servidor."
+    "no_connection": "No hay conexión SSH disponible. Por favor, conéctese primero a un servidor.",
+    "no_server_connection": "Sin Conexión al Servidor",
+    "permission_issue": "Problema de Permisos"
   },
   "navigation": {
     "containers": "Contenedores",
@@ -123,7 +121,8 @@
     "error_port_invalid": "Por favor ingrese un puerto válido (1-65535)",
     "error_username_required": "Por favor ingrese un nombre de usuario",
     "error_password_required": "Por favor ingrese una contraseña",
-    "error_private_key_required": "Por favor ingrese una clave privada"
+    "error_private_key_required": "Por favor ingrese una clave privada",
+    "no_servers_yet": "Aún no se han agregado servidores.\nToque + para agregar su primer servidor."
   },
   "auth": {
     "password": "Contraseña",
@@ -131,7 +130,6 @@
     "passphrase": "Frase de Contraseña (Opcional)"
   },
   "containers": {
-    "title": "Contenedores",
     "create": "Crear Contenedor",
     "loading": "Cargando contenedores...",
     "initializing": "Inicializando...",
@@ -139,9 +137,6 @@
     "no_images_available": "No hay imágenes disponibles",
     "pull_or_build_first": "Descargue o construya una imagen primero para crear contenedores",
     "no_search_results": "Ningún contenedor coincide con tu búsqueda",
-    "inspect_title": "Inspeccionar Contenedor - {}",
-    "delete_title": "Eliminar Contenedor",
-    "delete_confirmation": "¿Está seguro de que desea eliminar el contenedor \"{}\"?\n\nEsta acción no se puede deshacer.",
     "created_successfully": "Contenedor creado exitosamente",
     "failed_to_create": "Error al crear contenedor",
     "please_select_image": "Por favor seleccione una imagen",
@@ -156,26 +151,12 @@
     "action_failed": "{} falló: {}",
     "action_in_progress": "{}...",
     "pull_to_refresh": "Desliza hacia abajo para actualizar",
-    "actions": {
-      "start": "Iniciar",
-      "stop": "Detener",
-      "restart": "Reiniciar",
-      "inspect": "Inspeccionar",
-      "logs": "Registros",
-      "shell": "Terminal",
-      "delete": "Eliminar"
-    },
+    "failed_to_load": "Error al cargar contenedores",
     "stats": {
       "cpu": "CPU",
       "memory": "Memoria",
       "network": "Red",
       "pids": "PIDs"
-    },
-    "status": {
-      "running": "En ejecución",
-      "exited": "Detenido",
-      "created": "Creado",
-      "paused": "Pausado"
     },
     "create_form": {
       "image_selection": "Selección de Imagen",
@@ -217,16 +198,15 @@
     }
   },
   "images": {
-    "title": "Imágenes",
     "pull": "Descargar Imagen",
     "build": "Construir Imagen",
     "loading": "Cargando imágenes...",
     "no_images": "No se encontraron imágenes",
-    "no_search_results": "Ninguna imagen coincide con tu búsqueda",
+    "no_search_results": "No hay imágenes que coincidan con tu búsqueda",
+    "pull_to_refresh": "Desliza hacia abajo para actualizar",
     "inspect_title": "Inspeccionar Imagen - {}",
     "delete_title": "Eliminar Imagen",
     "delete_confirmation": "¿Está seguro de que desea eliminar la imagen \"{}:{}\"?\n\nEsta acción no se puede deshacer.",
-    "pull_to_refresh": "Desliza hacia abajo para actualizar",
     "pulling": "Descargando Imagen",
     "pulling_progress": "Descargando {}...",
     "pull_success": "Se descargó exitosamente {}",
@@ -248,9 +228,8 @@
     "search_failed": "Búsqueda Fallida",
     "search_docker_images": "Buscar Imágenes de Docker",
     "enter_image_name": "Ingrese un nombre de imagen para buscar en Docker Hub",
-    "no_results_found": "No se Encontraron Resultados",
-    "please_enter_search_term": "Por favor ingrese un término de búsqueda",
-    "pulling_may_take_time": "Esto puede tomar un tiempo dependiendo del tamaño de la imagen.",
+    "no_results_found": "No se encontraron resultados",
+    "please_enter_search_term": "Por favor ingresa un término de búsqueda",
     "image_name": "Nombre de la Imagen",
     "image_name_hint": "mi-imagen-personalizada",
     "please_enter_image_name": "Por favor ingrese un nombre de imagen",
@@ -266,40 +245,28 @@
     "building": "Construyendo...",
     "build_image_button": "Construir Imagen",
     "build_logs": "Registros de Construcción",
-    "actions": {
-      "inspect": "Inspeccionar",
-      "delete": "Eliminar",
-      "run": "Ejecutar"
-    }
+    "failed_to_load": "Error al cargar imágenes"
   },
   "volumes": {
-    "title": "Volúmenes",
     "loading": "Cargando volúmenes...",
     "no_volumes": "No se encontraron volúmenes",
     "no_search_results": "Ningún volumen coincide con tu búsqueda",
+    "pull_to_refresh": "Desliza hacia abajo para actualizar",
+    "failed_to_load": "Error al cargar volúmenes",
     "inspect_title": "Inspeccionar Volumen - {}",
     "delete_title": "Eliminar Volumen",
-    "delete_confirmation": "¿Está seguro de que desea eliminar el volumen \"{}\"?\n\nEsta acción no se puede deshacer.",
-    "pull_to_refresh": "Desliza hacia abajo para actualizar",
-    "actions": {
-      "inspect": "Inspeccionar",
-      "delete": "Eliminar"
-    }
+    "delete_confirmation": "¿Está seguro de que desea eliminar el volumen \"{}\"?\n\nEsta acción no se puede deshacer."
   },
   "networks": {
-    "title": "Redes",
     "loading": "Cargando redes...",
     "no_networks": "No se encontraron redes",
     "no_search_results": "Ninguna red coincide con tu búsqueda",
+    "pull_to_refresh": "Desliza hacia abajo para actualizar",
+    "failed_to_load": "Error al cargar redes",
     "inspect_title": "Inspeccionar Red - {}",
     "delete_title": "Eliminar Red",
     "delete_confirmation": "¿Está seguro de que desea eliminar la red \"{}\"?\n\nEsta acción no se puede deshacer.",
-    "cannot_delete_system": "No se puede eliminar la red del sistema \"{}\"",
-    "pull_to_refresh": "Desliza hacia abajo para actualizar",
-    "actions": {
-      "inspect": "Inspeccionar",
-      "delete": "Eliminar"
-    }
+    "cannot_delete_system": "No se puede eliminar la red del sistema \"{}\""
   },
   "settings": {
     "title": "Configuración",
@@ -358,8 +325,7 @@
     "disk": "Disco"
   },
   "operations": {
-    "executed_successfully": "Comando ejecutado exitosamente",
-    "error_occurred": "Error: {}"
+    "executed_successfully": "Comando ejecutado exitosamente"
   },
   "actions": {
     "confirm_action": "Confirmar {}",

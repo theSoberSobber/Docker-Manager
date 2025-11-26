@@ -590,9 +590,9 @@ class _ContainersScreenState extends State<ContainersScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              isConnectionError ? 'No Server Connection' : 
-              isPermissionError ? 'Permission Issue' :
-              'Failed to load containers',
+              isConnectionError ? 'connection.no_server_connection'.tr() : 
+              isPermissionError ? 'connection.permission_issue'.tr() :
+              'containers.failed_to_load'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
@@ -600,7 +600,7 @@ class _ContainersScreenState extends State<ContainersScreen>
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Text(
                 isConnectionError 
-                  ? 'Please connect to a server to view containers'
+                  ? 'connection.please_connect'.tr()
                   : _error!,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -681,12 +681,12 @@ class _ContainersScreenState extends State<ContainersScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'No containers found',
+              'containers.no_containers'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'No Docker containers are available on this server.',
+              'containers.pull_to_refresh'.tr(),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.grey[600],
@@ -740,7 +740,7 @@ class _ContainersScreenState extends State<ContainersScreen>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No containers match your search',
+                    'containers.no_search_results'.tr(),
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
