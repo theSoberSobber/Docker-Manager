@@ -10,10 +10,7 @@
     "ok": "OK",
     "refresh": "Rafraîchir",
     "settings": "Paramètres",
-    "loading": "Chargement...",
     "error": "Erreur",
-    "success": "Succès",
-    "confirm": "Confirmer",
     "add": "Ajouter",
     "save": "Enregistrer",
     "clear": "Effacer",
@@ -41,7 +38,6 @@
     "send_ctrl_d": "Envoyer Ctrl+D (EOF)",
     "showing_lines": "Affiche {} sur {} lignes",
     "logs": "Logs",
-    "clear_output": "Vider la sortie",
     "clear_search": "Effacer la recherche",
     "system_information": "Infos système",
     "servers": "Serveurs",
@@ -54,7 +50,7 @@
     "build_image_tooltip": "Construire une image depuis Dockerfile",
     "host_shell": "Shell hôte",
     "actions_for": "Actions pour {}",
-    "pull_image": "Télécharger l'image"
+    "pull_image": "Télécharger une image"
   },
   "connection": {
     "please_connect": "Veuillez d'abord vous connecter à un serveur",
@@ -131,7 +127,6 @@
     "passphrase": "Passphrase (optionnel)"
   },
   "containers": {
-    "title": "Conteneurs",
     "create": "Créer un conteneur",
     "loading": "Chargement des conteneurs...",
     "initializing": "Initialisation...",
@@ -139,9 +134,6 @@
     "no_images_available": "Aucune image disponible",
     "pull_or_build_first": "Téléchargez ou construisez une image d'abord",
     "no_search_results": "Aucun conteneur ne correspond",
-    "inspect_title": "Inspecter le conteneur - {}",
-    "delete_title": "Supprimer le conteneur",
-    "delete_confirmation": "Voulez-vous vraiment supprimer le conteneur \"{}\"?\n\nCette action est irréversible.",
     "created_successfully": "Conteneur créé",
     "failed_to_create": "Échec de création du conteneur",
     "please_select_image": "Sélectionnez une image",
@@ -155,27 +147,12 @@
     "action_success": "{} réussi",
     "action_failed": "{} a échoué : {}",
     "action_in_progress": "{}...",
-    "pull_to_refresh": "Tirer pour rafraîchir",
-    "actions": {
-      "start": "Démarrer",
-      "stop": "Arrêter",
-      "restart": "Redémarrer",
-      "inspect": "Inspecter",
-      "logs": "Logs",
-      "shell": "Shell",
-      "delete": "Supprimer"
-    },
+    "pull_to_refresh": "Tirez vers le bas pour actualiser",
     "stats": {
       "cpu": "CPU",
       "memory": "Mémoire",
       "network": "Réseau",
       "pids": "PIDs"
-    },
-    "status": {
-      "running": "En cours",
-      "exited": "Arrêté",
-      "created": "Créé",
-      "paused": "En pause"
     },
     "create_form": {
       "image_selection": "Sélection de l'image",
@@ -217,7 +194,6 @@
     }
   },
   "images": {
-    "title": "Images",
     "pull": "Télécharger",
     "build": "Construire",
     "loading": "Chargement des images...",
@@ -250,7 +226,6 @@
     "enter_image_name": "Entrez un nom d'image pour Docker Hub",
     "no_results_found": "Aucun résultat",
     "please_enter_search_term": "Entrez un terme de recherche",
-    "pulling_may_take_time": "Cela peut prendre du temps selon la taille.",
     "image_name": "Nom de l'image",
     "image_name_hint": "mon-image",
     "please_enter_image_name": "Entrez un nom d'image",
@@ -265,29 +240,18 @@
     "dockerfile_must_have_from": "Le Dockerfile doit contenir FROM",
     "building": "Construction...",
     "build_image_button": "Construire",
-    "build_logs": "Logs de build",
-    "actions": {
-      "inspect": "Inspecter",
-      "delete": "Supprimer",
-      "run": "Lancer"
-    }
+    "build_logs": "Logs de build"
   },
   "volumes": {
-    "title": "Volumes",
     "loading": "Chargement des volumes...",
     "no_volumes": "Aucun volume",
     "no_search_results": "Aucun volume ne correspond",
     "inspect_title": "Inspecter le volume - {}",
     "delete_title": "Supprimer le volume",
     "delete_confirmation": "Voulez-vous vraiment supprimer le volume \"{}\"?\n\nCette action est irréversible.",
-    "pull_to_refresh": "Tirer pour rafraîchir",
-    "actions": {
-      "inspect": "Inspecter",
-      "delete": "Supprimer"
-    }
+    "pull_to_refresh": "Tirer pour rafraîchir"
   },
   "networks": {
-    "title": "Réseaux",
     "loading": "Chargement des réseaux...",
     "no_networks": "Aucun réseau",
     "no_search_results": "Aucun réseau ne correspond",
@@ -295,11 +259,7 @@
     "delete_title": "Supprimer le réseau",
     "delete_confirmation": "Voulez-vous vraiment supprimer le réseau \"{}\"?\n\nCette action est irréversible.",
     "cannot_delete_system": "Impossible de supprimer le réseau système \"{}\"",
-    "pull_to_refresh": "Tirer pour rafraîchir",
-    "actions": {
-      "inspect": "Inspecter",
-      "delete": "Supprimer"
-    }
+    "pull_to_refresh": "Tirer pour rafraîchir"
   },
   "settings": {
     "title": "Paramètres",
@@ -358,8 +318,7 @@
     "disk": "Disque"
   },
   "operations": {
-    "executed_successfully": "Commande exécutée",
-    "error_occurred": "Erreur : {}"
+    "executed_successfully": "Commande exécutée"
   },
   "actions": {
     "confirm_action": "Confirmer {}",
@@ -379,4 +338,5 @@
     "no_output_to_copy": "Rien à copier",
     "no_matching_lines": "Aucune ligne correspondante trouvée",
     "try_different_search": "Essayez une autre recherche"
+  }
 }
