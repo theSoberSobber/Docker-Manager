@@ -64,6 +64,8 @@ This is a Flutter application. To build it yourself:
 
 Contributions are welcome. Please feel free to submit issues or pull requests.
 
+To help translate the app into your language, see [TRANSLATION.md](./TRANSLATION.md).
+
 ## FAQ
 
 For server setup requirements, troubleshooting, and platform-specific instructions, see the [FAQ](./FAQ.md).
