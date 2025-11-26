@@ -50,7 +50,8 @@
     "build_image_tooltip": "Construire une image depuis Dockerfile",
     "host_shell": "Shell hôte",
     "actions_for": "Actions pour {}",
-    "pull_image": "Télécharger une image"
+    "pull_image": "Télécharger une image",
+    "try_different_search": "Essayez une autre recherche"
   },
   "connection": {
     "please_connect": "Veuillez d'abord vous connecter à un serveur",
@@ -60,7 +61,9 @@
     "failed_to_select": "Impossible de sélectionner le serveur : {}",
     "failed_to_load": "Impossible de charger le serveur : {}",
     "timeout": "Délai de connexion dépassé. Réessayez ou vérifiez le serveur.",
-    "no_connection": "Aucune connexion SSH disponible. Connectez-vous d'abord."
+    "no_connection": "Aucune connexion SSH disponible. Connectez-vous d'abord.",
+    "no_server_connection": "Aucune connexion au serveur",
+    "permission_issue": "Problème de permission. Vérifiez les permissions Docker."
   },
   "navigation": {
     "containers": "Conteneurs",
@@ -75,6 +78,7 @@
   },
   "servers": {
     "title": "Serveurs Docker",
+    "no_servers_yet": "Aucun serveur disponible.\nCliquez sur + pour ajouter votre premier serveur.",
     "add_server": "Ajouter un serveur Docker",
     "edit_server": "Modifier le serveur Docker",
     "delete_server": "Supprimer le serveur",
@@ -148,11 +152,13 @@
     "action_failed": "{} a échoué : {}",
     "action_in_progress": "{}...",
     "pull_to_refresh": "Tirez vers le bas pour actualiser",
+    "failed_to_load": "Échec du chargement des conteneurs",
     "stats": {
       "cpu": "CPU",
       "memory": "Mémoire",
       "network": "Réseau",
-      "pids": "PIDs"
+      "pids": "PIDs",
+      "loading": "Chargement des stats ..."
     },
     "create_form": {
       "image_selection": "Sélection de l'image",
@@ -212,6 +218,7 @@
     "select_tag": "Sélectionner un tag pour {}",
     "loading_tags": "Chargement des tags...",
     "no_tags_found": "Aucun tag",
+    "failed_to_load": "Échec du chargement des images",
     "failed_to_load_tags": "Échec de chargement des tags : {}",
     "tag_latest": "Latest",
     "try_different_search": "Essayez un autre terme",
@@ -244,6 +251,7 @@
   },
   "volumes": {
     "loading": "Chargement des volumes...",
+    "failed_to_load": "Échec du chargement des volumes",
     "no_volumes": "Aucun volume",
     "no_search_results": "Aucun volume ne correspond",
     "inspect_title": "Inspecter le volume - {}",
@@ -253,6 +261,7 @@
   },
   "networks": {
     "loading": "Chargement des réseaux...",
+    "failed_to_load": "Échec du chargement des réseaux",
     "no_networks": "Aucun réseau",
     "no_search_results": "Aucun réseau ne correspond",
     "inspect_title": "Inspecter le réseau - {}",
