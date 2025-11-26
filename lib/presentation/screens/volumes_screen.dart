@@ -76,7 +76,7 @@ class _VolumesScreenState extends State<VolumesScreen>
   Future<void> _loadVolumes() async {
     if (!_sshService.isConnected) {
       setState(() {
-        _error = 'No SSH connection available';
+        _error = 'connection.no_connection';
         _isLoading = false;
       });
       return;
@@ -134,7 +134,7 @@ class _VolumesScreenState extends State<VolumesScreen>
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => ShellScreen(
-                title: 'Inspect Volume - ${volume.volumeName}',
+                title: 'volumes.inspect_title'.tr(args: [volume.volumeName]),
                 command: command,
               ),
             ),
@@ -179,7 +179,7 @@ class _VolumesScreenState extends State<VolumesScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result?.isNotEmpty == true ? result! : 'Command executed successfully'),
+            content: Text(result?.isNotEmpty == true ? result! : 'operations.executed_successfully'.tr()),
             backgroundColor: Colors.green,
           ),
         );
@@ -248,12 +248,12 @@ class _VolumesScreenState extends State<VolumesScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'Failed to load volumes',
+              'volumes.failed_to_load'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              _error!,
+              _error!.startsWith('connection.') || _error!.startsWith('volumes.') ? _error!.tr() : _error!,
               style: Theme.of(context).textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -293,7 +293,7 @@ class _VolumesScreenState extends State<VolumesScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'No volumes found',
+              'volumes.no_volumes'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
@@ -322,12 +322,12 @@ class _VolumesScreenState extends State<VolumesScreen>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No volumes match your search',
+                    'volumes.no_search_results'.tr(),
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Try a different search term',
+                    'common.try_different_search'.tr(),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[600],

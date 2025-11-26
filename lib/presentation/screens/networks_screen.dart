@@ -76,7 +76,7 @@ class _NetworksScreenState extends State<NetworksScreen>
   Future<void> _loadNetworks() async {
     if (!_sshService.isConnected) {
       setState(() {
-        _error = 'No SSH connection available';
+        _error = 'connection.no_connection';
         _isLoading = false;
       });
       return;
@@ -135,7 +135,7 @@ class _NetworksScreenState extends State<NetworksScreen>
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => ShellScreen(
-                title: 'Inspect Network - ${network.name}',
+                title: 'networks.inspect_title'.tr(args: [network.name]),
                 command: command,
               ),
             ),
@@ -191,7 +191,7 @@ class _NetworksScreenState extends State<NetworksScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result?.isNotEmpty == true ? result! : 'Command executed successfully'),
+            content: Text(result?.isNotEmpty == true ? result! : 'operations.executed_successfully'.tr()),
             backgroundColor: Colors.green,
           ),
         );
@@ -260,12 +260,12 @@ class _NetworksScreenState extends State<NetworksScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'Failed to load networks',
+              'networks.failed_to_load'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              _error!,
+              _error!.startsWith('connection.') || _error!.startsWith('networks.') ? _error!.tr() : _error!,
               style: Theme.of(context).textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -305,7 +305,7 @@ class _NetworksScreenState extends State<NetworksScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'No networks found',
+              'networks.no_networks'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
@@ -334,12 +334,12 @@ class _NetworksScreenState extends State<NetworksScreen>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No networks match your search',
+                    'networks.no_search_results'.tr(),
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Try a different search term',
+                    'common.try_different_search'.tr(),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[600],

@@ -178,9 +178,9 @@ class _ServerListScreenState extends State<ServerListScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _servers.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text(
-                    'No servers added yet.\nTap + to add your first server.',
+                    'servers.no_servers_yet'.tr(),
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 16),
                   ),

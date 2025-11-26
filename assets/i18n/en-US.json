@@ -10,10 +10,7 @@
     "ok": "OK",
     "refresh": "Refresh",
     "settings": "Settings",
-    "loading": "Loading...",
     "error": "Error",
-    "success": "Success",
-    "confirm": "Confirm",
     "add": "Add",
     "save": "Save",
     "clear": "Clear",
@@ -41,7 +38,6 @@
     "send_ctrl_d": "Send Ctrl+D (EOF)",
     "showing_lines": "Showing {} of {} lines",
     "logs": "Logs",
-    "clear_output": "Clear output",
     "clear_search": "Clear search",
     "system_information": "System Information",
     "servers": "Servers",
@@ -54,7 +50,8 @@
     "build_image_tooltip": "Build image from Dockerfile",
     "host_shell": "Host Shell",
     "actions_for": "Actions for {}",
-    "pull_image": "Pull Image"
+    "pull_image": "Pull Image",
+    "try_different_search": "Try a different search term"
   },
   "connection": {
     "please_connect": "Please connect to a server first",
@@ -64,7 +61,9 @@
     "failed_to_select": "Failed to select server: {}",
     "failed_to_load": "Failed to load server: {}",
     "timeout": "Connection timeout. Please try again or check your server connection.",
-    "no_connection": "No SSH connection available. Please connect to a server first."
+    "no_connection": "No SSH connection available. Please connect to a server first.",
+    "no_server_connection": "No Server Connection",
+    "permission_issue": "Permission Issue"
   },
   "navigation": {
     "containers": "Containers",
@@ -123,7 +122,8 @@
     "error_port_invalid": "Please enter a valid port (1-65535)",
     "error_username_required": "Please enter a username",
     "error_password_required": "Please enter a password",
-    "error_private_key_required": "Please enter a private key"
+    "error_private_key_required": "Please enter a private key",
+    "no_servers_yet": "No servers added yet.\nTap + to add your first server."
   },
   "auth": {
     "password": "Password",
@@ -131,7 +131,6 @@
     "passphrase": "Passphrase (Optional)"
   },
   "containers": {
-    "title": "Containers",
     "create": "Create Container",
     "loading": "Loading containers...",
     "initializing": "Initializing...",
@@ -139,9 +138,6 @@
     "no_images_available": "No images available",
     "pull_or_build_first": "Pull or build an image first to create containers",
     "no_search_results": "No containers match your search",
-    "inspect_title": "Inspect Container - {}",
-    "delete_title": "Delete Container",
-    "delete_confirmation": "Are you sure you want to delete container \"{}\"?\n\nThis action cannot be undone.",
     "created_successfully": "Container created successfully",
     "failed_to_create": "Failed to create container",
     "please_select_image": "Please select an image",
@@ -156,26 +152,13 @@
     "action_failed": "{} failed: {}",
     "action_in_progress": "{}...",
     "pull_to_refresh": "Pull down to refresh",
-    "actions": {
-      "start": "Start",
-      "stop": "Stop",
-      "restart": "Restart",
-      "inspect": "Inspect",
-      "logs": "Logs",
-      "shell": "Shell",
-      "delete": "Delete"
-    },
+    "failed_to_load": "Failed to load containers",
     "stats": {
       "cpu": "CPU",
       "memory": "Memory",
       "network": "Network",
-      "pids": "PIDs"
-    },
-    "status": {
-      "running": "Running",
-      "exited": "Exited",
-      "created": "Created",
-      "paused": "Paused"
+      "pids": "PIDs",
+      "loading": "Loading stats..."
     },
     "create_form": {
       "image_selection": "Image Selection",
@@ -217,16 +200,15 @@
     }
   },
   "images": {
-    "title": "Images",
     "pull": "Pull Image",
     "build": "Build Image",
     "loading": "Loading images...",
     "no_images": "No images found",
     "no_search_results": "No images match your search",
+    "pull_to_refresh": "Pull down to refresh",
     "inspect_title": "Inspect Image - {}",
     "delete_title": "Delete Image",
     "delete_confirmation": "Are you sure you want to delete image \"{}:{}\"?\n\nThis action cannot be undone.",
-    "pull_to_refresh": "Pull down to refresh",
     "pulling": "Pulling Image",
     "pulling_progress": "Pulling {}...",
     "pull_success": "Successfully pulled {}",
@@ -250,7 +232,6 @@
     "enter_image_name": "Enter an image name to search Docker Hub",
     "no_results_found": "No Results Found",
     "please_enter_search_term": "Please enter a search term",
-    "pulling_may_take_time": "This may take a while depending on the image size.",
     "image_name": "Image Name",
     "image_name_hint": "my-custom-image",
     "please_enter_image_name": "Please enter an image name",
@@ -266,40 +247,28 @@
     "building": "Building...",
     "build_image_button": "Build Image",
     "build_logs": "Build Logs",
-    "actions": {
-      "inspect": "Inspect",
-      "delete": "Delete",
-      "run": "Run"
-    }
+    "failed_to_load": "Failed to load images"
   },
   "volumes": {
-    "title": "Volumes",
     "loading": "Loading volumes...",
     "no_volumes": "No volumes found",
     "no_search_results": "No volumes match your search",
+    "pull_to_refresh": "Pull down to refresh",
+    "failed_to_load": "Failed to load volumes",
     "inspect_title": "Inspect Volume - {}",
     "delete_title": "Delete Volume",
-    "delete_confirmation": "Are you sure you want to delete volume \"{}\"?\n\nThis action cannot be undone.",
-    "pull_to_refresh": "Pull down to refresh",
-    "actions": {
-      "inspect": "Inspect",
-      "delete": "Delete"
-    }
+    "delete_confirmation": "Are you sure you want to delete volume \"{}\"?\n\nThis action cannot be undone."
   },
   "networks": {
-    "title": "Networks",
     "loading": "Loading networks...",
     "no_networks": "No networks found",
     "no_search_results": "No networks match your search",
+    "pull_to_refresh": "Pull down to refresh",
+    "failed_to_load": "Failed to load networks",
     "inspect_title": "Inspect Network - {}",
     "delete_title": "Delete Network",
     "delete_confirmation": "Are you sure you want to delete network \"{}\"?\n\nThis action cannot be undone.",
-    "cannot_delete_system": "Cannot delete system network \"{}\"",
-    "pull_to_refresh": "Pull down to refresh",
-    "actions": {
-      "inspect": "Inspect",
-      "delete": "Delete"
-    }
+    "cannot_delete_system": "Cannot delete system network \"{}\""
   },
   "settings": {
     "title": "Settings",
@@ -358,8 +327,7 @@
     "disk": "Disk"
   },
   "operations": {
-    "executed_successfully": "Command executed successfully",
-    "error_occurred": "Error: {}"
+    "executed_successfully": "Command executed successfully"
   },
   "actions": {
     "confirm_action": "Confirm {}",
@@ -372,5 +340,12 @@
     "start": "Start",
     "remove": "Remove",
     "history": "History"
+  },
+  "shell": {
+    "output_copied": "Output copied to clipboard",
+    "filtered_output_copied": "Filtered output copied to clipboard",
+    "no_output_to_copy": "No output to copy",
+    "no_matching_lines": "No matching lines found",
+    "try_different_search": "Try a different search term"
   }
 }

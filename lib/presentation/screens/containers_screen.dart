@@ -45,7 +45,7 @@ class _ContainersScreenState extends State<ContainersScreen>
     // If no connection exists on init, mark as tried to avoid showing "initializing"
     if (!_sshService.isConnected && !_sshService.isConnecting) {
       _hasTriedLoading = true;
-      _error = 'connection.please_connect'.tr();
+      _error = 'connection.please_connect';
     }
     // Start a periodic check to detect server changes
     _startServerChangeDetection();
@@ -103,7 +103,7 @@ class _ContainersScreenState extends State<ContainersScreen>
       setState(() {
         _hasTriedLoading = true;
         _isLoading = false;
-        _error = 'connection.please_connect'.tr();
+        _error = 'connection.please_connect';
       });
       return;
     }
@@ -139,14 +139,14 @@ class _ContainersScreenState extends State<ContainersScreen>
       if (!connectionSucceeded && mounted) {
         setState(() {
           _isLoading = false;
-          _error = 'connection.timeout'.tr();
+          _error = 'connection.timeout';
         });
       }
     } else {
       // No connection
       setState(() {
         _isLoading = false;
-        _error = 'connection.no_connection'.tr();
+        _error = 'connection.no_connection';
       });
     }
   }
@@ -559,18 +559,13 @@ class _ContainersScreenState extends State<ContainersScreen>
     }
 
     if (_error != null) {
-      // Get localized connection error messages for comparison
-      final timeoutMsg = 'connection.timeout'.tr();
-      final noConnectionMsg = 'connection.no_connection'.tr();
-      final pleaseConnectMsg = 'connection.please_connect'.tr();
-      
       // Check for connection-related errors using both English text (for exceptions)
-      // and localized messages (for user-set errors)
+      // and translation keys (for user-set errors)
       final isConnectionError = _error!.contains('No SSH connection') || 
                                 _error!.contains('Connection timeout') ||
-                                _error == timeoutMsg ||
-                                _error == noConnectionMsg ||
-                                _error == pleaseConnectMsg ||
+                                _error == 'connection.timeout' ||
+                                _error == 'connection.no_connection' ||
+                                _error == 'connection.please_connect' ||
                                 _error!.contains('Failed to get containers: Exception: No SSH connection');
       final isPermissionError = _error!.contains('Permission denied') || 
                                 _error!.contains('docker group');
@@ -590,9 +585,9 @@ class _ContainersScreenState extends State<ContainersScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              isConnectionError ? 'No Server Connection' : 
-              isPermissionError ? 'Permission Issue' :
-              'Failed to load containers',
+              isConnectionError ? 'connection.no_server_connection'.tr() : 
+              isPermissionError ? 'connection.permission_issue'.tr() :
+              'containers.failed_to_load'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
@@ -600,8 +595,8 @@ class _ContainersScreenState extends State<ContainersScreen>
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Text(
                 isConnectionError 
-                  ? 'Please connect to a server to view containers'
-                  : _error!,
+                  ? 'connection.please_connect'.tr()
+                  : _error!.startsWith('connection.') || _error!.startsWith('containers.') ? _error!.tr() : _error!,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.grey[600],
@@ -681,12 +676,12 @@ class _ContainersScreenState extends State<ContainersScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'No containers found',
+              'containers.no_containers'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'No Docker containers are available on this server.',
+              'containers.pull_to_refresh'.tr(),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.grey[600],
@@ -740,12 +735,12 @@ class _ContainersScreenState extends State<ContainersScreen>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No containers match your search',
+                    'containers.no_search_results'.tr(),
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Try a different search term',
+                    'common.try_different_search'.tr(),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[600],
