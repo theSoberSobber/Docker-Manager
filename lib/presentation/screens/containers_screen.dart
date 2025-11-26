@@ -45,7 +45,7 @@ class _ContainersScreenState extends State<ContainersScreen>
     // If no connection exists on init, mark as tried to avoid showing "initializing"
     if (!_sshService.isConnected && !_sshService.isConnecting) {
       _hasTriedLoading = true;
-      _error = 'connection.please_connect'.tr();
+      _error = 'connection.please_connect';
     }
     // Start a periodic check to detect server changes
     _startServerChangeDetection();
@@ -103,7 +103,7 @@ class _ContainersScreenState extends State<ContainersScreen>
       setState(() {
         _hasTriedLoading = true;
         _isLoading = false;
-        _error = 'connection.please_connect'.tr();
+        _error = 'connection.please_connect';
       });
       return;
     }
@@ -559,18 +559,13 @@ class _ContainersScreenState extends State<ContainersScreen>
     }
 
     if (_error != null) {
-      // Get localized connection error messages for comparison
-      final timeoutMsg = 'connection.timeout'.tr();
-      final noConnectionMsg = 'connection.no_connection'.tr();
-      final pleaseConnectMsg = 'connection.please_connect'.tr();
-      
       // Check for connection-related errors using both English text (for exceptions)
-      // and localized messages (for user-set errors)
+      // and translation keys (for user-set errors)
       final isConnectionError = _error!.contains('No SSH connection') || 
                                 _error!.contains('Connection timeout') ||
-                                _error == timeoutMsg ||
-                                _error == noConnectionMsg ||
-                                _error == pleaseConnectMsg ||
+                                _error == 'connection.timeout' ||
+                                _error == 'connection.no_connection' ||
+                                _error == 'connection.please_connect' ||
                                 _error!.contains('Failed to get containers: Exception: No SSH connection');
       final isPermissionError = _error!.contains('Permission denied') || 
                                 _error!.contains('docker group');
@@ -601,7 +596,7 @@ class _ContainersScreenState extends State<ContainersScreen>
               child: Text(
                 isConnectionError 
                   ? 'connection.please_connect'.tr()
-                  : _error!,
+                  : _error!.startsWith('connection.') || _error!.startsWith('containers.') ? _error!.tr() : _error!,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.grey[600],

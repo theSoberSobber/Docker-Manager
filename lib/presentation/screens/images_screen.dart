@@ -76,7 +76,7 @@ class _ImagesScreenState extends State<ImagesScreen>
   Future<void> _loadImages() async {
     if (!_sshService.isConnected) {
       setState(() {
-        _error = 'No SSH connection available';
+        _error = 'connection.no_connection';
         _isLoading = false;
       });
       return;
@@ -255,7 +255,7 @@ class _ImagesScreenState extends State<ImagesScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              _error!,
+              _error!.startsWith('connection.') || _error!.startsWith('images.') ? _error!.tr() : _error!,
               style: Theme.of(context).textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
