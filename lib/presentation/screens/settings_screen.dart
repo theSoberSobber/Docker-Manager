@@ -247,30 +247,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildSectionHeader('settings.language'.tr()),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: DropdownButtonFormField<String>(
-                    value: context.locale.languageCode == 'es' ? 'es' : 'en',
+                  child: DropdownButtonFormField<Locale>(
+                    value: context.locale,
                     decoration: InputDecoration(
                       labelText: 'settings.select_language'.tr(),
                       prefixIcon: const Icon(Icons.language),
                       border: const OutlineInputBorder(),
                     ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'en',
-                        child: Text('English'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'es',
-                        child: Text('Español'),
-                      ),
-                    ],
-                    onChanged: (String? value) async {
-                      if (value != null) {
-                        final locale = value == 'es' ? const Locale('es') : const Locale('en', 'US');
+                    items: context.supportedLocales.map((locale) {
+                      String displayName;
+                      switch (locale.languageCode) {
+                        case 'es':
+                          displayName = 'Español';
+                          break;
+                        case 'fr':
+                          displayName = 'Français';
+                          break;
+                        case 'en':
+                        default:
+                          displayName = 'English';
+                          break;
+                      }
+                      return DropdownMenuItem<Locale>(
+                        value: locale,
+                        child: Text(displayName),
+                      );
+                    }).toList(),
+                    onChanged: (Locale? locale) async {
+                      if (locale != null) {
                         await context.setLocale(locale);
                         setState(() {});
                         if (mounted) {
-                          final label = value == 'es' ? 'Español' : 'English';
+                          String label;
+                          switch (locale.languageCode) {
+                            case 'es':
+                              label = 'Español';
+                              break;
+                            case 'fr':
+                              label = 'Français';
+                              break;
+                            case 'en':
+                            default:
+                              label = 'English';
+                              break;
+                          }
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('settings.language_changed'.tr(args: [label])),
