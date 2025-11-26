@@ -100,4 +100,4 @@ The JSON files use nested objects organized by feature:
 
 ## Questions?
 
-Open an issue if you need help with translations or have questions about specific terms.
+Feel free to tag me anytime on the issue you have opened. Thank you so much for helping me make the app more accessible!
