@@ -4,20 +4,18 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:xterm/xterm.dart';
+import 'package:dartssh2/dartssh2.dart';
 import '../../data/services/ssh_connection_service.dart';
-import '../../data/services/interactive_shell_service.dart';
-import '../widgets/search_bar.dart';
 
 class ShellScreen extends StatefulWidget {
   final String title;
-  final String? command;
   final bool isInteractive;
-  final Map<String, String>? containerInfo; // For container shells
+  final Map<String, String>? containerInfo;
 
   const ShellScreen({
     super.key,
     required this.title,
-    this.command,
     this.isInteractive = false,
     this.containerInfo,
   });
@@ -28,383 +26,132 @@ class ShellScreen extends StatefulWidget {
 
 class _ShellScreenState extends State<ShellScreen> {
   final SSHConnectionService _sshService = SSHConnectionService();
-  final InteractiveShellService _interactiveShell = InteractiveShellService();
-  final TextEditingController _inputController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  final List<String> _output = [];
-  List<String> _filteredOutput = [];
+  late final Terminal _terminal;
+  final TerminalController _terminalController = TerminalController();
   bool _isLoading = true;
-  bool _isConnected = false;
-  bool _useInteractiveMode = true; // Toggle for testing
-  StreamSubscription<String>? _outputSubscription;
-  String _searchQuery = '';
-  bool _isSearching = false;
+  SSHSession? _session;
+  StreamSubscription<String>? _stdoutSubscription;
+  StreamSubscription<String>? _stderrSubscription;
 
   @override
   void initState() {
     super.initState();
-    _filteredOutput = _output; // Initialize with empty output
+    _terminal = Terminal(maxLines: 10000);
     _initializeShell();
   }
 
   @override
   void dispose() {
-    _outputSubscription?.cancel();
-    _interactiveShell.closeShell();
-    _inputController.dispose();
-    _scrollController.dispose();
+    _stdoutSubscription?.cancel();
+    _stderrSubscription?.cancel();
+    _terminalController.dispose();
+    _session?.close();
     super.dispose();
   }
 
   Future<void> _initializeShell() async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (!mounted) return;
+    setState(() => _isLoading = true);
 
     try {
       if (!_sshService.isConnected) {
-        _addOutput('Error: No SSH connection available');
+        _terminal.write('Error: No SSH connection available\r\n');
+        if (!mounted) return;
+        setState(() => _isLoading = false);
         return;
       }
 
-      // If there's a command, execute it (for logs, inspect, etc.)
-      if (widget.command != null) {
-        _addOutput('Executing: ${widget.command}');
-        _addOutput(''); // Empty line for better readability
-        final result = await _sshService.executeCommand(widget.command!);
-        if (result != null && result.isNotEmpty) {
-          _addOutput(result);
-        } else {
-          _addOutput('Command completed with no output');
-        }
-      }
-
-      // For interactive shells, try true interactive mode first
+      // Start interactive shell
       if (widget.isInteractive) {
-        if (_useInteractiveMode) {
-          // Try interactive mode first with timeout
-          _addOutput('🔄 Attempting true interactive mode...');
-          
-          try {
-            bool success = await _interactiveShell.startInteractiveShell(
-              containerId: widget.containerInfo?['containerId'],
-              executable: widget.containerInfo?['executable'] ?? '/bin/bash',
-            ).timeout(
-              const Duration(seconds: 15),
-              onTimeout: () {
-                _addOutput('⏰ Interactive mode timed out, switching to command mode...');
-                return false;
-              },
-            );
-
-            if (success) {
-              _addOutput('🚀 True interactive shell mode enabled!');
-              if (widget.containerInfo != null) {
-                _addOutput('Container: ${widget.containerInfo!['containerId']}');
-                _addOutput('Executable: ${widget.containerInfo!['executable']}');
-                _addOutput('✨ Real -it mode with persistent session!');
-              } else {
-                _addOutput('Host shell with true interactive mode.');
-              }
-              
-              // Listen to interactive shell output
-              _outputSubscription = _interactiveShell.outputStream?.listen(
-                (output) {
-                  // Process output in chunks to handle partial ANSI sequences
-                  _processStreamOutput(output);
-                },
-                onError: (error) {
-                  _addOutput('Shell error: $error');
-                  // Fallback to command mode on error
-                  _initializeCommandMode();
-                },
-              );
-              
-              _isConnected = true;
-            } else {
-              _addOutput('⚠️ Interactive mode failed, falling back to command mode...');
-              await _initializeCommandMode();
-            }
-          } catch (e) {
-            _addOutput('❌ Interactive mode error: $e');
-            _addOutput('🔄 Falling back to command mode...');
-            await _initializeCommandMode();
-          }
-        } else {
-          await _initializeCommandMode();
-        }
+        await _startInteractiveShell();
       }
     } catch (e) {
-      _addOutput('Error: $e');
-      if (widget.isInteractive) {
-        await _initializeCommandMode();
-      }
+      _terminal.write('Error: $e\r\n');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
-  Future<void> _reinitializeShell() async {
-    // Close current interactive shell if active
-    if (_interactiveShell.isActive) {
-      await _interactiveShell.closeShell();
-    }
-    
-    // Cancel subscription
-    _outputSubscription?.cancel();
-    _outputSubscription = null;
-    
-    // Clear output buffer and reinitialize
-    setState(() {
-      _output.clear();
-      _filteredOutput.clear();
-      _outputBuffer = '';
-      _isConnected = false;
-      _isLoading = true;
-      _searchQuery = '';
-      _isSearching = false;
-    });
-    
-    await _initializeShell();
-  }
-
-  Future<void> _initializeCommandMode() async {
+  Future<void> _startInteractiveShell() async {
     try {
-      if (widget.containerInfo != null) {
-        _addOutput('📦 Command-mode container shell ready.');
-        _addOutput('Container: ${widget.containerInfo!['containerId']}');
-        _addOutput('Executable: ${widget.containerInfo!['executable']}');
-        _addOutput('Commands will be executed inside the container.');
-      } else {
-        _addOutput('💻 Command-mode shell ready. Type commands below:');
+      // Create SSH session with PTY
+      _session = await _sshService.currentConnection!.shell(
+        pty: SSHPtyConfig(
+          width: _terminal.viewWidth > 0 ? _terminal.viewWidth : 80,
+          height: _terminal.viewHeight > 0 ? _terminal.viewHeight : 24,
+        ),
+      ).timeout(const Duration(seconds: 15));
+
+      if (!mounted) {
+        _session?.close();
+        return;
       }
-      _isConnected = true;
-    } catch (e) {
-      _addOutput('Error: $e');
-    }
-  }
 
-  String _outputBuffer = '';
-
-  void _processStreamOutput(String rawOutput) {
-    // Add to buffer to handle partial sequences
-    _outputBuffer += rawOutput;
-    
-    // Process complete lines
-    List<String> lines = _outputBuffer.split('\n');
-    
-    // Keep the last potentially incomplete line in buffer
-    _outputBuffer = lines.removeLast();
-    
-    // Process complete lines
-    List<String> newLines = [];
-    for (String line in lines) {
-      if (line.trim().isNotEmpty) {
-        String cleanLine = _cleanAnsiEscapes(line);
-        if (cleanLine.trim().isNotEmpty) {
-          newLines.add(cleanLine);
-        }
-      }
-    }
-    
-    if (newLines.isNotEmpty) {
-      setState(() {
-        _output.addAll(newLines);
-        _filteredOutput = _filterOutput(_output, _searchQuery);
-      });
-    }
-    
-    // Auto-scroll after processing
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  void _addOutput(String text) {
-    // Clean ANSI escape sequences and control characters
-    String cleanText = _cleanAnsiEscapes(text);
-    
-    // Check if this is JSON output from an inspect command
-    if (_isInspectCommand() && _isValidJson(cleanText)) {
-      cleanText = _formatJson(cleanText);
-    }
-    
-    // Split the text into lines and add each line separately
-    List<String> lines = cleanText.split('\n');
-    
-    setState(() {
-      _output.addAll(lines);
-      _filteredOutput = _filterOutput(_output, _searchQuery);
-    });
-    
-    // Auto-scroll to bottom
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  List<String> _filterOutput(List<String> output, String query) {
-    if (query.isEmpty) return output;
-    
-    final lowercaseQuery = query.toLowerCase();
-    return output.where((line) {
-      return line.toLowerCase().contains(lowercaseQuery);
-    }).toList();
-  }
-
-  void _onSearchChanged(String query) {
-    setState(() {
-      _searchQuery = query;
-      _isSearching = query.isNotEmpty;
-      _filteredOutput = _filterOutput(_output, query);
-    });
-  }
-
-  void _clearSearch() {
-    setState(() {
-      _searchQuery = '';
-      _isSearching = false;
-      _filteredOutput = _output;
-    });
-  }
-
-  bool _isInspectCommand() {
-    return widget.command != null && 
-           (widget.command!.contains('inspect') || widget.title.toLowerCase().contains('inspect'));
-  }
-
-  bool _isValidJson(String text) {
-    try {
-      json.decode(text);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  String _formatJson(String jsonString) {
-    try {
-      final dynamic jsonData = json.decode(jsonString);
-      const encoder = JsonEncoder.withIndent('  ');
-      return encoder.convert(jsonData);
-    } catch (e) {
-      return jsonString; // Return original if formatting fails
-    }
-  }
-
-  String _cleanAnsiEscapes(String text) {
-    // Remove ANSI escape sequences - comprehensive pattern
-    String cleaned = text;
-    
-    // Remove CSI (Control Sequence Introducer) sequences: ESC[...
-    cleaned = cleaned.replaceAll(RegExp(r'\x1B\[[0-9;]*[a-zA-Z]'), '');
-    
-    // Remove OSC (Operating System Command) sequences: ESC]...BEL or ESC]...ST
-    cleaned = cleaned.replaceAll(RegExp(r'\x1B\][^\x07\x1B]*(\x07|\x1B\\)'), '');
-    
-    // Remove DCS (Device Control String) sequences: ESC P...ESC\
-    cleaned = cleaned.replaceAll(RegExp(r'\x1BP[^\x1B]*\x1B\\'), '');
-    
-    // Remove specific terminal control sequences
-    cleaned = cleaned.replaceAll(RegExp(r'\x1B\[[\?]?[0-9]*[hl]'), ''); // Mode setting
-    cleaned = cleaned.replaceAll(RegExp(r'\x1B\[[0-9]*[ABCD]'), ''); // Cursor movement
-    cleaned = cleaned.replaceAll(RegExp(r'\x1B\[[0-9]*[JK]'), ''); // Clear sequences
-    cleaned = cleaned.replaceAll(RegExp(r'\x1B\[[0-9;]*[mK]'), ''); // SGR and clear
-    cleaned = cleaned.replaceAll(RegExp(r'\x1B\[\?[0-9]*[hl]'), ''); // Private modes
-    
-    // Remove bracketed paste mode sequences
-    cleaned = cleaned.replaceAll(RegExp(r'\x1B\[\?2004[hl]'), '');
-    
-    // Remove cursor position reports and other responses
-    cleaned = cleaned.replaceAll(RegExp(r'\x1B\[[0-9;]*R'), '');
-    
-    // Remove bell characters
-    cleaned = cleaned.replaceAll('\x07', '');
-    
-    // Remove carriage returns that create overwriting
-    cleaned = cleaned.replaceAll(RegExp(r'\r+'), '');
-    
-    // Remove excessive whitespace but preserve structure
-    cleaned = cleaned.replaceAll(RegExp(r' {3,}'), '  ');
-    
-    // Remove non-printable characters except newlines and tabs
-    cleaned = cleaned.replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]'), '');
-    
-    return cleaned;
-  }
-
-  Future<void> _executeCommand(String command) async {
-    if (command.trim().isEmpty) return;
-
-    _addOutput('\$ $command');
-    
-    try {
-      // Use interactive shell if available
-      if (_interactiveShell.isActive) {
-        await _interactiveShell.sendCommand(command);
-        _inputController.clear(); // Clear input in interactive mode too!
-        return; // Output will come through the stream
-      }
-      
-      // Fallback to command mode
-      String actualCommand = command;
-      
-      // If we're in a container shell, wrap the command with docker exec
+      // For container shells, enter the container
       if (widget.containerInfo != null) {
         final containerId = widget.containerInfo!['containerId'];
-        final executable = widget.containerInfo!['executable'];
+        final executable = widget.containerInfo!['executable'] ?? '/bin/bash';
         
-        // Get Docker CLI path from settings
         final prefs = await SharedPreferences.getInstance();
         final dockerCli = prefs.getString('dockerCliPath') ?? 'docker';
         
-        // For container shells, we need to execute commands inside the container
-        // We'll use docker exec for each command
-        actualCommand = '$dockerCli exec $containerId $executable -c "$command"';
-        
-        // Show the actual command being executed for transparency
-        _addOutput('Executing in container: $actualCommand');
-        _addOutput(''); // Empty line for better readability
+        _session!.write(utf8.encode('$dockerCli exec -it $containerId $executable\n'));
       }
       
-      final result = await _sshService.executeCommand(actualCommand);
-      if (result != null && result.isNotEmpty) {
-        _addOutput(result);
-      } else {
-        _addOutput('Command completed');
-      }
+      // Wire up terminal ↔ SSH
+      _terminal.onResize = (w, h, pw, ph) => _session?.resizeTerminal(w, h, pw, ph);
+      _terminal.onOutput = (data) => _session?.write(utf8.encode(data));
+      
+      // Listen to shell output with error handling and store subscriptions
+      _stdoutSubscription = _session!.stdout
+          .cast<List<int>>()
+          .transform(const Utf8Decoder())
+          .listen(
+            _terminal.write,
+            onError: (error) {
+              if (mounted) {
+                _terminal.write('\r\nStream error: $error\r\n');
+              }
+            },
+          );
+      
+      _stderrSubscription = _session!.stderr
+          .cast<List<int>>()
+          .transform(const Utf8Decoder())
+          .listen(
+            _terminal.write,
+            onError: (error) {
+              if (mounted) {
+                _terminal.write('\r\nStream error: $error\r\n');
+              }
+            },
+          );
+      
     } catch (e) {
-      _addOutput('Error: $e');
+      _terminal.write('❌ Failed to start shell: $e\r\n');
     }
-
-    _inputController.clear();
   }
 
   void _copyOutput() {
-    final outputText = _filteredOutput.join('\n');
-    if (outputText.isNotEmpty) {
-      Clipboard.setData(ClipboardData(text: outputText));
+    final lines = <String>[];
+    // Use buffer.height to get the number of lines in the buffer
+    for (var i = 0; i < _terminal.buffer.height; i++) {
+      final line = _terminal.buffer.lines[i];
+      final text = line.toString().trim();
+      if (text.isNotEmpty) lines.add(text);
+    }
+    
+    if (lines.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: lines.join('\n')));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.green),
+              const Icon(Icons.check_circle, color: Colors.green),
               const SizedBox(width: 8),
-              Text(_isSearching ? 'shell.filtered_output_copied'.tr() : 'shell.output_copied'.tr()),
+              Text('shell.output_copied'.tr()),
             ],
           ),
           duration: const Duration(seconds: 2),
@@ -413,7 +160,7 @@ class _ShellScreenState extends State<ShellScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_isSearching ? 'shell.no_matching_lines'.tr() : 'shell.no_output_to_copy'.tr()),
+          content: Text('shell.no_output_to_copy'.tr()),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -422,210 +169,86 @@ class _ShellScreenState extends State<ShellScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: Text(widget.title),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          if (widget.isInteractive) ...[
-            // Mode toggle button
+          if (widget.isInteractive && _session != null) ...[
             IconButton(
-              icon: Icon(_useInteractiveMode ? Icons.terminal : Icons.code),
-              tooltip: _useInteractiveMode ? ('common.switch_to_command_mode').tr() : ('common.switch_to_interactive_mode').tr(),
-              onPressed: () {
-                setState(() {
-                  _useInteractiveMode = !_useInteractiveMode;
-                });
-                _reinitializeShell();
-              },
+              icon: const Icon(Icons.stop),
+              tooltip: 'common.send_ctrl_c'.tr(),
+              onPressed: () => _session?.write(utf8.encode('\x03')),
             ),
-            // Interactive shell controls (only show when in interactive mode)
-            if (_interactiveShell.isActive) ...[
-              IconButton(
-                icon: const Icon(Icons.stop),
-                tooltip: ('common.send_ctrl_c').tr(),
-                onPressed: () => _interactiveShell.sendInterrupt(),
-              ),
-              IconButton(
-                icon: const Icon(Icons.exit_to_app),
-                tooltip: ('common.send_ctrl_d').tr(),
-                onPressed: () => _interactiveShell.sendEOF(),
-              ),
-            ],
-            // Clear button
             IconButton(
-              icon: const Icon(Icons.clear_all),
-              onPressed: () {
-                setState(() {
-                  _output.clear();
-                  _filteredOutput.clear();
-                  _searchQuery = '';
-                  _isSearching = false;
-                });
-              },
-              tooltip: 'Clear output',
+              icon: const Icon(Icons.keyboard_tab),
+              tooltip: 'shell.send_tab'.tr(),
+              onPressed: () => _session?.write(utf8.encode('\t')),
             ),
           ],
           IconButton(
             icon: const Icon(Icons.copy),
-            onPressed: () {
-              _copyOutput();
-            },
-            tooltip: ('common.copy_output').tr(),
+            onPressed: _copyOutput,
+            tooltip: 'common.copy_output'.tr(),
           ),
         ],
       ),
       body: SafeArea(
-        bottom: true,
-        child: Column(
-          children: [
-            // Search bar
-            if (!_isLoading)
-              Column(
-                children: [
-                  CustomSearchBar(
-                    hintText: ('common.search_in_output').tr(),
-                    onSearchChanged: _onSearchChanged,
-                    onClear: _clearSearch,
-                  ),
-                if (_isSearching)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
-                    child: Text(
-                      ('common.showing_lines').tr(args: [_filteredOutput.length.toString(), _output.length.toString()]),
+        child: _isLoading
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      color: isDark ? const Color(0xFFE6EDF3) : Colors.grey,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'shell.initializing'.tr(),
                       style: TextStyle(
-                        color: Theme.of(context).primaryColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                        color: isDark ? const Color(0xFFE6EDF3) : Colors.grey,
                       ),
                     ),
-                  ),
-              ],
-            ),
-          // Output area
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              color: Theme.of(context).brightness == Brightness.dark 
-                  ? const Color(0xFF0D1117) // GitHub dark terminal color
-                  : Colors.black,
-              child: _isLoading
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(
-                            color: Theme.of(context).brightness == Brightness.dark 
-                                ? const Color(0xFFE6EDF3)
-                                : Colors.grey,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Initializing shell...',
-                            style: TextStyle(
-                              color: Theme.of(context).brightness == Brightness.dark 
-                                  ? const Color(0xFFE6EDF3)
-                                  : Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : _filteredOutput.isEmpty && _isSearching
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.search_off,
-                                size: 64,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'shell.no_matching_lines'.tr(),
-                                style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark 
-                                      ? const Color(0xFFE6EDF3)
-                                      : Colors.grey[300],
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'shell.try_different_search'.tr(),
-                                style: TextStyle(
-                                  color: Theme.of(context).brightness == Brightness.dark 
-                                      ? const Color(0xFFE6EDF3)
-                                      : Colors.grey[300],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.only(top: 8, bottom: 8),
-                          child: Container(
-                            width: double.infinity,
-                            child: SelectableText(
-                              _filteredOutput.join('\n'),
-                              style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 14,
-                                color: Theme.of(context).brightness == Brightness.dark 
-                                    ? const Color(0xFFE6EDF3) // GitHub dark text color
-                                    : Colors.grey[300],
-                              ),
-                            ),
-                          ),
-                        ),
-            ),
-          ),
-          // Input area (only for interactive shells)
-          if (widget.isInteractive && _isConnected)
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                border: Border(
-                  top: BorderSide(
-                    color: Theme.of(context).dividerColor,
-                  ),
+                  ],
+                ),
+              )
+            : TerminalView(
+                _terminal,
+                controller: _terminalController,
+                autofocus: true,
+                backgroundOpacity: 1.0,
+                padding: const EdgeInsets.all(8),
+                theme: TerminalTheme(
+                  cursor: isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292F),
+                  selection: isDark 
+                      ? const Color(0xFF3B5998).withValues(alpha: 0.5)
+                      : const Color(0xFFB3D8FF).withValues(alpha: 0.5),
+                  foreground: isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292F),
+                  background: isDark ? const Color(0xFF0D1117) : const Color(0xFFF6F8FA),
+                  black: isDark ? const Color(0xFF484F58) : const Color(0xFF24292F),
+                  red: const Color(0xFFFF7B72),
+                  green: const Color(0xFF3FB950),
+                  yellow: const Color(0xFFD29922),
+                  blue: const Color(0xFF58A6FF),
+                  magenta: const Color(0xFFBC8CFF),
+                  cyan: const Color(0xFF39C5CF),
+                  white: isDark ? const Color(0xFFB1BAC4) : const Color(0xFF6E7781),
+                  brightBlack: isDark ? const Color(0xFF6E7681) : const Color(0xFF57606A),
+                  brightRed: const Color(0xFFFFA198),
+                  brightGreen: const Color(0xFF56D364),
+                  brightYellow: const Color(0xFFE3B341),
+                  brightBlue: const Color(0xFF79C0FF),
+                  brightMagenta: const Color(0xFFD2A8FF),
+                  brightCyan: const Color(0xFF56D4DD),
+                  brightWhite: isDark ? const Color(0xFFCDD9E5) : const Color(0xFF8C959F),
+                  searchHitBackground: const Color(0xFFD29922).withValues(alpha: 0.5),
+                  searchHitBackgroundCurrent: const Color(0xFFD29922),
+                  searchHitForeground: Colors.black,
                 ),
               ),
-              child: Row(
-                children: [
-                  const Text(
-                    '\$ ',
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: _inputController,
-                      style: const TextStyle(fontFamily: 'monospace'),
-                      decoration: InputDecoration(
-                        hintText: ('common.enter_command').tr(),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                      ),
-                      onSubmitted: _executeCommand,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.send),
-                    onPressed: () => _executeCommand(_inputController.text),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

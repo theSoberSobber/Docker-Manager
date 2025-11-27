@@ -6,7 +6,7 @@ import '../../data/services/ssh_connection_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
-import 'shell_screen.dart';
+import 'log_viewer_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class NetworksScreen extends StatefulWidget {
@@ -134,7 +134,7 @@ class _NetworksScreenState extends State<NetworksScreen>
           command = 'docker network inspect ${network.networkId}';
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => ShellScreen(
+              builder: (context) => LogViewerScreen(
                 title: 'networks.inspect_title'.tr(args: [network.name]),
                 command: command,
               ),

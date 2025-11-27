@@ -17,6 +17,7 @@
     "connect": "Conectar",
     "search": "Buscar",
     "searching": "Buscando...",
+    "loading": "Cargando...",
     "id": "ID",
     "image": "Imagen",
     "command": "Comando",
@@ -287,12 +288,12 @@
     "docker_cli_description": "Ruta al binario de Docker CLI. Compatible con Docker, Podman o instalaciones personalizadas.",
     "logs": "Registros",
     "default_log_lines": "Líneas de registro predeterminadas para mostrar",
-    "log_lines_description": "Limitar la salida de registros previene fallos en contenedores con registros grandes",
+    "log_lines_description": "Limitar la salida de logs previene fallos en contenedores con logs grandes",
     "log_100": "100 líneas (rápido)",
     "log_500": "500 líneas (recomendado)",
     "log_1000": "1000 líneas (detallado)",
     "log_5000": "5000 líneas (puede ser lento)",
-    "log_all": "Todos los registros (riesgoso)",
+    "log_all": "Todos los logs (riesgoso)",
     "system_maintenance": "Mantenimiento del Sistema",
     "clean_resources": "Limpiar recursos de Docker",
     "clean_description": "Eliminar contenedores, imágenes, redes, volúmenes y caché de compilación no utilizados",
@@ -346,6 +347,8 @@
     "filtered_output_copied": "Salida filtrada copiada al portapapeles",
     "no_output_to_copy": "No hay salida para copiar",
     "no_matching_lines": "No se encontraron líneas coincidentes",
-    "try_different_search": "Intenta con un término de búsqueda diferente"
+    "try_different_search": "Prueba con un término de búsqueda diferente",
+    "initializing": "Inicializando shell...",
+    "send_tab": "Enviar Tab"
   }
 }

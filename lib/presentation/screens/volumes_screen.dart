@@ -6,7 +6,7 @@ import '../../data/services/ssh_connection_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
-import 'shell_screen.dart';
+import 'log_viewer_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class VolumesScreen extends StatefulWidget {
@@ -133,7 +133,7 @@ class _VolumesScreenState extends State<VolumesScreen>
           command = 'docker volume inspect ${volume.volumeName}';
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => ShellScreen(
+              builder: (context) => LogViewerScreen(
                 title: 'volumes.inspect_title'.tr(args: [volume.volumeName]),
                 command: command,
               ),

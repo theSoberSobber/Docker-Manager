@@ -36,7 +36,7 @@ class ThemeManager extends ChangeNotifier {
       case ThemeMode.dark:
         return Icons.dark_mode;
       case ThemeMode.system:
-        return Icons.brightness_auto;
+        return Icons.brightness_medium; // Half sun/moon icon for system/auto
     }
   }
 

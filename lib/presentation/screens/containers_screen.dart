@@ -7,6 +7,7 @@ import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
+import 'log_viewer_screen.dart';
 import 'settings_screen.dart';
 import 'server_list_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -284,17 +285,17 @@ class _ContainersScreenState extends State<ContainersScreen>
           final logLines = prefs.getString('defaultLogLines') ?? '500';
           final dockerCli = prefs.getString('dockerCliPath') ?? 'docker';
           
-          // Build command based on setting
+          // Build command with timestamps enabled by default
           if (logLines == 'all') {
-            command = '$dockerCli logs ${container.id}';
+            command = '$dockerCli logs --timestamps ${container.id}';
           } else {
-            command = '$dockerCli logs --tail $logLines ${container.id}';
+            command = '$dockerCli logs --timestamps --tail $logLines ${container.id}';
           }
           
-          // Navigate to shell screen for logs
+          // Navigate to log viewer for logs
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => ShellScreen(
+              builder: (context) => LogViewerScreen(
                 title: '${('common.logs').tr()} - ${container.names}',
                 command: command,
               ),
@@ -306,11 +307,11 @@ class _ContainersScreenState extends State<ContainersScreen>
           final prefs = await SharedPreferences.getInstance();
           final dockerCli = prefs.getString('dockerCliPath') ?? 'docker';
           command = '$dockerCli inspect ${container.id}';
-          // Navigate to shell screen for inspect
+          // Navigate to log viewer for inspect
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => ShellScreen(
-                title: 'Inspect - ${container.names}',
+              builder: (context) => LogViewerScreen(
+                title: '${'actions.inspect'.tr()} - ${container.names}',
                 command: command,
               ),
             ),
