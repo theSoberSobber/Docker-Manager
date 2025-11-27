@@ -76,8 +76,6 @@ class _ShellScreenState extends State<ShellScreen> {
 
   Future<void> _startInteractiveShell() async {
     try {
-      _terminal.write('🔄 Connecting to shell...\r\n');
-      
       // Create SSH session with PTY
       _session = await _sshService.currentConnection!.shell(
         pty: SSHPtyConfig(
