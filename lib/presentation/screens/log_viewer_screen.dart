@@ -80,7 +80,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
     cleanText = _formatTimestamps(cleanText);
     
     setState(() {
-      final lines = cleanText.split('\n');
+      final lines = cleanText.split('\n').where((line) => line.isNotEmpty).toList();
       _output.addAll(lines);
       _filterOutput();
       
@@ -322,12 +322,23 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
                         : SingleChildScrollView(
                             controller: _scrollController,
                             padding: const EdgeInsets.all(8),
-                            child: SelectableText(
-                              _filteredOutput.join('\n'),
-                              style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 14,
-                                color: isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292F),
+                            child: SelectionArea(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: _filteredOutput.map((line) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12.0),
+                                    child: Text(
+                                      line,
+                                      style: TextStyle(
+                                        fontFamily: 'monospace',
+                                        fontSize: 14,
+                                        color: isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292F),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               ),
                             ),
                           ),
