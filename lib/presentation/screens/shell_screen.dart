@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -12,7 +11,7 @@ class ShellScreen extends StatefulWidget {
   final String title;
   final String? command;
   final bool isInteractive;
-  final Map<String, String>? containerInfo; // For container shells
+  final Map<String, String>? containerInfo;
 
   const ShellScreen({
     super.key,
@@ -31,17 +30,12 @@ class _ShellScreenState extends State<ShellScreen> {
   late final Terminal _terminal;
   final TerminalController _terminalController = TerminalController();
   bool _isLoading = true;
-  bool _isConnected = false;
-  bool _useInteractiveMode = true;
   SSHSession? _session;
 
   @override
   void initState() {
     super.initState();
-    _terminal = Terminal(
-      maxLines: 10000,
-    );
-    
+    _terminal = Terminal(maxLines: 10000);
     _initializeShell();
   }
 
@@ -52,54 +46,46 @@ class _ShellScreenState extends State<ShellScreen> {
   }
 
   Future<void> _initializeShell() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       if (!_sshService.isConnected) {
         _terminal.write('Error: No SSH connection available\r\n');
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
         return;
       }
 
-      // If there's a command, execute it (for logs, inspect, etc.)
+      // For one-time commands (logs, inspect, etc.)
       if (widget.command != null) {
-        _terminal.write('Executing: ${widget.command}\r\n\r\n');
-        final result = await _sshService.executeCommand(widget.command!);
-        if (result != null && result.isNotEmpty) {
-          // Check if this is JSON output from an inspect command
-          if (_isInspectCommand() && _isValidJson(result)) {
-            _terminal.write(_formatJson(result));
-          } else {
-            _terminal.write(result.replaceAll('\n', '\r\n'));
-          }
-        } else {
-          _terminal.write('Command completed with no output\r\n');
-        }
-        setState(() {
-          _isLoading = false;
-        });
+        await _executeCommand(widget.command!);
+        setState(() => _isLoading = false);
         return;
       }
 
-      // For interactive shells, try true interactive mode first
-      if (widget.isInteractive && _useInteractiveMode) {
+      // For interactive shells
+      if (widget.isInteractive) {
         await _startInteractiveShell();
-      } else if (widget.isInteractive) {
-        await _initializeCommandMode();
       }
     } catch (e) {
       _terminal.write('Error: $e\r\n');
-      if (widget.isInteractive) {
-        await _initializeCommandMode();
-      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _executeCommand(String command) async {
+    _terminal.write('Executing: $command\r\n\r\n');
+    final result = await _sshService.executeCommand(command);
+    
+    if (result != null && result.isNotEmpty) {
+      // Format JSON for inspect commands
+      if (_isInspectCommand() && _isValidJson(result)) {
+        _terminal.write(_formatJson(result));
+      } else {
+        _terminal.write(result.replaceAll('\n', '\r\n'));
+      }
+    } else {
+      _terminal.write('Command completed with no output\r\n');
     }
   }
 
@@ -113,95 +99,33 @@ class _ShellScreenState extends State<ShellScreen> {
           width: _terminal.viewWidth,
           height: _terminal.viewHeight,
         ),
-      ).timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw Exception('Shell creation timed out');
-        },
-      );
+      ).timeout(const Duration(seconds: 15));
 
-      _terminal.write('🚀 Interactive shell mode enabled!\r\n');
-      
+      // For container shells, enter the container
       if (widget.containerInfo != null) {
         final containerId = widget.containerInfo!['containerId'];
         final executable = widget.containerInfo!['executable'] ?? '/bin/bash';
         
-        _terminal.write('Container: $containerId\r\n');
-        _terminal.write('Executable: $executable\r\n');
-        
-        // Get Docker CLI path
         final prefs = await SharedPreferences.getInstance();
         final dockerCli = prefs.getString('dockerCliPath') ?? 'docker';
         
-        // Enter container shell
         _session!.write(utf8.encode('$dockerCli exec -it $containerId $executable\n'));
       }
       
-      // Clear initial connection messages after a brief delay
+      // Clear connection messages
       await Future.delayed(const Duration(milliseconds: 500));
       _terminal.buffer.clear();
       _terminal.buffer.setCursor(0, 0);
       
-      // Set up terminal resize handler
-      _terminal.onResize = (width, height, pixelWidth, pixelHeight) {
-        _session?.resizeTerminal(width, height, pixelWidth, pixelHeight);
-      };
+      // Wire up terminal ↔ SSH
+      _terminal.onResize = (w, h, pw, ph) => _session?.resizeTerminal(w, h, pw, ph);
+      _terminal.onOutput = (data) => _session?.write(utf8.encode(data));
       
-      // Set up terminal output handler (user input -> SSH)
-      _terminal.onOutput = (data) {
-        _session?.write(utf8.encode(data));
-      };
+      _session!.stdout.cast<List<int>>().transform(const Utf8Decoder()).listen(_terminal.write);
+      _session!.stderr.cast<List<int>>().transform(const Utf8Decoder()).listen(_terminal.write);
       
-      // Set up SSH output handler (SSH -> terminal)
-      _session!.stdout
-          .cast<List<int>>()
-          .transform(const Utf8Decoder())
-          .listen(_terminal.write);
-      
-      _session!.stderr
-          .cast<List<int>>()
-          .transform(const Utf8Decoder())
-          .listen(_terminal.write);
-      
-      _isConnected = true;
     } catch (e) {
-      _terminal.write('❌ Interactive mode error: $e\r\n');
-      _terminal.write('🔄 Falling back to command mode...\r\n');
-      await _initializeCommandMode();
-    }
-  }
-
-  Future<void> _reinitializeShell() async {
-    // Close current session if active
-    _session?.close();
-    _session = null;
-    
-    // Clear terminal and reinitialize
-    _terminal.buffer.clear();
-    _terminal.buffer.setCursor(0, 0);
-    
-    setState(() {
-      _isConnected = false;
-      _isLoading = true;
-    });
-    
-    await _initializeShell();
-  }
-
-  Future<void> _initializeCommandMode() async {
-    try {
-      if (widget.containerInfo != null) {
-        _terminal.write('📦 Command-mode container shell ready.\r\n');
-        _terminal.write('Container: ${widget.containerInfo!['containerId']}\r\n');
-        _terminal.write('Executable: ${widget.containerInfo!['executable']}\r\n');
-        _terminal.write('Note: Commands will execute one at a time (no persistent session).\r\n');
-      } else {
-        _terminal.write('💻 Command-mode shell ready.\r\n');
-        _terminal.write('Note: Commands will execute one at a time (no persistent session).\r\n');
-      }
-      _isConnected = true;
-    } catch (e) {
-      _terminal.write('Error: $e\r\n');
+      _terminal.write('❌ Failed to start shell: $e\r\n');
     }
   }
 
@@ -221,35 +145,29 @@ class _ShellScreenState extends State<ShellScreen> {
 
   String _formatJson(String jsonString) {
     try {
-      final dynamic jsonData = json.decode(jsonString);
-      const encoder = JsonEncoder.withIndent('  ');
-      return encoder.convert(jsonData);
+      final jsonData = json.decode(jsonString);
+      return const JsonEncoder.withIndent('  ').convert(jsonData);
     } catch (e) {
       return jsonString;
     }
   }
 
   void _copyOutput() {
-    final buffer = _terminal.buffer;
     final lines = <String>[];
-    
-    // Extract visible lines from terminal buffer
-    for (int i = 0; i < buffer.lines.length; i++) {
-      final line = buffer.lines[i];
-      final lineText = line.toString();
-      if (lineText.trim().isNotEmpty) {
-        lines.add(lineText);
-      }
+    // Use buffer.height to get the number of lines in the buffer
+    for (var i = 0; i < _terminal.buffer.height; i++) {
+      final line = _terminal.buffer.lines[i];
+      final text = line.toString().trim();
+      if (text.isNotEmpty) lines.add(text);
     }
     
-    final outputText = lines.join('\n');
-    if (outputText.isNotEmpty) {
-      Clipboard.setData(ClipboardData(text: outputText));
+    if (lines.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: lines.join('\n')));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.green),
+              const Icon(Icons.check_circle, color: Colors.green),
               const SizedBox(width: 8),
               Text('shell.output_copied'.tr()),
             ],
@@ -276,50 +194,26 @@ class _ShellScreenState extends State<ShellScreen> {
         title: Text(widget.title),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          if (widget.isInteractive) ...[
-            // Mode toggle button
+          if (widget.isInteractive && _session != null) ...[
             IconButton(
-              icon: Icon(_useInteractiveMode ? Icons.terminal : Icons.code),
-              tooltip: _useInteractiveMode 
-                  ? 'common.switch_to_command_mode'.tr() 
-                  : 'common.switch_to_interactive_mode'.tr(),
-              onPressed: () {
-                setState(() {
-                  _useInteractiveMode = !_useInteractiveMode;
-                });
-                _reinitializeShell();
-              },
+              icon: const Icon(Icons.stop),
+              tooltip: 'common.send_ctrl_c'.tr(),
+              onPressed: () => _session?.write(utf8.encode('\x03')),
             ),
-            // Interactive shell controls (only show when in interactive mode)
-            if (_session != null) ...[
-              IconButton(
-                icon: const Icon(Icons.stop),
-                tooltip: 'common.send_ctrl_c'.tr(),
-                onPressed: () {
-                  // Send Ctrl+C (ASCII 3)
-                  _session?.write(utf8.encode('\x03'));
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.exit_to_app),
-                tooltip: 'common.send_ctrl_d'.tr(),
-                onPressed: () {
-                  // Send Ctrl+D (ASCII 4 - EOF)
-                  _session?.write(utf8.encode('\x04'));
-                },
-              ),
-            ],
-            // Clear button
             IconButton(
-              icon: const Icon(Icons.clear_all),
-              onPressed: () {
-                _terminal.buffer.clear();
-                _terminal.buffer.setCursor(0, 0);
-                setState(() {});
-              },
-              tooltip: 'Clear output',
+              icon: const Icon(Icons.exit_to_app),
+              tooltip: 'common.send_ctrl_d'.tr(),
+              onPressed: () => _session?.write(utf8.encode('\x04')),
             ),
           ],
+          IconButton(
+            icon: const Icon(Icons.clear_all),
+            onPressed: () {
+              _terminal.buffer.clear();
+              _terminal.buffer.setCursor(0, 0);
+            },
+            tooltip: 'Clear',
+          ),
           IconButton(
             icon: const Icon(Icons.copy),
             onPressed: _copyOutput,
@@ -328,7 +222,6 @@ class _ShellScreenState extends State<ShellScreen> {
         ],
       ),
       body: SafeArea(
-        bottom: true,
         child: _isLoading
             ? Center(
                 child: Column(
