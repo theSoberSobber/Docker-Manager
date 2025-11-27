@@ -1,0 +1,139 @@
+name: Build Android Release
+
+on:
+  workflow_call:
+    inputs:
+      should_release:
+        description: 'Whether to upload to GitHub release'
+        required: true
+        type: boolean
+      version:
+        description: 'Version number from pubspec.yaml'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Clone envs repository and setup environment files
+        env:
+          PAT: ${{ secrets.PAT }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PAT:-}" ]; then
+            echo "ERROR: Set repository secret PAT for accessing envs repo." >&2
+            exit 1
+          fi
+          
+          git clone https://${PAT}@github.com/theSoberSobber/envs.git envs-repo
+          echo "✅ Successfully cloned envs repository"
+          
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pyyaml
+          
+          chmod +x envs-repo/init_env_vars.sh
+          envs-repo/init_env_vars.sh .github/CD.yml
+          
+          if [ -f "envs-repo/docker_manager_app/copy.sh" ]; then
+            chmod +x envs-repo/docker_manager_app/copy.sh
+            envs-repo/docker_manager_app/copy.sh .
+          fi
+          echo "✅ Environment setup complete"
+          
+          echo "✅ Files at root:"
+          ls -lah
+          
+          echo "✅ Removing envs-repo:"
+          rm -rf envs-repo
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: gradle
+      
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.5'  # Updated to match local development version
+          channel: 'stable'
+          cache: true
+      
+      - name: Install dependencies
+        run: flutter pub get
+      
+      - name: Analyze code
+        run: flutter analyze --no-fatal-infos
+      
+      # --- Build APK ---
+      - name: Build Release APK
+        run: flutter build apk --release
+      
+      - name: Rename APK
+        run: |
+          mv build/app/outputs/flutter-apk/app-release.apk \
+             build/app/outputs/flutter-apk/DockerManager-${{ inputs.version }}.apk
+      
+      # --- Build AAB ---
+      - name: Build Release AAB
+        run: flutter build appbundle --release
+      
+      - name: Rename AAB
+        run: |
+          mv build/app/outputs/bundle/release/app-release.aab \
+             build/app/outputs/bundle/release/DockerManager-${{ inputs.version }}.aab
+      
+      # --- Upload as artifacts ---
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DockerManager-APK-${{ inputs.version }}
+          path: build/app/outputs/flutter-apk/DockerManager-${{ inputs.version }}.apk
+          retention-days: 7
+      
+      - name: Upload AAB as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DockerManager-AAB-${{ inputs.version }}
+          path: build/app/outputs/bundle/release/DockerManager-${{ inputs.version }}.aab
+          retention-days: 7
+      
+      # --- GitHub Release (only if should_release is true) ---
+      # Upload Android files and append platform-specific details
+      - name: Upload Android builds to release
+        if: inputs.should_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ inputs.version }}
+          body: |
+            
+            ---
+            
+            📱 **Android builds available**
+            
+            **Downloads:**
+            - **APK**: Direct install for Android devices
+            - **AAB**: Google Play Store format
+          files: |
+            build/app/outputs/flutter-apk/DockerManager-${{ inputs.version }}.apk
+            build/app/outputs/bundle/release/DockerManager-${{ inputs.version }}.aab
+          append_body: true
+          draft: false
+          prerelease: false
+          
+      # --- Custom APK Manager Upload (APK only) ---
+      - name: Upload APK to APK Manager
+        run: |
+          echo "Uploading APK to APK Manager..."
+          curl -v -X POST \
+            -H "X-Secret-Key: ${APK_MANAGER_SECRET_KEY}" \
+            -F "file=@build/app/outputs/flutter-apk/DockerManager-${{ inputs.version }}.apk" \
+            https://apkmanager.1110777.xyz/docker-manager/upload

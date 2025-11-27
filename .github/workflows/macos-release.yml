@@ -1,16 +1,16 @@
-name: Build and Release macOS
+name: Build macOS Release
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      force_release:
-        description: 'Force create release even if version unchanged'
-        required: false
+      should_release:
+        description: 'Whether to upload to GitHub release'
+        required: true
         type: boolean
-        default: false
+      version:
+        description: 'Version number from pubspec.yaml'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -40,48 +40,8 @@ jobs:
       - name: Analyze code
         run: flutter analyze --no-fatal-infos
       
-      - name: Extract version from pubspec.yaml
-        id: version
-        run: |
-          VERSION=$(grep '^version: ' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Extracted version: $VERSION"
-      
-      - name: Check if release needed
-        id: check_release
-        run: |
-          BRANCH="${{ github.ref_name }}"
-          VERSION="v${{ steps.version.outputs.VERSION }}"
-          echo "Current branch: $BRANCH"
-          echo "Current version: $VERSION"
-          
-          # Only create releases on main branch
-          if [ "$BRANCH" != "main" ]; then
-            echo "Not on main branch, skipping release (artifacts only)"
-            echo "SHOULD_RELEASE=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          # Get latest release tag
-          LATEST_TAG=$(git ls-remote --tags origin | grep -v '\^{}' | grep -E 'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/.*refs\/tags\///' | sort -V | tail -1)
-          echo "Latest release tag: $LATEST_TAG"
-          
-          FORCE_RELEASE="${{ github.event.inputs.force_release }}"
-          
-          if [ "$FORCE_RELEASE" = "true" ]; then
-            echo "Force release enabled"
-            echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
-          elif [ -z "$LATEST_TAG" ]; then
-            echo "No previous release found, will create first release"
-            echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
-          elif [ "$VERSION" != "$LATEST_TAG" ]; then
-            echo "Version changed from $LATEST_TAG to $VERSION"
-            echo "SHOULD_RELEASE=true" >> $GITHUB_OUTPUT
-          else
-            echo "Version unchanged, skipping release"
-            echo "SHOULD_RELEASE=false" >> $GITHUB_OUTPUT
-          fi
-      
+
+
       - name: Build macOS Release
         run: flutter build macos --release
       
@@ -89,22 +49,22 @@ jobs:
         run: |
           cd build/macos/Build/Products/Release
           # Create a zip of the .app bundle
-          ditto -c -k --sequesterRsrc --keepParent docker.app ../../../../../DockerManager-macOS-${{ steps.version.outputs.VERSION }}.zip
+          ditto -c -k --sequesterRsrc --keepParent docker.app ../../../../../DockerManager-macOS-${{ inputs.version }}.zip
       
       - name: Upload macOS build as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DockerManager-macOS-${{ steps.version.outputs.VERSION }}
-          path: DockerManager-macOS-${{ steps.version.outputs.VERSION }}.zip
+          name: DockerManager-macOS-${{ inputs.version }}
+          path: DockerManager-macOS-${{ inputs.version }}.zip
           retention-days: 7
       
       # --- GitHub Release (only if version changed or forced) ---
       - name: Upload to GitHub Release
-        if: steps.check_release.outputs.SHOULD_RELEASE == 'true'
+        if: inputs.should_release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.version.outputs.VERSION }}
-          name: Docker Manager v${{ steps.version.outputs.VERSION }}
+          tag_name: v${{ inputs.version }}
+          name: Docker Manager v${{ inputs.version }}
           body: |
             🍎 **macOS build available**
             
@@ -117,7 +77,7 @@ jobs:
             **System Requirements:**
             - macOS 10.14 (Mojave) or later
             - Intel (x86_64) or Apple Silicon (M1/M2/M3) - Universal binary
-          files: DockerManager-macOS-${{ steps.version.outputs.VERSION }}.zip
+          files: DockerManager-macOS-${{ inputs.version }}.zip
           append_body: true
           generate_release_notes: false
           draft: false
