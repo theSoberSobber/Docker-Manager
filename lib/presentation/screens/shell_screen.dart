@@ -9,14 +9,12 @@ import '../../data/services/ssh_connection_service.dart';
 
 class ShellScreen extends StatefulWidget {
   final String title;
-  final String? command;
   final bool isInteractive;
   final Map<String, String>? containerInfo;
 
   const ShellScreen({
     super.key,
     required this.title,
-    this.command,
     this.isInteractive = false,
     this.containerInfo,
   });
@@ -55,14 +53,7 @@ class _ShellScreenState extends State<ShellScreen> {
         return;
       }
 
-      // For one-time commands (logs, inspect, etc.)
-      if (widget.command != null) {
-        await _executeCommand(widget.command!);
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      // For interactive shells
+      // Start interactive shell
       if (widget.isInteractive) {
         await _startInteractiveShell();
       }
@@ -70,22 +61,6 @@ class _ShellScreenState extends State<ShellScreen> {
       _terminal.write('Error: $e\r\n');
     } finally {
       setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _executeCommand(String command) async {
-    _terminal.write('Executing: $command\r\n\r\n');
-    final result = await _sshService.executeCommand(command);
-    
-    if (result != null && result.isNotEmpty) {
-      // Format JSON for inspect commands
-      if (_isInspectCommand() && _isValidJson(result)) {
-        _terminal.write(_formatJson(result));
-      } else {
-        _terminal.write(result.replaceAll('\n', '\r\n'));
-      }
-    } else {
-      _terminal.write('Command completed with no output\r\n');
     }
   }
 
@@ -126,29 +101,6 @@ class _ShellScreenState extends State<ShellScreen> {
       
     } catch (e) {
       _terminal.write('❌ Failed to start shell: $e\r\n');
-    }
-  }
-
-  bool _isInspectCommand() {
-    return widget.command != null && 
-           (widget.command!.contains('inspect') || widget.title.toLowerCase().contains('inspect'));
-  }
-
-  bool _isValidJson(String text) {
-    try {
-      json.decode(text);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  String _formatJson(String jsonString) {
-    try {
-      final jsonData = json.decode(jsonString);
-      return const JsonEncoder.withIndent('  ').convert(jsonData);
-    } catch (e) {
-      return jsonString;
     }
   }
 
