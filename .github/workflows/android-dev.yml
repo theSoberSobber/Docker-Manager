@@ -1,0 +1,116 @@
+name: Build Android (Dev)
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Clone envs repository and setup environment files
+        env:
+          PAT: ${{ secrets.PAT }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PAT:-}" ]; then
+            echo "ERROR: Set repository secret PAT for accessing envs repo." >&2
+            exit 1
+          fi
+          
+          git clone https://${PAT}@github.com/theSoberSobber/envs.git envs-repo
+          echo "✅ Successfully cloned envs repository"
+          
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pyyaml
+          
+          chmod +x envs-repo/init_env_vars.sh
+          envs-repo/init_env_vars.sh .github/CD.yml
+          
+          if [ -f "envs-repo/docker_manager_app/copy.sh" ]; then
+            chmod +x envs-repo/docker_manager_app/copy.sh
+            envs-repo/docker_manager_app/copy.sh .
+          fi
+          echo "✅ Environment setup complete"
+          
+          echo "✅ Files at root:"
+          ls -lah
+          
+          echo "✅ Removing envs-repo:"
+          rm -rf envs-repo
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: gradle
+      
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.5'
+          channel: 'stable'
+          cache: true
+      
+      - name: Extract version from pubspec.yaml
+        id: version
+        run: |
+          VERSION=$(grep '^version: ' pubspec.yaml | cut -d' ' -f2 | cut -d'+' -f1)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+      
+      - name: Prepare branch name for artifacts
+        id: branch
+        run: |
+          # Get branch name and sanitize it (remove special chars, limit to 20 chars)
+          BRANCH="${{ github.ref_name }}"
+          BRANCH_CLEAN=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9-]/-/g' | cut -c1-20)
+          echo "BRANCH_NAME=$BRANCH_CLEAN" >> $GITHUB_OUTPUT
+          echo "Sanitized branch name: $BRANCH_CLEAN"
+      
+      - name: Install dependencies
+        run: flutter pub get
+      
+      - name: Analyze code
+        run: flutter analyze --no-fatal-infos
+      
+      # --- Build APK ---
+      - name: Build Release APK
+        run: flutter build apk --release
+      
+      - name: Rename APK
+        run: |
+          mv build/app/outputs/flutter-apk/app-release.apk \
+             build/app/outputs/flutter-apk/DockerManager-${{ steps.version.outputs.VERSION }}-${{ steps.branch.outputs.BRANCH_NAME }}.apk
+      
+      # --- Build AAB ---
+      - name: Build Release AAB
+        run: flutter build appbundle --release
+      
+      - name: Rename AAB
+        run: |
+          mv build/app/outputs/bundle/release/app-release.aab \
+             build/app/outputs/bundle/release/DockerManager-${{ steps.version.outputs.VERSION }}-${{ steps.branch.outputs.BRANCH_NAME }}.aab
+      
+      # --- Upload as artifacts ---
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DockerManager-APK-${{ steps.version.outputs.VERSION }}-${{ steps.branch.outputs.BRANCH_NAME }}
+          path: build/app/outputs/flutter-apk/DockerManager-${{ steps.version.outputs.VERSION }}-${{ steps.branch.outputs.BRANCH_NAME }}.apk
+          retention-days: 7
+      
+      - name: Upload AAB as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DockerManager-AAB-${{ steps.version.outputs.VERSION }}-${{ steps.branch.outputs.BRANCH_NAME }}
+          path: build/app/outputs/bundle/release/DockerManager-${{ steps.version.outputs.VERSION }}-${{ steps.branch.outputs.BRANCH_NAME }}.aab
+          retention-days: 7
