@@ -123,7 +123,7 @@ jobs:
             - Any modern Linux distribution (Ubuntu 18.04+, Fedora 35+, etc.)
             - GTK 3.0+ (usually pre-installed)
             - x64 architecture
-          files: DockerManager-Linux-${{ steps.version.outputs.VERSION }}.tar.gz
+          files: DockerManager-Linux-${{ steps.version.outputs.VERSION }}.tar.gz\n          append_body: true
           generate_release_notes: false
           draft: false
           prerelease: false

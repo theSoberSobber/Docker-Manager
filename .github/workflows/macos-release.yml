@@ -118,6 +118,7 @@ jobs:
             - macOS 10.14 (Mojave) or later
             - Intel (x86_64) or Apple Silicon (M1/M2/M3) - Universal binary
           files: DockerManager-macOS-${{ steps.version.outputs.VERSION }}.zip
+          append_body: true
           generate_release_notes: false
           draft: false
           prerelease: false
