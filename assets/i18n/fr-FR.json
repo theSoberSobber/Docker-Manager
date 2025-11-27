@@ -72,8 +72,8 @@
     "networks": "Réseaux"
   },
   "home": {
-    "pull_image": "Télécharger image",
-    "build_image": "Construire image",
+    "pull_image": "Télécharger l'image",
+    "build_image": "Construire l'image",
     "host_shell": "Shell hôte"
   },
   "servers": {
