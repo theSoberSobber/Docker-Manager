@@ -283,7 +283,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'Loading...',
+                              'common.loading'.tr(),
                               style: TextStyle(
                                 color: isDark ? const Color(0xFFE6EDF3) : Colors.grey,
                               ),

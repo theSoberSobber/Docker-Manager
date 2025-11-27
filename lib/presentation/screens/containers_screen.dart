@@ -311,7 +311,7 @@ class _ContainersScreenState extends State<ContainersScreen>
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => LogViewerScreen(
-                title: 'Inspect - ${container.names}',
+                title: '${'common.inspect'.tr()} - ${container.names}',
                 command: command,
               ),
             ),

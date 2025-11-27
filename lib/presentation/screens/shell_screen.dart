@@ -29,6 +29,8 @@ class _ShellScreenState extends State<ShellScreen> {
   final TerminalController _terminalController = TerminalController();
   bool _isLoading = true;
   SSHSession? _session;
+  StreamSubscription<String>? _stdoutSubscription;
+  StreamSubscription<String>? _stderrSubscription;
 
   @override
   void initState() {
@@ -39,6 +41,9 @@ class _ShellScreenState extends State<ShellScreen> {
 
   @override
   void dispose() {
+    _stdoutSubscription?.cancel();
+    _stderrSubscription?.cancel();
+    _terminalController.dispose();
     _session?.close();
     super.dispose();
   }
@@ -71,8 +76,8 @@ class _ShellScreenState extends State<ShellScreen> {
       // Create SSH session with PTY
       _session = await _sshService.currentConnection!.shell(
         pty: SSHPtyConfig(
-          width: _terminal.viewWidth,
-          height: _terminal.viewHeight,
+          width: _terminal.viewWidth > 0 ? _terminal.viewWidth : 80,
+          height: _terminal.viewHeight > 0 ? _terminal.viewHeight : 24,
         ),
       ).timeout(const Duration(seconds: 15));
 
@@ -96,8 +101,30 @@ class _ShellScreenState extends State<ShellScreen> {
       _terminal.onResize = (w, h, pw, ph) => _session?.resizeTerminal(w, h, pw, ph);
       _terminal.onOutput = (data) => _session?.write(utf8.encode(data));
       
-      _session!.stdout.cast<List<int>>().transform(const Utf8Decoder()).listen(_terminal.write);
-      _session!.stderr.cast<List<int>>().transform(const Utf8Decoder()).listen(_terminal.write);
+      // Listen to shell output with error handling and store subscriptions
+      _stdoutSubscription = _session!.stdout
+          .cast<List<int>>()
+          .transform(const Utf8Decoder())
+          .listen(
+            _terminal.write,
+            onError: (error) {
+              if (mounted) {
+                _terminal.write('\r\nStream error: $error\r\n');
+              }
+            },
+          );
+      
+      _stderrSubscription = _session!.stderr
+          .cast<List<int>>()
+          .transform(const Utf8Decoder())
+          .listen(
+            _terminal.write,
+            onError: (error) {
+              if (mounted) {
+                _terminal.write('\r\nStream error: $error\r\n');
+              }
+            },
+          );
       
     } catch (e) {
       _terminal.write('❌ Failed to start shell: $e\r\n');
@@ -176,7 +203,7 @@ class _ShellScreenState extends State<ShellScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Initializing shell...',
+                      'shell.initializing'.tr(),
                       style: TextStyle(
                         color: isDark ? const Color(0xFFE6EDF3) : Colors.grey,
                       ),

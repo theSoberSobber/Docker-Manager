@@ -283,7 +283,7 @@ class _ImagesScreenState extends State<ImagesScreen>
       );
     }
 
-    if (_filteredImages.isEmpty && _searchQuery.isNotEmpty) {
+    if (_filteredImages.isEmpty && _searchQuery.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

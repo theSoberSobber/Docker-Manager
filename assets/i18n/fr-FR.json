@@ -346,6 +346,7 @@
     "filtered_output_copied": "Résultat du filtre copié dans le presse-papier",
     "no_output_to_copy": "Rien à copier",
     "no_matching_lines": "Aucune ligne correspondante trouvée",
-    "try_different_search": "Essayez une autre recherche"
+    "try_different_search": "Essayez une autre recherche",
+    "initializing": "Initialisation du shell..."
   }
 }
