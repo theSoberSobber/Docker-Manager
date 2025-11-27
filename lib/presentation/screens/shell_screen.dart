@@ -191,7 +191,7 @@ class _ShellScreenState extends State<ShellScreen> {
             ),
             IconButton(
               icon: const Icon(Icons.keyboard_tab),
-              tooltip: 'Send Tab',
+              tooltip: 'shell.send_tab'.tr(),
               onPressed: () => _session?.write(utf8.encode('\t')),
             ),
           ],
