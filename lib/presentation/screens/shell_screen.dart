@@ -102,11 +102,6 @@ class _ShellScreenState extends State<ShellScreen> {
         _session!.write(utf8.encode('$dockerCli exec -it $containerId $executable\n'));
       }
       
-      // Clear connection messages
-      await Future.delayed(const Duration(milliseconds: 500));
-      _terminal.buffer.clear();
-      _terminal.buffer.setCursor(0, 0);
-      
       // Wire up terminal ↔ SSH
       _terminal.onResize = (w, h, pw, ph) => _session?.resizeTerminal(w, h, pw, ph);
       _terminal.onOutput = (data) => _session?.write(utf8.encode(data));
@@ -230,8 +225,8 @@ class _ShellScreenState extends State<ShellScreen> {
                 theme: TerminalTheme(
                   cursor: isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292F),
                   selection: isDark 
-                      ? const Color(0xFF3B5998).withOpacity(0.5)
-                      : const Color(0xFFB3D8FF).withOpacity(0.5),
+                      ? const Color(0xFF3B5998).withValues(alpha: 0.5)
+                      : const Color(0xFFB3D8FF).withValues(alpha: 0.5),
                   foreground: isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292F),
                   background: isDark ? const Color(0xFF0D1117) : const Color(0xFFF6F8FA),
                   black: isDark ? const Color(0xFF484F58) : const Color(0xFF24292F),
@@ -250,7 +245,7 @@ class _ShellScreenState extends State<ShellScreen> {
                   brightMagenta: const Color(0xFFD2A8FF),
                   brightCyan: const Color(0xFF56D4DD),
                   brightWhite: isDark ? const Color(0xFFCDD9E5) : const Color(0xFF8C959F),
-                  searchHitBackground: const Color(0xFFD29922).withOpacity(0.5),
+                  searchHitBackground: const Color(0xFFD29922).withValues(alpha: 0.5),
                   searchHitBackgroundCurrent: const Color(0xFFD29922),
                   searchHitForeground: Colors.black,
                 ),
