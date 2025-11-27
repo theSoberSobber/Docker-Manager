@@ -188,7 +188,7 @@
       "add_volume_mount": "Ajouter un volume",
       "advanced_options": "Options avancées",
       "restart_policy": "Politique de redémarrage",
-      "restart_no": "Non",
+      "restart_no": "Ne pas redémarrer",
       "restart_always": "Toujours",
       "restart_unless_stopped": "Sauf si arrêté",
       "restart_on_failure": "En cas d'erreur",
