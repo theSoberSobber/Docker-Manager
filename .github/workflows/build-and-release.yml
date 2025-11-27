@@ -160,13 +160,19 @@ jobs:
             - Latest commit: ${{ github.event.head_commit.message }}
             - Branch: ${{ github.ref_name }}
             
-            📱 **Android Downloads:**
+            ---
+            
+            📱 **Android builds available**
+            
+            **Downloads:**
             - **APK**: Direct install for Android devices
             - **AAB**: Google Play Store format
           files: |
             build/app/outputs/flutter-apk/DockerManager-${{ steps.version.outputs.VERSION }}.apk
             build/app/outputs/bundle/release/DockerManager-${{ steps.version.outputs.VERSION }}.aab
           generate_release_notes: true
+          draft: false
+          prerelease: false
           
       # --- Custom APK Manager Upload (APK only) ---
       - name: Upload APK to APK Manager
