@@ -38,6 +38,7 @@ dependencies:
   dartssh2: ^2.9.0
   http: ^1.2.2
   easy_localization: ^3.0.7
+  xterm: ^4.0.0
 
 dev_dependencies:
   flutter_test:
