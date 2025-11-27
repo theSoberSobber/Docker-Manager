@@ -17,6 +17,7 @@
     "connect": "Connect",
     "search": "Search",
     "searching": "Searching...",
+    "loading": "Loading...",
     "id": "ID",
     "image": "Image",
     "command": "Command",

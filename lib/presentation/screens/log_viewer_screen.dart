@@ -42,11 +42,13 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
   }
 
   Future<void> _executeCommand() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
       if (!_sshService.isConnected) {
         _addOutput('Error: No SSH connection available');
+        if (!mounted) return;
         setState(() => _isLoading = false);
         return;
       }
@@ -63,11 +65,14 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
     } catch (e) {
       _addOutput('Error: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   void _addOutput(String text) {
+    if (!mounted) return;
     // Clean ANSI escape sequences and control characters
     String cleanText = _cleanAnsiEscapes(text);
     
@@ -86,6 +91,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
       
       // Auto-scroll to bottom after adding new output
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
             _scrollController.position.maxScrollExtent,

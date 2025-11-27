@@ -50,11 +50,13 @@ class _ShellScreenState extends State<ShellScreen> {
   }
 
   Future<void> _initializeShell() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
       if (!_sshService.isConnected) {
         _terminal.write('Error: No SSH connection available\r\n');
+        if (!mounted) return;
         setState(() => _isLoading = false);
         return;
       }
@@ -66,7 +68,9 @@ class _ShellScreenState extends State<ShellScreen> {
     } catch (e) {
       _terminal.write('Error: $e\r\n');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -81,6 +85,11 @@ class _ShellScreenState extends State<ShellScreen> {
           height: _terminal.viewHeight > 0 ? _terminal.viewHeight : 24,
         ),
       ).timeout(const Duration(seconds: 15));
+
+      if (!mounted) {
+        _session?.close();
+        return;
+      }
 
       // For container shells, enter the container
       if (widget.containerInfo != null) {
@@ -181,9 +190,9 @@ class _ShellScreenState extends State<ShellScreen> {
               onPressed: () => _session?.write(utf8.encode('\x03')),
             ),
             IconButton(
-              icon: const Icon(Icons.exit_to_app),
-              tooltip: 'common.send_ctrl_d'.tr(),
-              onPressed: () => _session?.write(utf8.encode('\x04')),
+              icon: const Icon(Icons.keyboard_tab),
+              tooltip: 'Send Tab',
+              onPressed: () => _session?.write(utf8.encode('\t')),
             ),
           ],
           IconButton(
