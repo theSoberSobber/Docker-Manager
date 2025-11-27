@@ -293,6 +293,8 @@
     "log_1000": "1000 lignes (détaillé)",
     "log_5000": "5000 lignes (lent)",
     "log_all": "Tous (risqué)",
+    "show_timestamps": "Afficher les horodatages dans les logs",
+    "timestamps_description": "Afficher les horodatages pour chaque entrée de log",
     "system_maintenance": "Maintenance système",
     "clean_resources": "Nettoyer les ressources",
     "clean_description": "Supprimer conteneurs, images, réseaux, volumes et cache inutilisés",

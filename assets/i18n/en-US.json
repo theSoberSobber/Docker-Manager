@@ -293,6 +293,8 @@
     "log_1000": "1000 lines (detailed)",
     "log_5000": "5000 lines (may be slow)",
     "log_all": "All logs (risky)",
+    "show_timestamps": "Show timestamps in logs",
+    "timestamps_description": "Display timestamps for each log entry",
     "system_maintenance": "System Maintenance",
     "clean_resources": "Clean up Docker resources",
     "clean_description": "Remove unused containers, images, networks, volumes, and build cache",

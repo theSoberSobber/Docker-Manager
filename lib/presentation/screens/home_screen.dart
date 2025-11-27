@@ -285,7 +285,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           IconButton(
             icon: Icon(ThemeManager().themeIcon),
             onPressed: () {
-              ThemeManager().toggleTheme();
+              setState(() {
+                ThemeManager().toggleTheme();
+              });
             },
             tooltip: ThemeManager().themeLabel,
           ),

@@ -283,12 +283,14 @@ class _ContainersScreenState extends State<ContainersScreen>
           final prefs = await SharedPreferences.getInstance();
           final logLines = prefs.getString('defaultLogLines') ?? '500';
           final dockerCli = prefs.getString('dockerCliPath') ?? 'docker';
+          final showTimestamps = prefs.getBool('showLogTimestamps') ?? false;
           
-          // Build command based on setting
+          // Build command based on settings
+          final timestampFlag = showTimestamps ? '--timestamps ' : '';
           if (logLines == 'all') {
-            command = '$dockerCli logs ${container.id}';
+            command = '$dockerCli logs $timestampFlag${container.id}';
           } else {
-            command = '$dockerCli logs --tail $logLines ${container.id}';
+            command = '$dockerCli logs $timestampFlag--tail $logLines ${container.id}';
           }
           
           // Navigate to shell screen for logs

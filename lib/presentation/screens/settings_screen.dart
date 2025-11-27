@@ -17,6 +17,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _dockerPathController = TextEditingController();
   bool _isLoading = true;
   bool _isPruning = false;
+  bool _showLogTimestamps = false;
 
   @override
   void initState() {
@@ -35,6 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _defaultLogLines = prefs.getString('defaultLogLines') ?? '500';
       _dockerCliPath = prefs.getString('dockerCliPath') ?? 'docker';
+      _showLogTimestamps = prefs.getBool('showLogTimestamps') ?? false;
       _dockerPathController.text = _dockerCliPath;
       _isLoading = false;
     });
@@ -379,6 +381,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildLogLinesOption('1000', 'settings.log_1000'.tr()),
                       _buildLogLinesOption('5000', 'settings.log_5000'.tr()),
                       _buildLogLinesOption('all', 'settings.log_all'.tr()),
+                      const SizedBox(height: 24),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          'settings.show_timestamps'.tr(),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'settings.timestamps_description'.tr(),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        value: _showLogTimestamps,
+                        onChanged: (bool value) async {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('showLogTimestamps', value);
+                          setState(() {
+                            _showLogTimestamps = value;
+                          });
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('settings.saved'.tr()),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          }
+                        },
+                      ),
                     ],
                   ),
                 ),

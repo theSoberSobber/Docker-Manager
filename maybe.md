@@ -4,6 +4,6 @@
 - ~log search~
 - ~search in all tabs (container, images and ... all)~
 - ~search in insepct~
-- better shell handling? `***`
+- ~better shell handling? `***`~
 - ~json formatting in insepct?~
 - notifications on docker events? maybe
