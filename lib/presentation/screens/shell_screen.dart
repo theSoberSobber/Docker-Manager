@@ -207,14 +207,6 @@ class _ShellScreenState extends State<ShellScreen> {
             ),
           ],
           IconButton(
-            icon: const Icon(Icons.clear_all),
-            onPressed: () {
-              _terminal.buffer.clear();
-              _terminal.buffer.setCursor(0, 0);
-            },
-            tooltip: 'Clear',
-          ),
-          IconButton(
             icon: const Icon(Icons.copy),
             onPressed: _copyOutput,
             tooltip: 'common.copy_output'.tr(),

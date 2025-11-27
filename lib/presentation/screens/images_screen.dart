@@ -6,7 +6,7 @@ import '../../data/services/ssh_connection_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
-import 'shell_screen.dart';
+import 'log_viewer_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class ImagesScreen extends StatefulWidget {
@@ -135,7 +135,7 @@ class _ImagesScreenState extends State<ImagesScreen>
           command = 'docker image inspect ${image.imageId}';
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => ShellScreen(
+              builder: (context) => LogViewerScreen(
                 title: 'images.inspect_title'.tr(args: ['${image.repository}:${image.tag}']),
                 command: command,
               ),
