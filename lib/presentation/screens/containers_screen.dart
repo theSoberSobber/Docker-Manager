@@ -4,8 +4,6 @@ import '../../domain/repositories/docker_repository.dart';
 import '../../data/repositories/docker_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../domain/models/server.dart';
-import '../../domain/repositories/server_repository.dart';
-import '../../data/repositories/server_repository_impl.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
@@ -26,7 +24,6 @@ class _ContainersScreenState extends State<ContainersScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
-  final ServerRepository _serverRepository = ServerRepositoryImpl();
   List<DockerContainer> _containers = [];
   List<DockerContainer> _filteredContainers = [];
   bool _isLoading = false;
@@ -80,60 +77,6 @@ class _ContainersScreenState extends State<ContainersScreen>
       // Continue checking
       _startServerChangeDetection();
     });
-  }
-
-  Future<void> _handleServerSelection(Server server) async {
-    try {
-      final result = await _sshService.switchToServer(server);
-      if (result.success) {
-        try {
-          await _serverRepository.setLastUsedServerId(server.id);
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('connection.failed_to_set_last_used'.tr(args: [e.toString()])),
-                backgroundColor: Colors.orange,
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          }
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('connection.selected_server'.tr(args: [server.name])),
-              duration: const Duration(milliseconds: 800),
-            ),
-          );
-
-          setState(() {
-            _lastKnownServer = server;
-            _lastLoadedServerId = null;
-            _hasTriedLoading = false;
-            _error = null;
-          });
-        }
-        await _checkConnectionAndLoad();
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('connection.failed_to_connect'.tr(args: [server.name])),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('connection.failed_to_select'.tr(args: [e.toString()])),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 
   @override
@@ -672,7 +615,9 @@ class _ContainersScreenState extends State<ContainersScreen>
                         context,
                         MaterialPageRoute(
                           builder: (context) => ServerListScreen(
-                            onServerSelected: _handleServerSelection,
+                            onServerSelected: (server) {
+                              Navigator.pop(context);
+                            },
                           ),
                         ),
                       );
