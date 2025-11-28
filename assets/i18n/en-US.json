@@ -64,7 +64,8 @@
     "timeout": "Connection timeout. Please try again or check your server connection.",
     "no_connection": "No SSH connection available. Please connect to a server first.",
     "no_server_connection": "No Server Connection",
-    "permission_issue": "Permission Issue"
+    "permission_issue": "Permission Issue",
+    "tap_server_icon": "Tap the server icon in the top-right to connect to a server"
   },
   "navigation": {
     "containers": "Containers",

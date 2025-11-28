@@ -611,9 +611,9 @@ class _ContainersScreenState extends State<ContainersScreen>
                   ElevatedButton.icon(
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Tap the server icon in the top-right to connect to a server'),
-                          duration: Duration(seconds: 3),
+                        SnackBar(
+                          content: Text('connection.tap_server_icon'.tr()),
+                          duration: const Duration(seconds: 3),
                         ),
                       );
                     },
