@@ -84,20 +84,30 @@ class _ContainersScreenState extends State<ContainersScreen>
 
   Future<void> _handleServerSelection(Server server) async {
     try {
-      await _serverRepository.setLastUsedServerId(server.id);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('connection.selected_server'.tr(args: [server.name])),
-            duration: const Duration(milliseconds: 800),
-          ),
-        );
-      }
-
       final result = await _sshService.switchToServer(server);
       if (result.success) {
+        try {
+          await _serverRepository.setLastUsedServerId(server.id);
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('connection.failed_to_set_last_used'.tr(args: [e.toString()])),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+
         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('connection.selected_server'.tr(args: [server.name])),
+              duration: const Duration(milliseconds: 800),
+            ),
+          );
+
           setState(() {
             _lastKnownServer = server;
             _lastLoadedServerId = null;
