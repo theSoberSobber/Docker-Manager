@@ -4,14 +4,11 @@ import '../../domain/repositories/docker_repository.dart';
 import '../../data/repositories/docker_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../domain/models/server.dart';
-import '../../domain/repositories/server_repository.dart';
-import '../../data/repositories/server_repository_impl.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
 import 'log_viewer_screen.dart';
 import 'settings_screen.dart';
-import 'server_list_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -26,7 +23,6 @@ class _ContainersScreenState extends State<ContainersScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
-  final ServerRepository _serverRepository = ServerRepositoryImpl();
   List<DockerContainer> _containers = [];
   List<DockerContainer> _filteredContainers = [];
   bool _isLoading = false;
@@ -80,60 +76,6 @@ class _ContainersScreenState extends State<ContainersScreen>
       // Continue checking
       _startServerChangeDetection();
     });
-  }
-
-  Future<void> _handleServerSelection(Server server) async {
-    try {
-      final result = await _sshService.switchToServer(server);
-      if (result.success) {
-        try {
-          await _serverRepository.setLastUsedServerId(server.id);
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('connection.failed_to_set_last_used'.tr(args: [e.toString()])),
-                backgroundColor: Colors.orange,
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          }
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('connection.selected_server'.tr(args: [server.name])),
-              duration: const Duration(milliseconds: 800),
-            ),
-          );
-
-          setState(() {
-            _lastKnownServer = server;
-            _lastLoadedServerId = null;
-            _hasTriedLoading = false;
-            _error = null;
-          });
-        }
-        await _checkConnectionAndLoad();
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('connection.failed_to_connect'.tr(args: [server.name])),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('connection.failed_to_select'.tr(args: [e.toString()])),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 
   @override
@@ -665,54 +607,24 @@ class _ContainersScreenState extends State<ContainersScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (isConnectionError) ...[
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ServerListScreen(
-                            onServerSelected: _handleServerSelection,
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.dns),
-                    label: Text('connection.connect_to_server'.tr()),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SettingsScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.settings),
-                    label: Text('common.settings'.tr()),
-                  ),
-                ] else ...[
-                  ElevatedButton.icon(
-                    onPressed: _refreshContainers,
-                    icon: const Icon(Icons.refresh),
-                    label: Text('common.retry'.tr()),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SettingsScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.settings),
-                    label: Text('common.settings'.tr()),
-                  ),
-                ],
+                ElevatedButton.icon(
+                  onPressed: _refreshContainers,
+                  icon: const Icon(Icons.refresh),
+                  label: Text(isConnectionError ? 'common.refresh'.tr() : 'common.retry'.tr()),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.settings),
+                  label: Text('common.settings'.tr()),
+                ),
               ],
             ),
           ],
