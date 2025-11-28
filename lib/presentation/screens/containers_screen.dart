@@ -9,7 +9,6 @@ import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
 import 'log_viewer_screen.dart';
 import 'settings_screen.dart';
-import 'server_list_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -611,14 +610,10 @@ class _ContainersScreenState extends State<ContainersScreen>
                 if (isConnectionError) ...[
                   ElevatedButton.icon(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ServerListScreen(
-                            onServerSelected: (server) {
-                              Navigator.pop(context);
-                            },
-                          ),
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('connection.tap_server_icon'.tr()),
+                          duration: const Duration(seconds: 3),
                         ),
                       );
                     },
@@ -626,18 +621,6 @@ class _ContainersScreenState extends State<ContainersScreen>
                     label: Text('connection.connect_to_server'.tr()),
                   ),
                   const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SettingsScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.settings),
-                    label: Text('common.settings'.tr()),
-                  ),
                 ] else ...[
                   ElevatedButton.icon(
                     onPressed: _refreshContainers,
@@ -645,19 +628,19 @@ class _ContainersScreenState extends State<ContainersScreen>
                     label: Text('common.retry'.tr()),
                   ),
                   const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SettingsScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.settings),
-                    label: Text('common.settings'.tr()),
-                  ),
                 ],
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.settings),
+                  label: Text('common.settings'.tr()),
+                ),
               ],
             ),
           ],

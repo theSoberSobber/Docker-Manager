@@ -64,7 +64,8 @@
     "timeout": "Tiempo de conexión agotado. Por favor, inténtelo de nuevo o verifique la conexión del servidor.",
     "no_connection": "No hay conexión SSH disponible. Por favor, conéctese primero a un servidor.",
     "no_server_connection": "Sin Conexión al Servidor",
-    "permission_issue": "Problema de Permisos"
+    "permission_issue": "Problema de Permisos",
+    "tap_server_icon": "Toque el icono del servidor en la esquina superior derecha para conectarse a un servidor"
   },
   "navigation": {
     "containers": "Contenedores",

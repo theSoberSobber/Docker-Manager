@@ -64,7 +64,8 @@
     "timeout": "Délai de connexion dépassé. Réessayez ou vérifiez le serveur.",
     "no_connection": "Aucune connexion SSH disponible. Connectez-vous d'abord.",
     "no_server_connection": "Aucune connexion au serveur",
-    "permission_issue": "Problème de permission. Vérifiez les permissions Docker."
+    "permission_issue": "Problème de permission. Vérifiez les permissions Docker.",
+    "tap_server_icon": "Appuyez sur l'icône du serveur en haut à droite pour vous connecter"
   },
   "navigation": {
     "containers": "Conteneurs",
