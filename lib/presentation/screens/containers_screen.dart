@@ -607,12 +607,28 @@ class _ContainersScreenState extends State<ContainersScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ElevatedButton.icon(
-                  onPressed: _refreshContainers,
-                  icon: const Icon(Icons.refresh),
-                  label: Text(isConnectionError ? 'common.refresh'.tr() : 'common.retry'.tr()),
-                ),
-                const SizedBox(width: 12),
+                if (isConnectionError) ...[
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Tap the server icon in the top-right to connect to a server'),
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.dns),
+                    label: Text('connection.connect_to_server'.tr()),
+                  ),
+                  const SizedBox(width: 12),
+                ] else ...[
+                  ElevatedButton.icon(
+                    onPressed: _refreshContainers,
+                    icon: const Icon(Icons.refresh),
+                    label: Text('common.retry'.tr()),
+                  ),
+                  const SizedBox(width: 12),
+                ],
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.push(
