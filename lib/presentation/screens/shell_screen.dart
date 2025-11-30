@@ -28,7 +28,11 @@ class _ShellScreenState extends State<ShellScreen> {
   final SSHConnectionService _sshService = SSHConnectionService();
   late final Terminal _terminal;
   final TerminalController _terminalController = TerminalController();
+  final FocusNode _terminalFocusNode = FocusNode();
   bool _isLoading = true;
+  bool _autofocusReady = false;
+  double _fontSize = const TerminalStyle().fontSize;
+  double _fontSizeAtScaleStart = const TerminalStyle().fontSize;
   SSHSession? _session;
   StreamSubscription<String>? _stdoutSubscription;
   StreamSubscription<String>? _stderrSubscription;
@@ -45,6 +49,7 @@ class _ShellScreenState extends State<ShellScreen> {
     _stdoutSubscription?.cancel();
     _stderrSubscription?.cancel();
     _terminalController.dispose();
+    _terminalFocusNode.dispose();
     _session?.close();
     super.dispose();
   }
@@ -70,6 +75,7 @@ class _ShellScreenState extends State<ShellScreen> {
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+        _requestTerminalFocus();
       }
     }
   }
@@ -131,6 +137,12 @@ class _ShellScreenState extends State<ShellScreen> {
       
     } catch (e) {
       _terminal.write('❌ Failed to start shell: $e\r\n');
+      return;
+    }
+
+    if (mounted) {
+      setState(() => _autofocusReady = true);
+      _requestTerminalFocus();
     }
   }
 
@@ -167,11 +179,33 @@ class _ShellScreenState extends State<ShellScreen> {
     }
   }
 
+  void _onScaleStart(ScaleStartDetails details) {
+    if (details.pointerCount < 2) return;
+    _fontSizeAtScaleStart = _fontSize;
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails details) {
+    if (details.pointerCount < 2) return;
+    final newSize = (_fontSizeAtScaleStart * details.scale).clamp(10.0, 24.0);
+    if (newSize != _fontSize) {
+      setState(() => _fontSize = newSize);
+    }
+  }
+
+  void _requestTerminalFocus() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isLoading || !_autofocusReady) return;
+      _terminalFocusNode.requestFocus();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     
     return Scaffold(
+      // Keep the scaffold stable while still padding for the keyboard manually.
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: Text(widget.title),
@@ -197,58 +231,71 @@ class _ShellScreenState extends State<ShellScreen> {
         ],
       ),
       body: SafeArea(
-        child: _isLoading
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      color: isDark ? const Color(0xFFE6EDF3) : Colors.grey,
+        // Add bottom padding for the keyboard without shifting the whole scaffold to avoid
+        // the "bounce" beneath the AppBar.
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: GestureDetector(
+            onScaleStart: _onScaleStart,
+            onScaleUpdate: _onScaleUpdate,
+            child: _isLoading
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          color: isDark ? const Color(0xFFE6EDF3) : Colors.grey,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'shell.initializing'.tr(),
+                          style: TextStyle(
+                            color: isDark ? const Color(0xFFE6EDF3) : Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'shell.initializing'.tr(),
-                      style: TextStyle(
-                        color: isDark ? const Color(0xFFE6EDF3) : Colors.grey,
-                      ),
+                  )
+                : TerminalView(
+                    _terminal,
+                    controller: _terminalController,
+                    focusNode: _terminalFocusNode,
+                    autofocus: _autofocusReady && !_isLoading,
+                    backgroundOpacity: 1.0,
+                    padding: const EdgeInsets.all(8),
+                    textStyle: TerminalStyle(fontSize: _fontSize),
+                    theme: TerminalTheme(
+                      cursor: isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292F),
+                      selection: isDark 
+                          ? const Color(0xFF3B5998).withValues(alpha: 0.5)
+                          : const Color(0xFFB3D8FF).withValues(alpha: 0.5),
+                      foreground: isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292F),
+                      background: isDark ? const Color(0xFF0D1117) : const Color(0xFFF6F8FA),
+                      black: isDark ? const Color(0xFF484F58) : const Color(0xFF24292F),
+                      red: const Color(0xFFFF7B72),
+                      green: const Color(0xFF3FB950),
+                      yellow: const Color(0xFFD29922),
+                      blue: const Color(0xFF58A6FF),
+                      magenta: const Color(0xFFBC8CFF),
+                      cyan: const Color(0xFF39C5CF),
+                      white: isDark ? const Color(0xFFB1BAC4) : const Color(0xFF6E7781),
+                      brightBlack: isDark ? const Color(0xFF6E7681) : const Color(0xFF57606A),
+                      brightRed: const Color(0xFFFFA198),
+                      brightGreen: const Color(0xFF56D364),
+                      brightYellow: const Color(0xFFE3B341),
+                      brightBlue: const Color(0xFF79C0FF),
+                      brightMagenta: const Color(0xFFD2A8FF),
+                      brightCyan: const Color(0xFF56D4DD),
+                      brightWhite: isDark ? const Color(0xFFCDD9E5) : const Color(0xFF8C959F),
+                      searchHitBackground: const Color(0xFFD29922).withValues(alpha: 0.5),
+                      searchHitBackgroundCurrent: const Color(0xFFD29922),
+                      searchHitForeground: Colors.black,
                     ),
-                  ],
-                ),
-              )
-            : TerminalView(
-                _terminal,
-                controller: _terminalController,
-                autofocus: true,
-                backgroundOpacity: 1.0,
-                padding: const EdgeInsets.all(8),
-                theme: TerminalTheme(
-                  cursor: isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292F),
-                  selection: isDark 
-                      ? const Color(0xFF3B5998).withValues(alpha: 0.5)
-                      : const Color(0xFFB3D8FF).withValues(alpha: 0.5),
-                  foreground: isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292F),
-                  background: isDark ? const Color(0xFF0D1117) : const Color(0xFFF6F8FA),
-                  black: isDark ? const Color(0xFF484F58) : const Color(0xFF24292F),
-                  red: const Color(0xFFFF7B72),
-                  green: const Color(0xFF3FB950),
-                  yellow: const Color(0xFFD29922),
-                  blue: const Color(0xFF58A6FF),
-                  magenta: const Color(0xFFBC8CFF),
-                  cyan: const Color(0xFF39C5CF),
-                  white: isDark ? const Color(0xFFB1BAC4) : const Color(0xFF6E7781),
-                  brightBlack: isDark ? const Color(0xFF6E7681) : const Color(0xFF57606A),
-                  brightRed: const Color(0xFFFFA198),
-                  brightGreen: const Color(0xFF56D364),
-                  brightYellow: const Color(0xFFE3B341),
-                  brightBlue: const Color(0xFF79C0FF),
-                  brightMagenta: const Color(0xFFD2A8FF),
-                  brightCyan: const Color(0xFF56D4DD),
-                  brightWhite: isDark ? const Color(0xFFCDD9E5) : const Color(0xFF8C959F),
-                  searchHitBackground: const Color(0xFFD29922).withValues(alpha: 0.5),
-                  searchHitBackgroundCurrent: const Color(0xFFD29922),
-                  searchHitForeground: Colors.black,
-                ),
-              ),
+                  ),
+          ),
+        ),
       ),
     );
   }
