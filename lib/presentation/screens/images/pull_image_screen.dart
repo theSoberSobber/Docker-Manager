@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/services/docker_registry_service.dart';
 import '../../../data/services/ssh_connection_service.dart';
+import '../../../data/services/docker_cli_path_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class PullImageScreen extends StatefulWidget {
@@ -13,6 +14,7 @@ class PullImageScreen extends StatefulWidget {
 class _PullImageScreenState extends State<PullImageScreen> {
   final _registryService = DockerRegistryService();
   final _sshService = SSHConnectionService();
+  final DockerCliPathService _dockerCliPathService = DockerCliPathService();
   final _searchController = TextEditingController();
   final _registryController = TextEditingController(text: 'hub.docker.com');
 
@@ -178,8 +180,9 @@ class _PullImageScreenState extends State<PullImageScreen> {
     );
 
     try {
+      final dockerCli = await _dockerCliPathService.getDockerCliPath();
       final result =
-          await _sshService.executeCommand('docker pull $fullImageName');
+          await _sshService.executeCommand('$dockerCli pull $fullImageName');
 
       if (!mounted) return;
       Navigator.of(context).pop(); // Close loading dialog

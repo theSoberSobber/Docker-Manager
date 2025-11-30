@@ -3,6 +3,7 @@ import '../../domain/models/docker_image.dart';
 import '../../domain/repositories/docker_repository.dart';
 import '../../data/repositories/docker_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
+import '../../data/services/docker_cli_path_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
@@ -20,6 +21,7 @@ class _ImagesScreenState extends State<ImagesScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
+  final DockerCliPathService _dockerCliPathService = DockerCliPathService();
   List<DockerImage> _images = [];
   List<DockerImage> _filteredImages = [];
   bool _isLoading = false;
@@ -129,10 +131,11 @@ class _ImagesScreenState extends State<ImagesScreen>
   Future<void> _handleImageAction(DockerAction action, DockerImage image) async {
     try {
       String command;
+      final dockerCli = await _dockerCliPathService.getDockerCliPath();
       
       switch (action.command) {
         case 'docker image inspect':
-          command = 'docker image inspect ${image.imageId}';
+          command = '$dockerCli image inspect ${image.imageId}';
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => LogViewerScreen(
@@ -165,14 +168,14 @@ class _ImagesScreenState extends State<ImagesScreen>
           );
 
           if (confirmed == true) {
-            command = 'docker image rm ${image.imageId}';
+            command = '$dockerCli image rm ${image.imageId}';
           } else {
             return;
           }
           break;
           
         default:
-          command = '${action.command} ${image.imageId}';
+          command = '${action.command.replaceFirst('docker', dockerCli)} ${image.imageId}';
       }
 
       // Execute the command

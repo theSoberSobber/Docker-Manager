@@ -3,6 +3,7 @@ import '../../domain/models/docker_volume.dart';
 import '../../domain/repositories/docker_repository.dart';
 import '../../data/repositories/docker_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
+import '../../data/services/docker_cli_path_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
@@ -20,6 +21,7 @@ class _VolumesScreenState extends State<VolumesScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
+  final DockerCliPathService _dockerCliPathService = DockerCliPathService();
   List<DockerVolume> _volumes = [];
   List<DockerVolume> _filteredVolumes = [];
   bool _isLoading = false;
@@ -127,10 +129,11 @@ class _VolumesScreenState extends State<VolumesScreen>
   Future<void> _handleVolumeAction(DockerAction action, DockerVolume volume) async {
     try {
       String command;
+      final dockerCli = await _dockerCliPathService.getDockerCliPath();
       
       switch (action.command) {
         case 'docker volume inspect':
-          command = 'docker volume inspect ${volume.volumeName}';
+          command = '$dockerCli volume inspect ${volume.volumeName}';
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => LogViewerScreen(
@@ -163,14 +166,14 @@ class _VolumesScreenState extends State<VolumesScreen>
           );
 
           if (confirmed == true) {
-            command = 'docker volume rm ${volume.volumeName}';
+            command = '$dockerCli volume rm ${volume.volumeName}';
           } else {
             return;
           }
           break;
           
         default:
-          command = '${action.command} ${volume.volumeName}';
+          command = '${action.command.replaceFirst('docker', dockerCli)} ${volume.volumeName}';
       }
 
       // Execute the command

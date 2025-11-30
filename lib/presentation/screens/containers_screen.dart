@@ -3,6 +3,7 @@ import '../../domain/models/docker_container.dart';
 import '../../domain/repositories/docker_repository.dart';
 import '../../data/repositories/docker_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
+import '../../data/services/docker_cli_path_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
@@ -23,6 +24,7 @@ class _ContainersScreenState extends State<ContainersScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
+  final DockerCliPathService _dockerCliPathService = DockerCliPathService();
   List<DockerContainer> _containers = [];
   List<DockerContainer> _filteredContainers = [];
   bool _isLoading = false;
@@ -275,6 +277,7 @@ class _ContainersScreenState extends State<ContainersScreen>
   Future<void> _handleContainerAction(DockerAction action, DockerContainer container) async {
     try {
       String command;
+      final dockerCli = await _dockerCliPathService.getDockerCliPath();
       
       // Build the complete Docker command based on the action
       switch (action.command) {
@@ -282,7 +285,6 @@ class _ContainersScreenState extends State<ContainersScreen>
           // Get settings
           final prefs = await SharedPreferences.getInstance();
           final logLines = prefs.getString('defaultLogLines') ?? '500';
-          final dockerCli = prefs.getString('dockerCliPath') ?? 'docker';
           
           // Build command with timestamps enabled by default
           if (logLines == 'all') {
@@ -303,8 +305,6 @@ class _ContainersScreenState extends State<ContainersScreen>
           return;
           
         case 'docker inspect':
-          final prefs = await SharedPreferences.getInstance();
-          final dockerCli = prefs.getString('dockerCliPath') ?? 'docker';
           command = '$dockerCli inspect ${container.id}';
           // Navigate to log viewer for inspect
           Navigator.of(context).push(
@@ -323,29 +323,19 @@ class _ContainersScreenState extends State<ContainersScreen>
           return;
           
         case 'docker stop':
-          final prefs1 = await SharedPreferences.getInstance();
-          final dockerCli1 = prefs1.getString('dockerCliPath') ?? 'docker';
-          command = '$dockerCli1 stop ${container.id}';
+          command = '$dockerCli stop ${container.id}';
           break;
         case 'docker start':
-          final prefs2 = await SharedPreferences.getInstance();
-          final dockerCli2 = prefs2.getString('dockerCliPath') ?? 'docker';
-          command = '$dockerCli2 start ${container.id}';
+          command = '$dockerCli start ${container.id}';
           break;
         case 'docker restart':
-          final prefs3 = await SharedPreferences.getInstance();
-          final dockerCli3 = prefs3.getString('dockerCliPath') ?? 'docker';
-          command = '$dockerCli3 restart ${container.id}';
+          command = '$dockerCli restart ${container.id}';
           break;
         case 'docker rm':
-          final prefs4 = await SharedPreferences.getInstance();
-          final dockerCli4 = prefs4.getString('dockerCliPath') ?? 'docker';
-          command = '$dockerCli4 rm ${container.id}';
+          command = '$dockerCli rm ${container.id}';
           break;
         default:
-          final prefsDefault = await SharedPreferences.getInstance();
-          final dockerCliDefault = prefsDefault.getString('dockerCliPath') ?? 'docker';
-          command = '${action.command.replaceFirst('docker', dockerCliDefault)} ${container.id}';
+          command = '${action.command.replaceFirst('docker', dockerCli)} ${container.id}';
       }
 
       // Show loading indicator

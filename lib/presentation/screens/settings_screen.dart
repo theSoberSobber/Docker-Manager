@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import '../widgets/theme_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/services/ssh_connection_service.dart';
+import '../../data/services/docker_cli_path_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,6 +18,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _dockerPathController = TextEditingController();
   bool _isLoading = true;
   bool _isPruning = false;
+  final DockerCliPathService _dockerCliPathService = DockerCliPathService();
 
   @override
   void initState() {
@@ -139,9 +141,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final sshService = SSHConnectionService();
       
-      // Get the configured Docker CLI path
-      final prefs = await SharedPreferences.getInstance();
-      final dockerCmd = prefs.getString('dockerCliPath') ?? 'docker';
+      // Get the configured Docker CLI path (server-specific if set)
+      final dockerCmd = await _dockerCliPathService.getDockerCliPath();
       
       final result = await sshService.executeCommand('$dockerCmd system prune -af --volumes');
       

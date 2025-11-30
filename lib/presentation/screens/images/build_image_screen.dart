@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/services/ssh_connection_service.dart';
+import '../../../data/services/docker_cli_path_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class BuildImageScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
     text: 'FROM busybox\nRUN echo "Hello from Docker Manager"',
   );
   final _sshService = SSHConnectionService();
+  final DockerCliPathService _dockerCliPathService = DockerCliPathService();
   
   bool _isBuilding = false;
   String _buildLogs = '';
@@ -72,8 +74,9 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
       });
       _scrollToBottom();
 
+      final dockerCli = await _dockerCliPathService.getDockerCliPath();
       // Build the image with streaming output
-      final buildCommand = 'docker build -t $imageName:$tag -f $dockerfilePath $tempDir';
+      final buildCommand = '$dockerCli build -t $imageName:$tag -f $dockerfilePath $tempDir';
       
       // For now, execute command and get output
       // TODO: Implement streaming output

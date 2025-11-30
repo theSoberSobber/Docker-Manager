@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../domain/models/docker_image.dart';
 import '../../../data/repositories/docker_repository_impl.dart';
 import '../../../data/services/ssh_connection_service.dart';
+import '../../../data/services/docker_cli_path_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class CreateContainerScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
   final _nameController = TextEditingController();
   final _sshService = SSHConnectionService();
   final _dockerRepository = DockerRepositoryImpl();
+  final DockerCliPathService _dockerCliPathService = DockerCliPathService();
 
   List<DockerImage> _availableImages = [];
   DockerImage? _selectedImage;
@@ -115,10 +117,10 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
     });
   }
 
-  String _buildDockerRunCommand() {
+  String _buildDockerRunCommand(String dockerCli) {
     if (_selectedImage == null) return '';
 
-    final buffer = StringBuffer('docker run -d');
+    final buffer = StringBuffer('$dockerCli run -d');
 
     // Container name
     if (_nameController.text.isNotEmpty) {
@@ -201,7 +203,8 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
     });
 
     try {
-      final command = _buildDockerRunCommand();
+      final dockerCli = await _dockerCliPathService.getDockerCliPath();
+      final command = _buildDockerRunCommand(dockerCli);
       final result = await _sshService.executeCommand(command);
 
       if (mounted) {

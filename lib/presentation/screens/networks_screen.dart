@@ -3,6 +3,7 @@ import '../../domain/models/docker_network.dart';
 import '../../domain/repositories/docker_repository.dart';
 import '../../data/repositories/docker_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
+import '../../data/services/docker_cli_path_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
@@ -20,6 +21,7 @@ class _NetworksScreenState extends State<NetworksScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
+  final DockerCliPathService _dockerCliPathService = DockerCliPathService();
   List<DockerNetwork> _networks = [];
   List<DockerNetwork> _filteredNetworks = [];
   bool _isLoading = false;
@@ -128,10 +130,11 @@ class _NetworksScreenState extends State<NetworksScreen>
   Future<void> _handleNetworkAction(DockerAction action, DockerNetwork network) async {
     try {
       String command;
+      final dockerCli = await _dockerCliPathService.getDockerCliPath();
       
       switch (action.command) {
         case 'docker network inspect':
-          command = 'docker network inspect ${network.networkId}';
+          command = '$dockerCli network inspect ${network.networkId}';
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => LogViewerScreen(
@@ -175,14 +178,14 @@ class _NetworksScreenState extends State<NetworksScreen>
           );
 
           if (confirmed == true) {
-            command = 'docker network rm ${network.networkId}';
+            command = '$dockerCli network rm ${network.networkId}';
           } else {
             return;
           }
           break;
           
         default:
-          command = '${action.command} ${network.networkId}';
+          command = '${action.command.replaceFirst('docker', dockerCli)} ${network.networkId}';
       }
 
       // Execute the command

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:xterm/xterm.dart';
 import 'package:dartssh2/dartssh2.dart';
 import '../../data/services/ssh_connection_service.dart';
+import '../../data/services/docker_cli_path_service.dart';
 
 class ShellScreen extends StatefulWidget {
   final String title;
@@ -26,6 +26,7 @@ class ShellScreen extends StatefulWidget {
 
 class _ShellScreenState extends State<ShellScreen> {
   final SSHConnectionService _sshService = SSHConnectionService();
+  final DockerCliPathService _dockerCliPathService = DockerCliPathService();
   late final Terminal _terminal;
   final TerminalController _terminalController = TerminalController();
   final FocusNode _terminalFocusNode = FocusNode();
@@ -99,10 +100,8 @@ class _ShellScreenState extends State<ShellScreen> {
       if (widget.containerInfo != null) {
         final containerId = widget.containerInfo!['containerId'];
         final executable = widget.containerInfo!['executable'] ?? '/bin/bash';
-        
-        final prefs = await SharedPreferences.getInstance();
-        final dockerCli = prefs.getString('dockerCliPath') ?? 'docker';
-        
+
+        final dockerCli = await _dockerCliPathService.getDockerCliPath();
         _session!.write(utf8.encode('$dockerCli exec -it $containerId $executable\n'));
       }
       
