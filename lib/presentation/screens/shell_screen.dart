@@ -28,7 +28,9 @@ class _ShellScreenState extends State<ShellScreen> {
   final SSHConnectionService _sshService = SSHConnectionService();
   late final Terminal _terminal;
   final TerminalController _terminalController = TerminalController();
+  final FocusNode _terminalFocusNode = FocusNode();
   bool _isLoading = true;
+  bool _autofocusReady = false;
   double _fontSize = const TerminalStyle().fontSize;
   double _fontSizeAtScaleStart = const TerminalStyle().fontSize;
   SSHSession? _session;
@@ -47,6 +49,7 @@ class _ShellScreenState extends State<ShellScreen> {
     _stdoutSubscription?.cancel();
     _stderrSubscription?.cancel();
     _terminalController.dispose();
+    _terminalFocusNode.dispose();
     _session?.close();
     super.dispose();
   }
@@ -72,6 +75,7 @@ class _ShellScreenState extends State<ShellScreen> {
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+        _requestTerminalFocus();
       }
     }
   }
@@ -133,6 +137,12 @@ class _ShellScreenState extends State<ShellScreen> {
       
     } catch (e) {
       _terminal.write('❌ Failed to start shell: $e\r\n');
+      return;
+    }
+
+    if (mounted) {
+      setState(() => _autofocusReady = true);
+      _requestTerminalFocus();
     }
   }
 
@@ -180,6 +190,13 @@ class _ShellScreenState extends State<ShellScreen> {
     if (newSize != _fontSize) {
       setState(() => _fontSize = newSize);
     }
+  }
+
+  void _requestTerminalFocus() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isLoading || !_autofocusReady) return;
+      _terminalFocusNode.requestFocus();
+    });
   }
 
   @override
@@ -244,7 +261,8 @@ class _ShellScreenState extends State<ShellScreen> {
                 : TerminalView(
                     _terminal,
                     controller: _terminalController,
-                    autofocus: true,
+                    focusNode: _terminalFocusNode,
+                    autofocus: _autofocusReady && !_isLoading,
                     backgroundOpacity: 1.0,
                     padding: const EdgeInsets.all(8),
                     textStyle: TerminalStyle(fontSize: _fontSize),
