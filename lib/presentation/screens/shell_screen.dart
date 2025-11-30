@@ -170,8 +170,10 @@ class _ShellScreenState extends State<ShellScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     
     return Scaffold(
+      // Keep the scaffold stable while still padding for the keyboard manually.
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: Text(widget.title),
@@ -197,58 +199,65 @@ class _ShellScreenState extends State<ShellScreen> {
         ],
       ),
       body: SafeArea(
-        child: _isLoading
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      color: isDark ? const Color(0xFFE6EDF3) : Colors.grey,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'shell.initializing'.tr(),
-                      style: TextStyle(
+        // Add bottom padding for the keyboard without shifting the whole scaffold to avoid
+        // the "bounce" beneath the AppBar.
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: _isLoading
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
                         color: isDark ? const Color(0xFFE6EDF3) : Colors.grey,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      Text(
+                        'shell.initializing'.tr(),
+                        style: TextStyle(
+                          color: isDark ? const Color(0xFFE6EDF3) : Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : TerminalView(
+                  _terminal,
+                  controller: _terminalController,
+                  autofocus: true,
+                  backgroundOpacity: 1.0,
+                  padding: const EdgeInsets.all(8),
+                  theme: TerminalTheme(
+                    cursor: isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292F),
+                    selection: isDark 
+                        ? const Color(0xFF3B5998).withValues(alpha: 0.5)
+                        : const Color(0xFFB3D8FF).withValues(alpha: 0.5),
+                    foreground: isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292F),
+                    background: isDark ? const Color(0xFF0D1117) : const Color(0xFFF6F8FA),
+                    black: isDark ? const Color(0xFF484F58) : const Color(0xFF24292F),
+                    red: const Color(0xFFFF7B72),
+                    green: const Color(0xFF3FB950),
+                    yellow: const Color(0xFFD29922),
+                    blue: const Color(0xFF58A6FF),
+                    magenta: const Color(0xFFBC8CFF),
+                    cyan: const Color(0xFF39C5CF),
+                    white: isDark ? const Color(0xFFB1BAC4) : const Color(0xFF6E7781),
+                    brightBlack: isDark ? const Color(0xFF6E7681) : const Color(0xFF57606A),
+                    brightRed: const Color(0xFFFFA198),
+                    brightGreen: const Color(0xFF56D364),
+                    brightYellow: const Color(0xFFE3B341),
+                    brightBlue: const Color(0xFF79C0FF),
+                    brightMagenta: const Color(0xFFD2A8FF),
+                    brightCyan: const Color(0xFF56D4DD),
+                    brightWhite: isDark ? const Color(0xFFCDD9E5) : const Color(0xFF8C959F),
+                    searchHitBackground: const Color(0xFFD29922).withValues(alpha: 0.5),
+                    searchHitBackgroundCurrent: const Color(0xFFD29922),
+                    searchHitForeground: Colors.black,
+                  ),
                 ),
-              )
-            : TerminalView(
-                _terminal,
-                controller: _terminalController,
-                autofocus: true,
-                backgroundOpacity: 1.0,
-                padding: const EdgeInsets.all(8),
-                theme: TerminalTheme(
-                  cursor: isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292F),
-                  selection: isDark 
-                      ? const Color(0xFF3B5998).withValues(alpha: 0.5)
-                      : const Color(0xFFB3D8FF).withValues(alpha: 0.5),
-                  foreground: isDark ? const Color(0xFFE6EDF3) : const Color(0xFF24292F),
-                  background: isDark ? const Color(0xFF0D1117) : const Color(0xFFF6F8FA),
-                  black: isDark ? const Color(0xFF484F58) : const Color(0xFF24292F),
-                  red: const Color(0xFFFF7B72),
-                  green: const Color(0xFF3FB950),
-                  yellow: const Color(0xFFD29922),
-                  blue: const Color(0xFF58A6FF),
-                  magenta: const Color(0xFFBC8CFF),
-                  cyan: const Color(0xFF39C5CF),
-                  white: isDark ? const Color(0xFFB1BAC4) : const Color(0xFF6E7781),
-                  brightBlack: isDark ? const Color(0xFF6E7681) : const Color(0xFF57606A),
-                  brightRed: const Color(0xFFFFA198),
-                  brightGreen: const Color(0xFF56D364),
-                  brightYellow: const Color(0xFFE3B341),
-                  brightBlue: const Color(0xFF79C0FF),
-                  brightMagenta: const Color(0xFFD2A8FF),
-                  brightCyan: const Color(0xFF56D4DD),
-                  brightWhite: isDark ? const Color(0xFFCDD9E5) : const Color(0xFF8C959F),
-                  searchHitBackground: const Color(0xFFD29922).withValues(alpha: 0.5),
-                  searchHitBackgroundCurrent: const Color(0xFFD29922),
-                  searchHitForeground: Colors.black,
-                ),
-              ),
+        ),
       ),
     );
   }
