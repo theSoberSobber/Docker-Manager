@@ -358,5 +358,16 @@
     "try_different_search": "Prueba con un término de búsqueda diferente",
     "initializing": "Inicializando shell...",
     "send_tab": "Enviar Tab"
+  },
+  "file_manager": {
+    "title": "Sistema de archivos",
+    "not_connected": "Conéctate a un servidor para explorar el sistema de archivos.",
+    "load_error": "No se pudo cargar el directorio: {}",
+    "empty": "Esta carpeta está vacía",
+    "go_up": "Subir un nivel",
+    "edit_title": "Editar {}",
+    "editing": "Editando {}",
+    "save_success": "Archivo guardado",
+    "save_error": "No se pudo guardar: {}"
   }
 }
