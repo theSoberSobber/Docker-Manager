@@ -53,20 +53,6 @@ jobs:
           echo "✅ Removing envs-repo:"
           rm -rf envs-repo
       
-      - name: Write PostHog secrets to local.properties (optional)
-        run: |
-          set -euo pipefail
-          : "${POSTHOG_HOST:=https://us.i.posthog.com}"
-          if [ -z "${POSTHOG_API_KEY:-}" ]; then
-            echo "⚠️ POSTHOG_API_KEY not set; telemetry will stay disabled."
-          else
-            {
-              echo "posthog.api.key=${POSTHOG_API_KEY}"
-              echo "posthog.host=${POSTHOG_HOST}"
-            } >> android/local.properties
-            echo "✅ Wrote PostHog secrets to android/local.properties"
-          fi
-      
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
