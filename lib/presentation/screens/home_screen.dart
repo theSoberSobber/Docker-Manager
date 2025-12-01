@@ -100,7 +100,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             TextButton(
               onPressed: () async {
                 await _analytics.setUserConsent(false);
-                if (mounted) Navigator.of(context).pop();
+                if (!mounted) return;
+                Navigator.of(context).pop();
               },
               child: const Text('No thanks'),
             ),
@@ -108,7 +109,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onPressed: () async {
                 await _analytics.setUserConsent(true);
                 await _analytics.trackEvent('telemetry.opt_in');
-                if (mounted) Navigator.of(context).pop();
+                if (!mounted) return;
+                Navigator.of(context).pop();
               },
               child: const Text('Yes, share'),
             ),

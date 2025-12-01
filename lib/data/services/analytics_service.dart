@@ -19,13 +19,11 @@ class AnalyticsService {
 
   bool _isEnabled = false;
   bool _isInitializing = false;
-  bool _hasPrompted = false;
   String? _distinctId;
 
   /// Initialize analytics only if the user has opted in.
   Future<void> initializeIfConsented() async {
     final prefs = await SharedPreferences.getInstance();
-    _hasPrompted = prefs.getBool(_promptedKey) ?? false;
     final allowed = prefs.getBool(_optInKey) ?? false;
     if (!allowed) {
       debugPrint('[Analytics] Skipping setup (user has not opted in)');
@@ -76,7 +74,6 @@ class AnalyticsService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_optInKey, allowed);
     await prefs.setBool(_promptedKey, true);
-    _hasPrompted = true;
 
     if (allowed) {
       await _setupPosthog();
