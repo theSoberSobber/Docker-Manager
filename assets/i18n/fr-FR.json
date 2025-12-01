@@ -310,7 +310,9 @@
     "prune_failed": "Échec du nettoyage",
     "prune_cannot_undo": "Action irréversible !",
     "select_language": "Choisir la langue",
-    "pruning": "Nettoyage..."
+    "pruning": "Nettoyage...",
+    "version_label": "Version {} (build {})",
+    "version_loading": "Chargement de la version..."
   },
   "system_info": {
     "title": "Infos système",

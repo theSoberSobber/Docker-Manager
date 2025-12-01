@@ -4,6 +4,7 @@ import '../widgets/theme_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../data/services/docker_cli_path_service.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -18,12 +19,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _dockerPathController = TextEditingController();
   bool _isLoading = true;
   bool _isPruning = false;
+  String _appVersion = '';
+  String _buildNumber = '';
   final DockerCliPathService _dockerCliPathService = DockerCliPathService();
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _loadAppVersion();
   }
 
   @override
@@ -40,6 +44,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _dockerPathController.text = _dockerCliPath;
       _isLoading = false;
     });
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      if (mounted) {
+        setState(() {
+          _appVersion = packageInfo.version;
+          _buildNumber = packageInfo.buildNumber;
+        });
+      }
+    } catch (_) {
+      // If version retrieval fails, leave the version fields empty.
+    }
   }
 
   Future<void> _saveDefaultLogLines(String value) async {
@@ -435,6 +453,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 
                 const SizedBox(height: 32),
+                _buildVersionInfo(),
               ],
             ),
     );
@@ -506,6 +525,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
       selected: isSelected,
+    );
+  }
+
+  Widget _buildVersionInfo() {
+    final versionText = (_appVersion.isNotEmpty && _buildNumber.isNotEmpty)
+        ? 'settings.version_label'.tr(args: [_appVersion, _buildNumber])
+        : 'settings.version_loading'.tr();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        children: [
+          const Divider(height: 0),
+          const SizedBox(height: 12),
+          Text(
+            versionText,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.outline,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

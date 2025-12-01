@@ -310,7 +310,9 @@
     "prune_failed": "Purga Fallida",
     "prune_cannot_undo": "¡Esta acción no se puede deshacer!",
     "select_language": "Seleccionar Idioma",
-    "pruning": "Purgando..."
+    "pruning": "Purgando...",
+    "version_label": "Versión {} (compilación {})",
+    "version_loading": "Cargando versión..."
   },
   "system_info": {
     "title": "Información del Sistema",

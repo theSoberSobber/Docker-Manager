@@ -310,7 +310,9 @@
     "prune_failed": "Prune Failed",
     "prune_cannot_undo": "This action cannot be undone!",
     "select_language": "Select Language",
-    "pruning": "Pruning..."
+    "pruning": "Pruning...",
+    "version_label": "Version {} (build {})",
+    "version_loading": "Loading version..."
   },
   "system_info": {
     "title": "System Information",
