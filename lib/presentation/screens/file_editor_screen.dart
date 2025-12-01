@@ -30,6 +30,7 @@ class _FileEditorScreenState extends State<FileEditorScreen> {
 
   @override
   void dispose() {
+    _sftpService.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -42,11 +43,13 @@ class _FileEditorScreenState extends State<FileEditorScreen> {
 
     try {
       final content = await _sftpService.readFile(widget.path);
+      if (!mounted) return;
       setState(() {
         _controller.text = content;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'file_manager.load_error'.tr(args: [e.toString()]);
         _isLoading = false;

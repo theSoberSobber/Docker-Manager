@@ -62,11 +62,13 @@ class _FileSystemScreenState extends State<FileSystemScreen> {
 
     try {
       final items = await _sftpService.listDirectory(_currentPath);
+      if (!mounted) return;
       setState(() {
         _entries = items;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'file_manager.load_error'.tr(args: [e.toString()]);
         _isLoading = false;
@@ -87,7 +89,7 @@ class _FileSystemScreenState extends State<FileSystemScreen> {
         MaterialPageRoute(
           builder: (context) => FileEditorScreen(path: entry.path),
         ),
-      );
+      ).then((_) => _load());
     }
   }
 
@@ -168,40 +170,42 @@ class _FileSystemScreenState extends State<FileSystemScreen> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildPathRow(),
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(child: _buildPathRow()),
           if (_currentPath != '/')
-            ListTile(
-              leading: const Icon(Icons.arrow_upward),
-              title: Text('file_manager.go_up'.tr()),
-              onTap: _goUp,
+            SliverToBoxAdapter(
+              child: ListTile(
+                leading: const Icon(Icons.arrow_upward),
+                title: Text('file_manager.go_up'.tr()),
+                onTap: _goUp,
+              ),
             ),
-          Expanded(
-            child: _entries.isEmpty
-                ? Center(
-                    child: Text('file_manager.empty'.tr()),
-                  )
-                : ListView.separated(
-                    itemCount: _entries.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final entry = _entries[index];
-                      return ListTile(
-                        leading: Icon(
-                          entry.isDirectory ? Icons.folder : Icons.insert_drive_file,
-                          color: entry.isDirectory
-                              ? Theme.of(context).colorScheme.primary
-                              : null,
-                        ),
-                        title: Text(entry.name),
-                        subtitle: Text(_entrySubtitle(entry)),
-                        onTap: () => _openEntry(entry),
-                      );
-                    },
+          if (_entries.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(child: Text('file_manager.empty'.tr())),
+            )
+          else
+            SliverList.separated(
+              itemCount: _entries.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final entry = _entries[index];
+                return ListTile(
+                  leading: Icon(
+                    entry.isDirectory ? Icons.folder : Icons.insert_drive_file,
+                    color: entry.isDirectory
+                        ? Theme.of(context).colorScheme.primary
+                        : null,
                   ),
-          ),
+                  title: Text(entry.name),
+                  subtitle: Text(_entrySubtitle(entry)),
+                  onTap: () => _openEntry(entry),
+                );
+              },
+            ),
         ],
       ),
     );
@@ -234,7 +238,9 @@ class _FileSystemScreenState extends State<FileSystemScreen> {
     final parts = <String>[];
     if (entry.modified != null) {
       parts.add(
-        DateFormat.yMMMd().add_jm().format(entry.modified!.toLocal()),
+        DateFormat.yMMMd(context.locale.toString())
+            .add_jm()
+            .format(entry.modified!.toLocal()),
       );
     }
     if (!entry.isDirectory && entry.size != null) {
