@@ -7,6 +7,7 @@ import '../../data/services/docker_cli_path_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
+import '../../data/services/analytics_service.dart';
 import 'shell_screen.dart';
 import 'log_viewer_screen.dart';
 import 'settings_screen.dart';
@@ -25,6 +26,7 @@ class _ContainersScreenState extends State<ContainersScreen>
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
   final DockerCliPathService _dockerCliPathService = DockerCliPathService();
+  final AnalyticsService _analytics = AnalyticsService();
   List<DockerContainer> _containers = [];
   List<DockerContainer> _filteredContainers = [];
   bool _isLoading = false;
@@ -220,6 +222,7 @@ class _ContainersScreenState extends State<ContainersScreen>
 
   Future<void> _refreshContainers() async {
     _hasTriedLoading = false; // Reset the flag to allow reload
+    _analytics.trackEvent('containers.refresh');
     await _checkConnectionAndLoad();
   }
 
@@ -265,6 +268,10 @@ class _ContainersScreenState extends State<ContainersScreen>
       _searchQuery = query;
       _filteredContainers = _filterContainers(_containers, query);
     });
+    _analytics.trackEvent('containers.search', properties: {
+      'queryLength': query.length,
+      'hasFilters': _selectedStack != null,
+    });
   }
 
   void _onStackFilterChanged(String? stack) {
@@ -272,12 +279,21 @@ class _ContainersScreenState extends State<ContainersScreen>
       _selectedStack = stack;
       _filteredContainers = _filterContainers(_containers, _searchQuery);
     });
+    _analytics.trackEvent('containers.stack_filter_changed', properties: {
+      'stack': stack ?? 'all',
+    });
   }
 
   Future<void> _handleContainerAction(DockerAction action, DockerContainer container) async {
     try {
       String command;
       final dockerCli = await _dockerCliPathService.getDockerCliPath();
+      await _analytics.trackEvent('containers.action_selected', properties: {
+        'action': action.command,
+        'containerId': container.id,
+        'containerName': container.names,
+        'isRunning': container.status.toLowerCase().startsWith('up'),
+      });
       
       // Build the complete Docker command based on the action
       switch (action.command) {
@@ -296,6 +312,7 @@ class _ContainersScreenState extends State<ContainersScreen>
           // Navigate to log viewer for logs
           Navigator.of(context).push(
             MaterialPageRoute(
+              settings: const RouteSettings(name: 'ContainerLogs'),
               builder: (context) => LogViewerScreen(
                 title: '${('common.logs').tr()} - ${container.names}',
                 command: command,
@@ -309,6 +326,7 @@ class _ContainersScreenState extends State<ContainersScreen>
           // Navigate to log viewer for inspect
           Navigator.of(context).push(
             MaterialPageRoute(
+              settings: const RouteSettings(name: 'ContainerInspect'),
               builder: (context) => LogViewerScreen(
                 title: '${'actions.inspect'.tr()} - ${container.names}',
                 command: command,
@@ -365,6 +383,12 @@ class _ContainersScreenState extends State<ContainersScreen>
         ScaffoldMessenger.of(context).clearSnackBars();
         
         if (result != null && result.isNotEmpty) {
+          await _analytics.trackEvent('containers.action_completed', properties: {
+            'action': action.command,
+            'containerId': container.id,
+            'containerName': container.names,
+            'status': 'success_with_output',
+          });
           // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -389,6 +413,12 @@ class _ContainersScreenState extends State<ContainersScreen>
           }
         } else {
           // Command executed but no output
+          await _analytics.trackEvent('containers.action_completed', properties: {
+            'action': action.command,
+            'containerId': container.id,
+            'containerName': container.names,
+            'status': 'success_no_output',
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('containers.action_completed'.tr(args: [action.label])),
@@ -399,6 +429,15 @@ class _ContainersScreenState extends State<ContainersScreen>
         }
       }
     } catch (e) {
+      await _analytics.trackException(
+        'containers.action_failed',
+        e,
+        properties: {
+          'action': action.command,
+          'containerId': container.id,
+          'containerName': container.names,
+        },
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -505,8 +544,14 @@ class _ContainersScreenState extends State<ContainersScreen>
   }
 
   void _openInteractiveShell(DockerContainer container, String executable) {
+    _analytics.trackEvent('containers.exec_shell', properties: {
+      'containerId': container.id,
+      'containerName': container.names,
+      'executable': executable,
+    });
     Navigator.of(context).push(
       MaterialPageRoute(
+        settings: const RouteSettings(name: 'ContainerShell'),
         builder: (context) => ShellScreen(
           title: 'Shell - ${container.names}',
           isInteractive: true,
@@ -621,9 +666,11 @@ class _ContainersScreenState extends State<ContainersScreen>
                 ],
                 ElevatedButton.icon(
                   onPressed: () {
+                    _analytics.trackButton('open_settings', location: 'containers_error');
                     Navigator.push(
                       context,
                       MaterialPageRoute(
+                        settings: const RouteSettings(name: 'Settings'),
                         builder: (context) => const SettingsScreen(),
                       ),
                     );
@@ -673,9 +720,11 @@ class _ContainersScreenState extends State<ContainersScreen>
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
                   onPressed: () {
+                    _analytics.trackButton('open_settings', location: 'containers_empty');
                     Navigator.push(
                       context,
                       MaterialPageRoute(
+                        settings: const RouteSettings(name: 'Settings'),
                         builder: (context) => const SettingsScreen(),
                       ),
                     );

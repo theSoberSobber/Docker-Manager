@@ -7,6 +7,7 @@ import '../../data/services/docker_cli_path_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
+import '../../data/services/analytics_service.dart';
 import 'log_viewer_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -22,6 +23,7 @@ class _VolumesScreenState extends State<VolumesScreen>
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
   final DockerCliPathService _dockerCliPathService = DockerCliPathService();
+  final AnalyticsService _analytics = AnalyticsService();
   List<DockerVolume> _volumes = [];
   List<DockerVolume> _filteredVolumes = [];
   bool _isLoading = false;
@@ -109,6 +111,11 @@ class _VolumesScreenState extends State<VolumesScreen>
     }
   }
 
+  Future<void> _refreshVolumes() {
+    _analytics.trackEvent('volumes.refresh');
+    return _loadVolumes();
+  }
+
   List<DockerVolume> _filterVolumes(List<DockerVolume> volumes, String query) {
     if (query.isEmpty) return volumes;
     
@@ -124,18 +131,26 @@ class _VolumesScreenState extends State<VolumesScreen>
       _searchQuery = query;
       _filteredVolumes = _filterVolumes(_volumes, query);
     });
+    _analytics.trackEvent('volumes.search', properties: {
+      'queryLength': query.length,
+    });
   }
 
   Future<void> _handleVolumeAction(DockerAction action, DockerVolume volume) async {
     try {
       String command;
       final dockerCli = await _dockerCliPathService.getDockerCliPath();
+      await _analytics.trackEvent('volumes.action_selected', properties: {
+        'action': action.command,
+        'volume': volume.volumeName,
+      });
       
       switch (action.command) {
         case 'docker volume inspect':
           command = '$dockerCli volume inspect ${volume.volumeName}';
           Navigator.of(context).push(
             MaterialPageRoute(
+              settings: const RouteSettings(name: 'VolumeInspect'),
               builder: (context) => LogViewerScreen(
                 title: 'volumes.inspect_title'.tr(args: [volume.volumeName]),
                 command: command,
@@ -186,11 +201,24 @@ class _VolumesScreenState extends State<VolumesScreen>
             backgroundColor: Colors.green,
           ),
         );
+        await _analytics.trackEvent('volumes.action_completed', properties: {
+          'action': action.command,
+          'volume': volume.volumeName,
+          'status': 'success',
+        });
         
         // Refresh the list after action
         _loadVolumes();
       }
     } catch (e) {
+      await _analytics.trackException(
+        'volumes.action_failed',
+        e,
+        properties: {
+          'action': action.command,
+          'volume': volume.volumeName,
+        },
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -208,7 +236,7 @@ class _VolumesScreenState extends State<VolumesScreen>
     
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: _loadVolumes,
+        onRefresh: _refreshVolumes,
         child: _buildBody(),
       ),
     );
@@ -262,7 +290,7 @@ class _VolumesScreenState extends State<VolumesScreen>
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: _loadVolumes,
+              onPressed: _refreshVolumes,
               icon: const Icon(Icons.refresh),
               label: Text('common.retry'.tr()),
             ),

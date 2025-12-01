@@ -7,6 +7,7 @@ import '../../data/services/ssh_connection_service.dart';
 import '../widgets/theme_manager.dart';
 import '../widgets/system_info_dialog.dart';
 import '../widgets/speed_dial_fab.dart';
+import '../../data/services/analytics_service.dart';
 import 'server_list_screen.dart';
 import 'shell_screen.dart';
 import 'containers_screen.dart';
@@ -27,6 +28,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final ServerRepository _serverRepository = ServerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
+  final AnalyticsService _analytics = AnalyticsService();
   int _currentIndex = 0;
 
   @override
@@ -55,6 +57,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _loadLastUsedServer() async {
     try {
       final lastUsedServer = await _serverRepository.getLastUsedServer();
+      await _analytics.trackEvent('servers.last_used_loaded', properties: {
+        'hasLastServer': lastUsedServer != null,
+      });
 
       // Auto-connect to last used server if available (silently)
       if (lastUsedServer != null) {
@@ -75,6 +80,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _connectToServerSilently(Server server) async {
     try {
       final result = await _sshService.switchToServer(server);
+      await _analytics.trackEvent('servers.connection_attempt', properties: {
+        'serverId': server.id,
+        'serverName': server.name,
+        'success': result.success,
+      });
       
       // Only show message if connection failed on startup
       if (mounted && !result.success) {
@@ -103,6 +113,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       // 1. Save server selection first
       await _serverRepository.setLastUsedServerId(server.id);
+      await _analytics.trackEvent('servers.selected', properties: {
+        'serverId': server.id,
+        'serverName': server.name,
+      });
       
       // 2. Show selection message
       if (mounted) {
@@ -144,6 +158,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       case 0: // Containers tab
         return FloatingActionButton(
           onPressed: () async {
+            _analytics.trackButton('create_container', location: 'containers_tab');
             if (!_sshService.isConnected) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -156,6 +171,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
+                settings: const RouteSettings(name: 'CreateContainer'),
                 builder: (context) => const CreateContainerScreen(),
               ),
             );
@@ -178,6 +194,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               label: 'home.pull_image'.tr(),
               tooltip: 'common.pull_image_tooltip'.tr(),
               onPressed: () async {
+                _analytics.trackButton('pull_image', location: 'images_tab');
                 if (!_sshService.isConnected) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -190,6 +207,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
+                    settings: const RouteSettings(name: 'PullImage'),
                     builder: (context) => const PullImageScreen(),
                   ),
                 );
@@ -203,6 +221,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               label: 'home.build_image'.tr(),
               tooltip: 'common.build_image_tooltip'.tr(),
               onPressed: () async {
+                _analytics.trackButton('build_image', location: 'images_tab');
                 if (!_sshService.isConnected) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -215,6 +234,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
+                    settings: const RouteSettings(name: 'BuildImage'),
                     builder: (context) => const BuildImageScreen(),
                   ),
                 );
@@ -241,6 +261,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           IconButton(
             icon: const Icon(Icons.info_outline),
             onPressed: () {
+              _analytics.trackButton('open_system_info', location: 'app_bar');
               if (_sshService.isConnected) {
                 showDialog(
                   context: context,
@@ -262,9 +283,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             icon: const Icon(Icons.terminal),
             tooltip: 'common.host_shell'.tr(),
             onPressed: () {
+              _analytics.trackButton('open_host_shell', location: 'app_bar');
               if (_sshService.isConnected) {
                 Navigator.of(context).push(
                   MaterialPageRoute(
+                    settings: const RouteSettings(name: 'HostShell'),
                     builder: (context) => ShellScreen(
                       title: 'home.host_shell'.tr(),
                       isInteractive: true,
@@ -288,6 +311,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               setState(() {
                 ThemeManager().toggleTheme();
               });
+              _analytics.trackEvent(
+                'theme.toggled',
+                properties: {'mode': ThemeManager().themeMode.name},
+              );
             },
             tooltip: ThemeManager().themeLabel,
           ),
@@ -295,9 +322,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           IconButton(
             icon: const Icon(Icons.dns),
             onPressed: () async {
+              _analytics.trackButton('open_server_list', location: 'app_bar');
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
+                  settings: const RouteSettings(name: 'ServerList'),
                   builder: (context) => ServerListScreen(
                     onServerSelected: _selectServer,
                   ),
@@ -320,6 +349,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         onTap: (index) {
           setState(() {
             _currentIndex = index;
+          });
+          _analytics.trackEvent('navigation.tab_selected', properties: {
+            'tabIndex': index,
           });
         },
         items: [

@@ -7,6 +7,7 @@ import '../../data/services/docker_cli_path_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
+import '../../data/services/analytics_service.dart';
 import 'log_viewer_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -22,6 +23,7 @@ class _ImagesScreenState extends State<ImagesScreen>
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
   final DockerCliPathService _dockerCliPathService = DockerCliPathService();
+  final AnalyticsService _analytics = AnalyticsService();
   List<DockerImage> _images = [];
   List<DockerImage> _filteredImages = [];
   bool _isLoading = false;
@@ -109,6 +111,11 @@ class _ImagesScreenState extends State<ImagesScreen>
     }
   }
 
+  Future<void> _refreshImages() {
+    _analytics.trackEvent('images.refresh');
+    return _loadImages();
+  }
+
   List<DockerImage> _filterImages(List<DockerImage> images, String query) {
     if (query.isEmpty) return images;
     
@@ -126,18 +133,27 @@ class _ImagesScreenState extends State<ImagesScreen>
       _searchQuery = query;
       _filteredImages = _filterImages(_images, query);
     });
+    _analytics.trackEvent('images.search', properties: {
+      'queryLength': query.length,
+    });
   }
 
   Future<void> _handleImageAction(DockerAction action, DockerImage image) async {
     try {
       String command;
       final dockerCli = await _dockerCliPathService.getDockerCliPath();
+      await _analytics.trackEvent('images.action_selected', properties: {
+        'action': action.command,
+        'repository': image.repository,
+        'tag': image.tag,
+      });
       
       switch (action.command) {
         case 'docker image inspect':
           command = '$dockerCli image inspect ${image.imageId}';
           Navigator.of(context).push(
             MaterialPageRoute(
+              settings: const RouteSettings(name: 'ImageInspect'),
               builder: (context) => LogViewerScreen(
                 title: 'images.inspect_title'.tr(args: ['${image.repository}:${image.tag}']),
                 command: command,
@@ -188,11 +204,26 @@ class _ImagesScreenState extends State<ImagesScreen>
             backgroundColor: Colors.green,
           ),
         );
+        await _analytics.trackEvent('images.action_completed', properties: {
+          'action': action.command,
+          'repository': image.repository,
+          'tag': image.tag,
+          'status': 'success',
+        });
         
         // Refresh the list after action
         _loadImages();
       }
     } catch (e) {
+      await _analytics.trackException(
+        'images.action_failed',
+        e,
+        properties: {
+          'action': action.command,
+          'repository': image.repository,
+          'tag': image.tag,
+        },
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -210,7 +241,7 @@ class _ImagesScreenState extends State<ImagesScreen>
     
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: _loadImages,
+        onRefresh: _refreshImages,
         child: _buildBody(),
       ),
     );

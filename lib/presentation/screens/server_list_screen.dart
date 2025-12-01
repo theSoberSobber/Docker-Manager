@@ -3,6 +3,7 @@ import '../../domain/models/server.dart';
 import '../../domain/repositories/server_repository.dart';
 import '../../data/repositories/server_repository_impl.dart';
 import 'add_server_screen.dart';
+import '../../data/services/analytics_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class ServerListScreen extends StatefulWidget {
@@ -19,6 +20,7 @@ class ServerListScreen extends StatefulWidget {
 
 class _ServerListScreenState extends State<ServerListScreen> {
   final ServerRepository _serverRepository = ServerRepositoryImpl();
+  final AnalyticsService _analytics = AnalyticsService();
   List<Server> _servers = [];
   bool _isLoading = true;
   String? _currentServerId;
@@ -62,6 +64,10 @@ class _ServerListScreenState extends State<ServerListScreen> {
   Future<void> _addServer(Server server) async {
     try {
       await _serverRepository.saveServer(server);
+      await _analytics.trackEvent('servers.added', properties: {
+        'serverId': server.id,
+        'name': server.name,
+      });
       await _loadServers(); // Refresh the list
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -80,6 +86,10 @@ class _ServerListScreenState extends State<ServerListScreen> {
   Future<void> _updateServer(Server server) async {
     try {
       await _serverRepository.updateServer(server);
+      await _analytics.trackEvent('servers.updated', properties: {
+        'serverId': server.id,
+        'name': server.name,
+      });
       await _loadServers(); // Refresh the list
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -98,6 +108,9 @@ class _ServerListScreenState extends State<ServerListScreen> {
   Future<void> _deleteServer(String serverId) async {
     try {
       await _serverRepository.deleteServer(serverId);
+      await _analytics.trackEvent('servers.deleted', properties: {
+        'serverId': serverId,
+      });
       await _loadServers(); // Refresh the list
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -115,14 +128,20 @@ class _ServerListScreenState extends State<ServerListScreen> {
 
   Future<void> _selectServer(Server server) async {
     if (widget.onServerSelected != null) {
+      await _analytics.trackEvent('servers.tapped', properties: {
+        'serverId': server.id,
+        'name': server.name,
+      });
       widget.onServerSelected!(server);
       Navigator.of(context).pop(true); // Return true to indicate server was selected
     }
   }
 
   Future<void> _navigateToAddServer() async {
+    _analytics.trackButton('open_add_server', location: 'server_list');
     final server = await Navigator.of(context).push<Server>(
       MaterialPageRoute(
+        settings: const RouteSettings(name: 'AddServer'),
         builder: (context) => const AddServerScreen(),
       ),
     );
@@ -133,8 +152,10 @@ class _ServerListScreenState extends State<ServerListScreen> {
   }
 
   Future<void> _navigateToEditServer(Server server) async {
+    _analytics.trackButton('edit_server', location: 'server_list');
     final updatedServer = await Navigator.of(context).push<Server>(
       MaterialPageRoute(
+        settings: const RouteSettings(name: 'EditServer'),
         builder: (context) => AddServerScreen(server: server),
       ),
     );

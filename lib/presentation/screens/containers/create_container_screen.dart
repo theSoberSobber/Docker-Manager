@@ -3,6 +3,7 @@ import '../../../domain/models/docker_image.dart';
 import '../../../data/repositories/docker_repository_impl.dart';
 import '../../../data/services/ssh_connection_service.dart';
 import '../../../data/services/docker_cli_path_service.dart';
+import '../../../data/services/analytics_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class CreateContainerScreen extends StatefulWidget {
@@ -18,6 +19,7 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
   final _sshService = SSHConnectionService();
   final _dockerRepository = DockerRepositoryImpl();
   final DockerCliPathService _dockerCliPathService = DockerCliPathService();
+  final AnalyticsService _analytics = AnalyticsService();
 
   List<DockerImage> _availableImages = [];
   DockerImage? _selectedImage;
@@ -201,6 +203,16 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
     setState(() {
       _isCreating = true;
     });
+    _analytics.trackEvent('containers.create_submitted', properties: {
+      'nameProvided': _nameController.text.isNotEmpty,
+      'portMappings': _portMappings.length,
+      'envVars': _envVariables.length,
+      'volumes': _volumeMounts.length,
+      'restartPolicy': _restartPolicy,
+      'networkMode': _networkMode,
+      'privileged': _privileged,
+      'imageSelected': _selectedImage != null,
+    });
 
     try {
       final dockerCli = await _dockerCliPathService.getDockerCliPath();
@@ -216,6 +228,13 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
             ),
           );
           Navigator.of(context).pop(true); // Return true to indicate success
+          await _analytics.trackEvent('containers.created', properties: {
+            'name': _nameController.text,
+            'image': _selectedImage != null ? '${_selectedImage!.repository}:${_selectedImage!.tag}' : '',
+            'restartPolicy': _restartPolicy,
+            'networkMode': _networkMode,
+            'privileged': _privileged,
+          });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -226,6 +245,9 @@ class _CreateContainerScreenState extends State<CreateContainerScreen> {
         }
       }
     } catch (e) {
+      await _analytics.trackException('containers.create_failed', e, properties: {
+        'image': _selectedImage?.repository,
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

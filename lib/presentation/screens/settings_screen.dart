@@ -4,6 +4,7 @@ import '../widgets/theme_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../data/services/docker_cli_path_service.dart';
+import '../../data/services/analytics_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -19,6 +20,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoading = true;
   bool _isPruning = false;
   final DockerCliPathService _dockerCliPathService = DockerCliPathService();
+  final AnalyticsService _analytics = AnalyticsService();
 
   @override
   void initState() {
@@ -48,6 +50,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _defaultLogLines = value;
     });
+    _analytics.trackEvent('settings.logs_default_changed', properties: {
+      'value': value,
+    });
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -65,6 +70,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setString('dockerCliPath', path);
     setState(() {
       _dockerCliPath = path;
+    });
+    _analytics.trackEvent('settings.docker_path_saved', properties: {
+      'usesDefault': path == 'docker',
     });
     
     if (mounted) {
@@ -129,6 +137,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirmed == true && mounted) {
+      _analytics.trackEvent('settings.prune_confirmed');
       await _executeSystemPrune();
     }
   }
@@ -145,10 +154,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final dockerCmd = await _dockerCliPathService.getDockerCliPath();
       
       final result = await sshService.executeCommand('$dockerCmd system prune -af --volumes');
+      await _analytics.trackEvent('settings.prune_started');
       
       if (mounted) {
         setState(() {
           _isPruning = false;
+        });
+        await _analytics.trackEvent('settings.prune_completed', properties: {
+          'resultLength': result?.length ?? 0,
         });
 
         // Show result dialog
@@ -178,6 +191,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       }
     } catch (e) {
+      await _analytics.trackException('settings.prune_failed', e);
       if (mounted) {
         setState(() {
           _isPruning = false;
@@ -278,6 +292,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       if (locale != null) {
                         await context.setLocale(locale);
                         setState(() {});
+                        _analytics.trackEvent('settings.language_changed', properties: {
+                          'language': locale.languageCode,
+                        });
                         if (mounted) {
                           String label;
                           switch (locale.languageCode) {
@@ -476,6 +493,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       onTap: () {
         themeManager.setThemeMode(mode);
         setState(() {});
+        _analytics.trackEvent('settings.theme_changed', properties: {
+          'mode': mode.name,
+        });
       },
     );
   }

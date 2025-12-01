@@ -39,6 +39,7 @@ dependencies:
   http: ^1.2.2
   easy_localization: ^3.0.7
   xterm: ^4.0.0
+  posthog_flutter: ^5.9.0
 
 dev_dependencies:
   flutter_test:

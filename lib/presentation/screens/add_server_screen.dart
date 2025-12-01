@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/server.dart';
 import '../../data/services/ssh_connection_service.dart';
+import '../../data/services/analytics_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class AddServerScreen extends StatefulWidget {
@@ -23,6 +24,7 @@ class _AddServerScreenState extends State<AddServerScreen> {
   final _passphraseController = TextEditingController();
   final _dockerCliPathController = TextEditingController();
   final SSHConnectionService _sshService = SSHConnectionService();
+  final AnalyticsService _analytics = AnalyticsService();
   bool _usePassword = true;
   bool _isTesting = false;
   String? _testResult;
@@ -94,6 +96,11 @@ class _AddServerScreenState extends State<AddServerScreen> {
             ? _dockerCliPathController.text.trim()
             : null,
       );
+      _analytics.trackEvent('servers.saved', properties: {
+        'mode': _isEditMode ? 'edit' : 'create',
+        'hasCustomDockerPath': server.dockerCliPath?.isNotEmpty == true,
+        'authMethod': _usePassword ? 'password' : 'key',
+      });
       Navigator.of(context).pop(server);
     }
   }
@@ -141,6 +148,10 @@ class _AddServerScreenState extends State<AddServerScreen> {
       _isTesting = true;
       _testResult = null;
     });
+    _analytics.trackEvent('servers.test_connection_attempt', properties: {
+      'mode': _isEditMode ? 'edit' : 'create',
+      'authMethod': _usePassword ? 'password' : 'key',
+    });
 
     try {
       final testServer = Server(
@@ -171,11 +182,22 @@ class _AddServerScreenState extends State<AddServerScreen> {
           _testResult = result.error ?? 'Unknown connection error';
         }
       });
+      await _analytics.trackEvent('servers.test_connection_result', properties: {
+        'success': result.success,
+        'error': result.error,
+      });
     } catch (e) {
       setState(() {
         _isTesting = false;
         _testResult = e.toString();
       });
+      await _analytics.trackException(
+        'servers.test_connection_failed',
+        e,
+        properties: {
+          'mode': _isEditMode ? 'edit' : 'create',
+        },
+      );
     }
   }
 

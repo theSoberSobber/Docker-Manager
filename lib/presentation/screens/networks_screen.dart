@@ -7,6 +7,7 @@ import '../../data/services/docker_cli_path_service.dart';
 import '../../domain/models/server.dart';
 import '../widgets/docker_resource_actions.dart';
 import '../widgets/search_bar_with_settings.dart';
+import '../../data/services/analytics_service.dart';
 import 'log_viewer_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -22,6 +23,7 @@ class _NetworksScreenState extends State<NetworksScreen>
   final DockerRepository _dockerRepository = DockerRepositoryImpl();
   final SSHConnectionService _sshService = SSHConnectionService();
   final DockerCliPathService _dockerCliPathService = DockerCliPathService();
+  final AnalyticsService _analytics = AnalyticsService();
   List<DockerNetwork> _networks = [];
   List<DockerNetwork> _filteredNetworks = [];
   bool _isLoading = false;
@@ -109,6 +111,11 @@ class _NetworksScreenState extends State<NetworksScreen>
     }
   }
 
+  Future<void> _refreshNetworks() {
+    _analytics.trackEvent('networks.refresh');
+    return _loadNetworks();
+  }
+
   List<DockerNetwork> _filterNetworks(List<DockerNetwork> networks, String query) {
     if (query.isEmpty) return networks;
     
@@ -125,18 +132,27 @@ class _NetworksScreenState extends State<NetworksScreen>
       _searchQuery = query;
       _filteredNetworks = _filterNetworks(_networks, query);
     });
+    _analytics.trackEvent('networks.search', properties: {
+      'queryLength': query.length,
+    });
   }
 
   Future<void> _handleNetworkAction(DockerAction action, DockerNetwork network) async {
     try {
       String command;
       final dockerCli = await _dockerCliPathService.getDockerCliPath();
+      await _analytics.trackEvent('networks.action_selected', properties: {
+        'action': action.command,
+        'network': network.name,
+        'scope': network.scope,
+      });
       
       switch (action.command) {
         case 'docker network inspect':
           command = '$dockerCli network inspect ${network.networkId}';
           Navigator.of(context).push(
             MaterialPageRoute(
+              settings: const RouteSettings(name: 'NetworkInspect'),
               builder: (context) => LogViewerScreen(
                 title: 'networks.inspect_title'.tr(args: [network.name]),
                 command: command,
@@ -148,6 +164,9 @@ class _NetworksScreenState extends State<NetworksScreen>
         case 'docker network rm':
           // Prevent deletion of system networks
           if (['bridge', 'host', 'none'].contains(network.name)) {
+            _analytics.trackEvent('networks.delete_blocked', properties: {
+              'network': network.name,
+            });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('networks.cannot_delete_system'.tr(args: [network.name])),
@@ -198,11 +217,26 @@ class _NetworksScreenState extends State<NetworksScreen>
             backgroundColor: Colors.green,
           ),
         );
+        await _analytics.trackEvent('networks.action_completed', properties: {
+          'action': action.command,
+          'network': network.name,
+          'scope': network.scope,
+          'status': 'success',
+        });
         
         // Refresh the list after action
         _loadNetworks();
       }
     } catch (e) {
+      await _analytics.trackException(
+        'networks.action_failed',
+        e,
+        properties: {
+          'action': action.command,
+          'network': network.name,
+          'scope': network.scope,
+        },
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -220,7 +254,7 @@ class _NetworksScreenState extends State<NetworksScreen>
     
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: _loadNetworks,
+        onRefresh: _refreshNetworks,
         child: _buildBody(),
       ),
     );
@@ -274,7 +308,7 @@ class _NetworksScreenState extends State<NetworksScreen>
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: _loadNetworks,
+              onPressed: _refreshNetworks,
               icon: const Icon(Icons.refresh),
               label: Text('common.retry'.tr()),
             ),

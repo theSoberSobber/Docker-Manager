@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/services/ssh_connection_service.dart';
 import '../../../data/services/docker_cli_path_service.dart';
+import '../../../data/services/analytics_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class BuildImageScreen extends StatefulWidget {
@@ -19,6 +20,7 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
   );
   final _sshService = SSHConnectionService();
   final DockerCliPathService _dockerCliPathService = DockerCliPathService();
+  final AnalyticsService _analytics = AnalyticsService();
   
   bool _isBuilding = false;
   String _buildLogs = '';
@@ -55,6 +57,11 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
       final imageName = _nameController.text.trim();
       final tag = _tagController.text.trim();
       final dockerfile = _dockerfileController.text;
+      _analytics.trackEvent('images.build.started', properties: {
+        'image': imageName,
+        'tag': tag,
+        'dockerfileLength': dockerfile.length,
+      });
 
       // Create a temporary directory and Dockerfile on the server
       final tempDir = '/tmp/docker_build_${DateTime.now().millisecondsSinceEpoch}';
@@ -106,6 +113,11 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
             _buildLogs += '\n✓ Successfully built $imageName:$tag\n';
             _isBuilding = false;
           });
+          await _analytics.trackEvent('images.build.completed', properties: {
+            'image': imageName,
+            'tag': tag,
+            'status': 'success',
+          });
           _scrollToBottom();
           
           ScaffoldMessenger.of(context).showSnackBar(
@@ -124,6 +136,11 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
           setState(() {
             _buildLogs += '\n✗ Build failed\n';
             _isBuilding = false;
+          });
+          await _analytics.trackEvent('images.build.completed', properties: {
+            'image': imageName,
+            'tag': tag,
+            'status': 'failure',
           });
           _scrollToBottom();
           
@@ -150,6 +167,13 @@ class _BuildImageScreenState extends State<BuildImageScreen> {
           ),
         );
       }
+      await _analytics.trackException(
+        'images.build.failed',
+        e,
+        properties: {
+          'dockerfileLength': _dockerfileController.text.length,
+        },
+      );
     }
   }
 

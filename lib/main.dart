@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:posthog_flutter/posthog_flutter.dart';
+
 import 'presentation/screens/home_screen.dart';
 import 'presentation/widgets/theme_manager.dart';
+import 'data/services/analytics_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
+  await AnalyticsService().init();
   
   runApp(
     EasyLocalization(
@@ -27,6 +31,7 @@ class MyApp extends StatelessWidget {
       builder: (context, child) {
         return MaterialApp(
           title: 'Docker Manager',
+          navigatorObservers: [PosthogObserver()],
           localizationsDelegates: context.localizationDelegates,
           supportedLocales: context.supportedLocales,
           locale: context.locale,
