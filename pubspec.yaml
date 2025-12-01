@@ -40,6 +40,8 @@ dependencies:
   easy_localization: ^3.0.7
   xterm: ^4.0.0
   package_info_plus: ^8.1.2
+  url_launcher: ^6.3.1
+  font_awesome_flutter: ^10.7.0
 
 dev_dependencies:
   flutter_test:

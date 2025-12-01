@@ -312,7 +312,12 @@
     "select_language": "Select Language",
     "pruning": "Pruning...",
     "version_label": "Version {} (build {})",
-    "version_loading": "Loading version..."
+    "version_loading": "Loading version...",
+    "support_title": "Support & feedback",
+    "support_subtitle": "Rate us on Google Play or drop by GitHub to file issues and ideas.",
+    "rate_play": "Rate on Google Play",
+    "github_repo": "View on GitHub",
+    "link_open_failed": "Couldn't open link"
   },
   "system_info": {
     "title": "System Information",

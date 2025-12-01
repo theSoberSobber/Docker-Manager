@@ -312,7 +312,12 @@
     "select_language": "Choisir la langue",
     "pruning": "Nettoyage...",
     "version_label": "Version {} (build {})",
-    "version_loading": "Chargement de la version..."
+    "version_loading": "Chargement de la version...",
+    "support_title": "Support et retours",
+    "support_subtitle": "Notez l'appli sur Google Play ou passez sur GitHub pour vos idées.",
+    "rate_play": "Noter sur Google Play",
+    "github_repo": "Voir sur GitHub",
+    "link_open_failed": "Impossible d'ouvrir le lien"
   },
   "system_info": {
     "title": "Infos système",
