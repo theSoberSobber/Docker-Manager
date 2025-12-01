@@ -21,6 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _dockerPathController = TextEditingController();
   bool _isLoading = true;
   bool _isPruning = false;
+  bool _showStackCards = true;
   String _appVersion = '';
   String _buildNumber = '';
   final Uri _githubUri = Uri.parse('https://github.com/theSoberSobber/Docker-Manager');
@@ -45,6 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _defaultLogLines = prefs.getString('defaultLogLines') ?? '500';
       _dockerCliPath = prefs.getString('dockerCliPath') ?? 'docker';
+      _showStackCards = prefs.getBool('showComposeStackCards') ?? true;
       _dockerPathController.text = _dockerCliPath;
       _isLoading = false;
     });
@@ -128,6 +130,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _saveShowStackCards(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('showComposeStackCards', value);
+    setState(() {
+      _showStackCards = value;
+    });
   }
 
   Future<void> _showSystemPruneDialog() async {
@@ -399,6 +409,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                         onSubmitted: _saveDockerCliPath,
+                      ),
+                      const SizedBox(height: 16),
+                      Card(
+                        elevation: 0,
+                        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.4),
+                        child: SwitchListTile(
+                          title: Text('settings.show_stack_cards'.tr()),
+                          subtitle: Text('settings.show_stack_cards_desc'.tr()),
+                          value: _showStackCards,
+                          onChanged: _saveShowStackCards,
+                        ),
                       ),
                     ],
                   ),

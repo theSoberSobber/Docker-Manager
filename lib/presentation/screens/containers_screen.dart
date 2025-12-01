@@ -10,6 +10,7 @@ import '../widgets/search_bar_with_settings.dart';
 import 'shell_screen.dart';
 import 'log_viewer_screen.dart';
 import 'settings_screen.dart';
+import 'file_system_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -27,6 +28,8 @@ class _ContainersScreenState extends State<ContainersScreen>
   final DockerCliPathService _dockerCliPathService = DockerCliPathService();
   List<DockerContainer> _containers = [];
   List<DockerContainer> _filteredContainers = [];
+  final Map<String, String> _stackActionsInProgress = {}; // stackName -> action
+  bool _showStackCards = true;
   bool _isLoading = false;
   String? _error;
   bool _hasTriedLoading = false;
@@ -44,6 +47,7 @@ class _ContainersScreenState extends State<ContainersScreen>
     WidgetsBinding.instance.addObserver(this);
     // Initialize with current server to avoid false detection of server change
     _lastKnownServer = _sshService.currentServer;
+    _loadUserPreferences();
     // If no connection exists on init, mark as tried to avoid showing "initializing"
     if (!_sshService.isConnected && !_sshService.isConnecting) {
       _hasTriedLoading = true;
@@ -59,30 +63,42 @@ class _ContainersScreenState extends State<ContainersScreen>
     super.dispose();
   }
 
-  /// Start a timer to detect when server changes
   void _startServerChangeDetection() {
-    // Check every second if the server changed
-    Future.delayed(const Duration(seconds: 1), () {
+    Future.delayed(const Duration(seconds: 1), () async {
       if (!mounted) return;
       
       final currentServer = _sshService.currentServer;
       
-      // Only reload if server actually changed
       if (_lastKnownServer?.id != currentServer?.id) {
         _lastKnownServer = currentServer;
         _lastLoadedServerId = null; // Clear loaded server to trigger reload
         _hasTriedLoading = false;
         _checkConnectionAndLoad();
       }
+
+      // Refresh user preferences periodically so settings apply without restart
+      await _loadUserPreferences();
       
       // Continue checking
       _startServerChangeDetection();
     });
   }
 
+  Future<void> _loadUserPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    final showCards = prefs.getBool('showComposeStackCards') ?? true;
+    if (showCards != _showStackCards) {
+      setState(() {
+        _showStackCards = showCards;
+      });
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _loadUserPreferences();
     // This gets called when the tab becomes visible
     // Only load if we haven't loaded for the current server yet
     final currentServerId = _sshService.currentServer?.id;
@@ -272,6 +288,159 @@ class _ContainersScreenState extends State<ContainersScreen>
       _selectedStack = stack;
       _filteredContainers = _filterContainers(_containers, _searchQuery);
     });
+  }
+
+  List<_ComposeStackInfo> _buildStackInfos() {
+    final Map<String, List<DockerContainer>> stacks = {};
+    for (final container in _containers.where((c) => c.isPartOfStack)) {
+      stacks.putIfAbsent(container.composeProject!, () => []).add(container);
+    }
+
+    final infos = stacks.entries.map((entry) {
+      final containers = entry.value;
+      final workingDir = containers
+          .map((c) => c.composeWorkingDir)
+          .firstWhere((dir) => dir != null && dir.trim().isNotEmpty, orElse: () => null);
+      final configFiles = containers
+          .map((c) => c.composeConfigFiles)
+          .firstWhere((files) => files != null && files.trim().isNotEmpty, orElse: () => null);
+      final fallbackPath = containers
+          .map((c) => c.composeProjectPath)
+          .firstWhere((path) => path != null && path.trim().isNotEmpty, orElse: () => null);
+
+      return _ComposeStackInfo(
+        name: entry.key,
+        containers: containers,
+        workingDir: workingDir,
+        configFiles: configFiles,
+        fallbackPath: fallbackPath,
+      );
+    }).toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+
+    return infos;
+  }
+
+  Future<void> _handleStackAction(
+    String stack,
+    _ComposeStackInfo info,
+    String action,
+  ) async {
+    setState(() {
+      _stackActionsInProgress[stack] = action;
+    });
+
+    try {
+      final dockerCli = await _dockerCliPathService.getDockerCliPath();
+      String command;
+
+      if (info.canUseComposeCli) {
+        final projectDir = info.projectDirectory ?? info.filesPath;
+        final buffer = StringBuffer('$dockerCli compose ');
+        if (projectDir != null && projectDir.isNotEmpty) {
+          buffer.write('--project-directory ${_shellQuote(projectDir)} ');
+        }
+        buffer.write('--project-name ${_shellQuote(stack)} ');
+        for (final file in info.configFileList) {
+          buffer.write('-f ${_shellQuote(file)} ');
+        }
+        final composeAction = action == 'start' ? 'up -d' : action;
+        buffer.write(composeAction);
+        command = buffer.toString();
+      } else {
+        final ids = info.containers.map((c) => c.id).join(' ');
+        if (ids.trim().isEmpty) {
+          throw Exception('No containers found for stack $stack');
+        }
+        final directAction = action == 'start' ? 'start' : action;
+        command = '$dockerCli $directAction $ids';
+      }
+
+      await _sshService.executeCommand(command);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'containers.stack_action_success'
+                        .tr(args: [stack, _stackActionLabel(action)]),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        await _refreshContainers();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('containers.stack_action_failed'.tr(args: [e.toString()])),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _stackActionsInProgress.remove(stack);
+        });
+      }
+    }
+  }
+
+  void _openStackFiles(_ComposeStackInfo info) {
+    final path = info.filesPath;
+    if (path == null || path.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('containers.stack_missing_path'.tr())),
+      );
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => FileSystemScreen(
+          initialPath: path,
+          title: 'file_manager.title'.tr(),
+        ),
+      ),
+    );
+  }
+
+  String _shellQuote(String input) {
+    final escaped = input.replaceAll("'", "'\"'\"'");
+    return "'$escaped'";
+  }
+
+  String _stackActionLabel(String action) {
+    switch (action) {
+      case 'start':
+        return 'containers.stack_started'.tr();
+      case 'stop':
+        return 'containers.stack_stopped'.tr();
+      case 'restart':
+        return 'containers.stack_restarted'.tr();
+      default:
+        return action;
+    }
   }
 
   Future<void> _handleContainerAction(DockerAction action, DockerContainer container) async {
@@ -728,6 +897,8 @@ class _ContainersScreenState extends State<ContainersScreen>
       );
     }
 
+    final stackInfos = _buildStackInfos();
+
     return Column(
       children: [
         SearchBarWithSettings(
@@ -735,6 +906,7 @@ class _ContainersScreenState extends State<ContainersScreen>
           onSearchChanged: _onSearchChanged,
         ),
         _buildStackFilterChips(),
+        if (_showStackCards && stackInfos.isNotEmpty) _buildStackManagementRow(stackInfos),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _refreshContainers,
@@ -808,6 +980,136 @@ class _ContainersScreenState extends State<ContainersScreen>
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStackManagementRow(List<_ComposeStackInfo> stackInfos) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.layers_outlined, size: 18),
+              const SizedBox(width: 6),
+              Text(
+                'containers.stack_actions'.tr(),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: stackInfos.map(_buildStackCard).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStackCard(_ComposeStackInfo info) {
+    final actionInProgress = _stackActionsInProgress[info.name];
+    final isBusy = actionInProgress != null;
+    final runningLabel = 'containers.stack_running_status'
+        .tr(args: [info.runningCount.toString(), info.totalCount.toString()]);
+    final canOpenFiles = info.filesPath != null && info.filesPath!.isNotEmpty;
+
+    return Container(
+      width: 240,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.7),
+        ),
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.4),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      info.name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      runningLabel,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey[700],
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isBusy)
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (info.filesPath != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              info.filesPath!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                icon: const Icon(Icons.play_arrow, size: 18),
+                label: Text('containers.stack_start'.tr()),
+                onPressed: isBusy ? null : () => _handleStackAction(info.name, info, 'start'),
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.stop, size: 18),
+                label: Text('containers.stack_stop'.tr()),
+                onPressed: isBusy ? null : () => _handleStackAction(info.name, info, 'stop'),
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.refresh, size: 18),
+                label: Text('containers.stack_restart'.tr()),
+                onPressed: isBusy ? null : () => _handleStackAction(info.name, info, 'restart'),
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.folder_open, size: 18),
+                label: Text('containers.stack_files'.tr()),
+                onPressed: isBusy || !canOpenFiles ? null : () => _openStackFiles(info),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -1053,5 +1355,69 @@ class _ContainersScreenState extends State<ContainersScreen>
         ),
       ],
     );
+  }
+}
+
+class _ComposeStackInfo {
+  final String name;
+  final List<DockerContainer> containers;
+  final String? workingDir;
+  final String? configFiles;
+  final String? fallbackPath;
+
+  const _ComposeStackInfo({
+    required this.name,
+    required this.containers,
+    this.workingDir,
+    this.configFiles,
+    this.fallbackPath,
+  });
+
+  int get totalCount => containers.length;
+
+  int get runningCount =>
+      containers.where((c) => c.status.toLowerCase().startsWith('up')).length;
+
+  String? get projectDirectory {
+    if (workingDir != null && workingDir!.trim().isNotEmpty) {
+      return workingDir!.trim();
+    }
+    if (fallbackPath != null && fallbackPath!.trim().isNotEmpty) {
+      return fallbackPath!.trim();
+    }
+    return null;
+  }
+
+  List<String> get configFileList {
+    if (configFiles == null || configFiles!.trim().isEmpty) return [];
+    return configFiles!
+        .split(RegExp(r'[;,]'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  bool get canUseComposeCli {
+    if (projectDirectory != null && projectDirectory!.isNotEmpty) {
+      return true;
+    }
+    return configFileList.any((file) => file.contains('/'));
+  }
+
+  String? get filesPath {
+    if (projectDirectory != null && projectDirectory!.isNotEmpty) {
+      return projectDirectory;
+    }
+    if (fallbackPath != null && fallbackPath!.trim().isNotEmpty) {
+      return fallbackPath;
+    }
+    if (configFileList.isEmpty) return null;
+
+    final config = configFileList.first;
+    final lastSlash = config.lastIndexOf('/');
+    if (lastSlash > 0) {
+      return config.substring(0, lastSlash);
+    }
+    return null;
   }
 }
