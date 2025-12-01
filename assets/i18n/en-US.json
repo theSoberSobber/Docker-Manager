@@ -358,5 +358,16 @@
     "try_different_search": "Try a different search term",
     "initializing": "Initializing shell...",
     "send_tab": "Send Tab"
+  },
+  "file_manager": {
+    "title": "File System",
+    "not_connected": "Connect to a server to browse the file system.",
+    "load_error": "Could not load directory: {}",
+    "empty": "This folder is empty",
+    "go_up": "Up one level",
+    "edit_title": "Edit {}",
+    "editing": "Editing {}",
+    "save_success": "File saved",
+    "save_error": "Failed to save: {}"
   }
 }

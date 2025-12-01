@@ -358,5 +358,16 @@
     "try_different_search": "Essayez une autre recherche",
     "initializing": "Initialisation du shell...",
     "send_tab": "Envoyer Tab"
+  },
+  "file_manager": {
+    "title": "Système de fichiers",
+    "not_connected": "Connectez-vous à un serveur pour parcourir le système de fichiers.",
+    "load_error": "Impossible de charger le répertoire : {}",
+    "empty": "Ce dossier est vide",
+    "go_up": "Monter d'un niveau",
+    "edit_title": "Éditer {}",
+    "editing": "Édition de {}",
+    "save_success": "Fichier enregistré",
+    "save_error": "Échec de l'enregistrement : {}"
   }
 }

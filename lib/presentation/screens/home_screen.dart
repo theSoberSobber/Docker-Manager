@@ -4,11 +4,11 @@ import '../../domain/models/server.dart';
 import '../../domain/repositories/server_repository.dart';
 import '../../data/repositories/server_repository_impl.dart';
 import '../../data/services/ssh_connection_service.dart';
-import '../widgets/theme_manager.dart';
 import '../widgets/system_info_dialog.dart';
 import '../widgets/speed_dial_fab.dart';
 import 'server_list_screen.dart';
 import 'shell_screen.dart';
+import 'file_system_screen.dart';
 import 'containers_screen.dart';
 import 'containers/create_container_screen.dart';
 import 'images_screen.dart';
@@ -281,15 +281,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               }
             },
           ),
-          // Theme toggle button
+          // Remote file system button
           IconButton(
-            icon: Icon(ThemeManager().themeIcon),
+            icon: const Icon(Icons.folder),
+            tooltip: 'file_manager.title'.tr(),
             onPressed: () {
-              setState(() {
-                ThemeManager().toggleTheme();
-              });
+              if (_sshService.isConnected) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const FileSystemScreen(),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('connection.please_connect'.tr()),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
             },
-            tooltip: ThemeManager().themeLabel,
           ),
           // Server selection button
           IconButton(
