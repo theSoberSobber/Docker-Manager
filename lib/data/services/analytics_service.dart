@@ -14,15 +14,34 @@ class AnalyticsService {
       String.fromEnvironment('POSTHOG_API_KEY', defaultValue: '');
   static const String _host =
       String.fromEnvironment('POSTHOG_HOST', defaultValue: 'https://us.i.posthog.com');
+  static const _optInKey = 'analytics_opt_in';
+  static const _promptedKey = 'analytics_prompted';
 
   bool _isEnabled = false;
+  bool _isInitializing = false;
+  bool _hasPrompted = false;
   String? _distinctId;
 
-  Future<void> init() async {
+  /// Initialize analytics only if the user has opted in.
+  Future<void> initializeIfConsented() async {
+    final prefs = await SharedPreferences.getInstance();
+    _hasPrompted = prefs.getBool(_promptedKey) ?? false;
+    final allowed = prefs.getBool(_optInKey) ?? false;
+    if (!allowed) {
+      debugPrint('[Analytics] Skipping setup (user has not opted in)');
+      return;
+    }
+    await _setupPosthog();
+  }
+
+  Future<void> _setupPosthog() async {
     if (_apiKey.isEmpty) {
       debugPrint('[Analytics] PostHog disabled (POSTHOG_API_KEY missing)');
       return;
     }
+    if (_isEnabled || _isInitializing) return;
+
+    _isInitializing = true;
 
     try {
       final config = PostHogConfig(_apiKey)
@@ -47,7 +66,38 @@ class AnalyticsService {
     } catch (e) {
       _isEnabled = false;
       debugPrint('[Analytics] Failed to initialize PostHog: $e');
+    } finally {
+      _isInitializing = false;
     }
+  }
+
+  /// Persist user choice and initialize/disable accordingly.
+  Future<void> setUserConsent(bool allowed) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_optInKey, allowed);
+    await prefs.setBool(_promptedKey, true);
+    _hasPrompted = true;
+
+    if (allowed) {
+      await _setupPosthog();
+    } else {
+      _isEnabled = false;
+      try {
+        await Posthog().disable();
+      } catch (_) {
+        // ignore disable errors
+      }
+    }
+  }
+
+  Future<bool> hasPromptedConsent() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_promptedKey) ?? false;
+  }
+
+  Future<bool> isOptedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_optInKey) ?? false;
   }
 
   Future<String> _getOrCreateDistinctId() async {

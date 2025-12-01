@@ -9,7 +9,7 @@ import 'data/services/analytics_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
-  await AnalyticsService().init();
+  await AnalyticsService().initializeIfConsented();
   
   runApp(
     EasyLocalization(

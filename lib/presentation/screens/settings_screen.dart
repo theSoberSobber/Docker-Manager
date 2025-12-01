@@ -19,6 +19,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _dockerPathController = TextEditingController();
   bool _isLoading = true;
   bool _isPruning = false;
+  bool _telemetryOptIn = false;
   final DockerCliPathService _dockerCliPathService = DockerCliPathService();
   final AnalyticsService _analytics = AnalyticsService();
 
@@ -36,10 +37,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    final telemetryOptIn = await _analytics.isOptedIn();
     setState(() {
       _defaultLogLines = prefs.getString('defaultLogLines') ?? '500';
       _dockerCliPath = prefs.getString('dockerCliPath') ?? 'docker';
       _dockerPathController.text = _dockerCliPath;
+      _telemetryOptIn = telemetryOptIn;
       _isLoading = false;
     });
   }
@@ -80,6 +83,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SnackBar(
           content: Text('settings.docker_cli_saved'.tr()),
           duration: const Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
+  Future<void> _setTelemetryOptIn(bool enabled) async {
+    setState(() {
+      _telemetryOptIn = enabled;
+    });
+    await _analytics.setUserConsent(enabled);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            enabled
+                ? 'Anonymous telemetry enabled. Thank you for helping improve the app.'
+                : 'Telemetry disabled. You can re-enable it anytime.',
+          ),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -319,6 +341,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       }
                     },
                   ),
+                ),
+                
+                const Divider(height: 32),
+                
+                // Telemetry Section
+                _buildSectionHeader('Telemetry'),
+                SwitchListTile(
+                  title: const Text('Share anonymous telemetry'),
+                  subtitle: const Text(
+                    'Helps us improve the app. No server credentials or commands are sent.',
+                  ),
+                  value: _telemetryOptIn,
+                  onChanged: _setTelemetryOptIn,
                 ),
                 
                 const Divider(height: 32),

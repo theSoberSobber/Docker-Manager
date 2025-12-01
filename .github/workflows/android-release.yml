@@ -53,6 +53,20 @@ jobs:
           echo "✅ Removing envs-repo:"
           rm -rf envs-repo
       
+      - name: Write PostHog secrets to local.properties (optional)
+        run: |
+          set -euo pipefail
+          : "${POSTHOG_HOST:=https://us.i.posthog.com}"
+          if [ -z "${POSTHOG_API_KEY:-}" ]; then
+            echo "⚠️ POSTHOG_API_KEY not set; telemetry will stay disabled."
+          else
+            {
+              echo "posthog.api.key=${POSTHOG_API_KEY}"
+              echo "posthog.host=${POSTHOG_HOST}"
+            } >> android/local.properties
+            echo "✅ Wrote PostHog secrets to android/local.properties"
+          fi
+      
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -75,7 +89,7 @@ jobs:
       
       # --- Build APK ---
       - name: Build Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --dart-define=POSTHOG_API_KEY=${POSTHOG_API_KEY:-} --dart-define=POSTHOG_HOST=${POSTHOG_HOST:-https://us.i.posthog.com}
       
       - name: Rename APK
         run: |
@@ -84,7 +98,7 @@ jobs:
       
       # --- Build AAB ---
       - name: Build Release AAB
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --dart-define=POSTHOG_API_KEY=${POSTHOG_API_KEY:-} --dart-define=POSTHOG_HOST=${POSTHOG_HOST:-https://us.i.posthog.com}
       
       - name: Rename AAB
         run: |
