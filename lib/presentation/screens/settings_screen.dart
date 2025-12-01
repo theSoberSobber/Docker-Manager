@@ -4,6 +4,9 @@ import '../widgets/theme_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../data/services/docker_cli_path_service.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -18,12 +21,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _dockerPathController = TextEditingController();
   bool _isLoading = true;
   bool _isPruning = false;
+  String _appVersion = '';
+  String _buildNumber = '';
+  final Uri _githubUri = Uri.parse('https://github.com/theSoberSobber/Docker-Manager');
+  final Uri _playStoreUri = Uri.parse('https://play.google.com/store/apps/details?id=com.pavit.docker');
   final DockerCliPathService _dockerCliPathService = DockerCliPathService();
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _loadAppVersion();
   }
 
   @override
@@ -40,6 +48,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _dockerPathController.text = _dockerCliPath;
       _isLoading = false;
     });
+  }
+
+  Future<void> _openExternalLink(Uri uri) async {
+    try {
+      final canOpen = await canLaunchUrl(uri);
+      var launched = false;
+
+      if (canOpen) {
+        launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (!launched) {
+          launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
+        }
+      }
+
+      // Fallbacks if validation or external launch failed.
+      if (!launched) {
+        launched = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+      }
+
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('settings.link_open_failed'.tr())),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('settings.link_open_failed'.tr())),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      if (mounted) {
+        setState(() {
+          _appVersion = packageInfo.version;
+          _buildNumber = packageInfo.buildNumber;
+        });
+      }
+    } catch (_) {
+      // If version retrieval fails, leave the version fields empty.
+    }
   }
 
   Future<void> _saveDefaultLogLines(String value) async {
@@ -221,6 +274,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               children: [
+                _buildSupportCard(),
                 // Appearance Section
                 _buildSectionHeader('settings.appearance'.tr()),
                 _buildThemeOption(
@@ -435,8 +489,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 
                 const SizedBox(height: 32),
+                _buildVersionInfo(),
               ],
             ),
+    );
+  }
+
+  Widget _buildSupportCard() {
+    final versionText = (_appVersion.isNotEmpty && _buildNumber.isNotEmpty)
+        ? 'settings.version_label'.tr(args: [_appVersion, _buildNumber])
+        : 'settings.version_loading'.tr();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Docker Manager',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          versionText,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const FaIcon(FontAwesomeIcons.github),
+                    tooltip: 'settings.github_repo'.tr(),
+                    onPressed: () => _openExternalLink(_githubUri),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton.icon(
+                    icon: const Icon(Icons.play_circle),
+                    label: Text('settings.rate_play'.tr()),
+                    onPressed: () => _openExternalLink(_playStoreUri),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -506,6 +622,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
       selected: isSelected,
+    );
+  }
+
+  Widget _buildVersionInfo() {
+    final versionText = (_appVersion.isNotEmpty && _buildNumber.isNotEmpty)
+        ? 'settings.version_label'.tr(args: [_appVersion, _buildNumber])
+        : 'settings.version_loading'.tr();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        children: [
+          const Divider(height: 0),
+          const SizedBox(height: 12),
+          Text(
+            versionText,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.outline,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

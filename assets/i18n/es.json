@@ -310,7 +310,14 @@
     "prune_failed": "Purga Fallida",
     "prune_cannot_undo": "¡Esta acción no se puede deshacer!",
     "select_language": "Seleccionar Idioma",
-    "pruning": "Purgando..."
+    "pruning": "Purgando...",
+    "version_label": "Versión {} (compilación {})",
+    "version_loading": "Cargando versión...",
+    "support_title": "Soporte y comentarios",
+    "support_subtitle": "Califícanos en Google Play o visita GitHub para compartir ideas.",
+    "rate_play": "Calificar en Google Play",
+    "github_repo": "Ver en GitHub",
+    "link_open_failed": "No se pudo abrir el enlace"
   },
   "system_info": {
     "title": "Información del Sistema",
