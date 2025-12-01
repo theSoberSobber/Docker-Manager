@@ -4,6 +4,7 @@ import '../widgets/theme_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../data/services/docker_cli_path_service.dart';
+import '../../data/services/analytics_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -21,11 +22,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _dockerPathController = TextEditingController();
   bool _isLoading = true;
   bool _isPruning = false;
+  bool _telemetryOptIn = false;
   String _appVersion = '';
   String _buildNumber = '';
   final Uri _githubUri = Uri.parse('https://github.com/theSoberSobber/Docker-Manager');
   final Uri _playStoreUri = Uri.parse('https://play.google.com/store/apps/details?id=com.pavit.docker');
   final DockerCliPathService _dockerCliPathService = DockerCliPathService();
+  final AnalyticsService _analytics = AnalyticsService();
 
   @override
   void initState() {
@@ -42,10 +45,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    final telemetryOptIn = await _analytics.isOptedIn();
     setState(() {
       _defaultLogLines = prefs.getString('defaultLogLines') ?? '500';
       _dockerCliPath = prefs.getString('dockerCliPath') ?? 'docker';
       _dockerPathController.text = _dockerCliPath;
+      _telemetryOptIn = telemetryOptIn;
       _isLoading = false;
     });
   }
@@ -101,6 +106,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _defaultLogLines = value;
     });
+    _analytics.trackEvent('settings.logs_default_changed', properties: {
+      'value': value,
+    });
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -119,12 +127,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _dockerCliPath = path;
     });
+    _analytics.trackEvent('settings.docker_path_saved', properties: {
+      'usesDefault': path == 'docker',
+    });
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('settings.docker_cli_saved'.tr()),
           duration: const Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
+  Future<void> _setTelemetryOptIn(bool enabled) async {
+    setState(() {
+      _telemetryOptIn = enabled;
+    });
+    await _analytics.setUserConsent(enabled);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            enabled
+                ? 'Anonymous telemetry enabled. Thank you for helping improve the app.'
+                : 'Telemetry disabled. You can re-enable it anytime.',
+          ),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -182,6 +212,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirmed == true && mounted) {
+      _analytics.trackEvent('settings.prune_confirmed');
       await _executeSystemPrune();
     }
   }
@@ -198,10 +229,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final dockerCmd = await _dockerCliPathService.getDockerCliPath();
       
       final result = await sshService.executeCommand('$dockerCmd system prune -af --volumes');
+      await _analytics.trackEvent('settings.prune_started');
       
       if (mounted) {
         setState(() {
           _isPruning = false;
+        });
+        await _analytics.trackEvent('settings.prune_completed', properties: {
+          'resultLength': result?.length ?? 0,
         });
 
         // Show result dialog
@@ -231,6 +266,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       }
     } catch (e) {
+      await _analytics.trackException('settings.prune_failed', e);
       if (mounted) {
         setState(() {
           _isPruning = false;
@@ -332,6 +368,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       if (locale != null) {
                         await context.setLocale(locale);
                         setState(() {});
+                        _analytics.trackEvent('settings.language_changed', properties: {
+                          'language': locale.languageCode,
+                        });
                         if (mounted) {
                           String label;
                           switch (locale.languageCode) {
@@ -356,6 +395,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       }
                     },
                   ),
+                ),
+                
+                const Divider(height: 32),
+                
+                // Telemetry Section
+                _buildSectionHeader('Telemetry'),
+                SwitchListTile(
+                  title: const Text('Share anonymous telemetry'),
+                  subtitle: const Text(
+                    'Helps us improve the app. No server credentials or commands are sent.',
+                  ),
+                  value: _telemetryOptIn,
+                  onChanged: _setTelemetryOptIn,
                 ),
                 
                 const Divider(height: 32),
@@ -592,6 +644,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       onTap: () {
         themeManager.setThemeMode(mode);
         setState(() {});
+        _analytics.trackEvent('settings.theme_changed', properties: {
+          'mode': mode.name,
+        });
       },
     );
   }

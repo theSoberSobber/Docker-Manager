@@ -75,7 +75,7 @@ jobs:
       
       # --- Build APK ---
       - name: Build Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --dart-define=POSTHOG_API_KEY=${POSTHOG_API_KEY:-} --dart-define=POSTHOG_HOST=${POSTHOG_HOST:-https://us.i.posthog.com}
       
       - name: Rename APK
         run: |
@@ -84,7 +84,7 @@ jobs:
       
       # --- Build AAB ---
       - name: Build Release AAB
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --dart-define=POSTHOG_API_KEY=${POSTHOG_API_KEY:-} --dart-define=POSTHOG_HOST=${POSTHOG_HOST:-https://us.i.posthog.com}
       
       - name: Rename AAB
         run: |

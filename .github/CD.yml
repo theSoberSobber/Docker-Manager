@@ -8,6 +8,8 @@
 # These will be read from envs repo and made available to the workflow
 required_env_vars:
   - APK_MANAGER_SECRET_KEY
+  - POSTHOG_API_KEY
+  - POSTHOG_HOST
   # Add any other environment variables your Flutter app needs here
   
 # Environment folder in the envs repo that contains files for this project

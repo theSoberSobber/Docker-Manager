@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/services/docker_registry_service.dart';
 import '../../../data/services/ssh_connection_service.dart';
 import '../../../data/services/docker_cli_path_service.dart';
+import '../../../data/services/analytics_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class PullImageScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class _PullImageScreenState extends State<PullImageScreen> {
   final _registryService = DockerRegistryService();
   final _sshService = SSHConnectionService();
   final DockerCliPathService _dockerCliPathService = DockerCliPathService();
+  final AnalyticsService _analytics = AnalyticsService();
   final _searchController = TextEditingController();
   final _registryController = TextEditingController(text: 'hub.docker.com');
 
@@ -48,6 +50,10 @@ class _PullImageScreenState extends State<PullImageScreen> {
         _searchResults = [];
       });
     }
+    _analytics.trackEvent('images.pull.search', properties: {
+      'queryLength': _searchController.text.trim().length,
+      'registry': _registryController.text.trim(),
+    });
 
     try {
       final results = await _registryService.searchImages(
@@ -70,6 +76,9 @@ class _PullImageScreenState extends State<PullImageScreen> {
   }
 
   Future<void> _showTagSelectionDialog(ImageSearchResult image) async {
+    _analytics.trackEvent('images.pull.select_image', properties: {
+      'image': image.name,
+    });
     // Show loading dialog while fetching tags
     showDialog(
       context: context,
@@ -124,7 +133,13 @@ class _PullImageScreenState extends State<PullImageScreen> {
                           backgroundColor: Colors.blue.withOpacity(0.2),
                         )
                       : null,
-                  onTap: () => Navigator.of(context).pop(tag),
+                  onTap: () {
+                    _analytics.trackEvent('images.pull.tag_selected', properties: {
+                      'image': image.name,
+                      'tag': tag,
+                    });
+                    Navigator.of(context).pop(tag);
+                  },
                 );
               },
             ),
@@ -155,6 +170,10 @@ class _PullImageScreenState extends State<PullImageScreen> {
 
   Future<void> _pullImage(String imageName, String tag) async {
     final fullImageName = '$imageName:$tag';
+    _analytics.trackEvent('images.pull.started', properties: {
+      'image': imageName,
+      'tag': tag,
+    });
 
     // Show loading dialog
     showDialog(
@@ -194,6 +213,10 @@ class _PullImageScreenState extends State<PullImageScreen> {
             backgroundColor: Colors.green,
           ),
         );
+        await _analytics.trackEvent('images.pull.completed', properties: {
+          'image': imageName,
+          'tag': tag,
+        });
         Navigator.of(context).pop(true); // Return to images screen
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -202,10 +225,23 @@ class _PullImageScreenState extends State<PullImageScreen> {
             backgroundColor: Colors.red,
           ),
         );
+        await _analytics.trackEvent('images.pull.completed', properties: {
+          'image': imageName,
+          'tag': tag,
+          'status': 'empty_output',
+        });
       }
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop(); // Close loading dialog
+      await _analytics.trackException(
+        'images.pull.failed',
+        e,
+        properties: {
+          'image': imageName,
+          'tag': tag,
+        },
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('common.error'.tr() + ': $e'),
