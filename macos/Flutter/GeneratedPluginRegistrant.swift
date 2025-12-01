@@ -9,6 +9,8 @@ import package_info_plus
 import shared_preferences_foundation
 import url_launcher_macos
 
+/// Registers all generated Flutter macOS plugins with the provided plugin registry.
+/// - Parameter registry: The registry used to obtain plugin registrars for each plugin.
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   FPPPackageInfoPlusPlugin.register(with: registry.registrar(forPlugin: "FPPPackageInfoPlusPlugin"))
   SharedPreferencesPlugin.register(with: registry.registrar(forPlugin: "SharedPreferencesPlugin"))
