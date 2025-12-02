@@ -4,9 +4,7 @@
     
     <application
         android:label="Docker Manager"
-        android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
-        android:extractNativeLibs="true">
+        android:name="${applicationName}">
         <activity
             android:name=".MainActivity"
             android:exported="true"
