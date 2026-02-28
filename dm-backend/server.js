@@ -93,32 +93,6 @@ app.post('/api/pairing/generate', (req, res) => {
   res.json({ token });
 });
 
-// POST /api/pairing/register
-// Called by dm-notifier when it starts up
-app.post('/api/pairing/register', (req, res) => {
-  const { token, server_id } = req.body;
-
-  if (!token) {
-    return res.status(400).json({ error: 'token is required' });
-  }
-
-  const pairingData = pairingTokens.get(token);
-  if (!pairingData) {
-    return res.status(404).json({ error: 'Invalid or expired pairing token' });
-  }
-
-  // Register the server
-  registeredServers.set(server_id || pairingData.server_id, {
-    rc_user_id: pairingData.rc_user_id,
-    status: 'paired',
-    last_seen: Date.now(),
-    pairing_token: token,
-  });
-
-  console.log(`✅ Server ${(server_id || pairingData.server_id).substring(0, 8)}... registered`);
-  res.json({ success: true });
-});
-
 // GET /api/pairing/status/:serverId
 // Check if a dm-notifier is registered for a server
 app.get('/api/pairing/status/:serverId', (req, res) => {

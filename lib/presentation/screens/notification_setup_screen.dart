@@ -5,6 +5,7 @@ import '../../data/services/subscription_service.dart';
 import '../../data/services/notification_service.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../data/services/docker_cli_path_service.dart';
+import '../../data/repositories/server_repository_impl.dart';
 import '../../domain/models/server.dart';
 
 /// Screen for setting up Docker event notifications for a server.
@@ -24,6 +25,7 @@ class NotificationSetupScreen extends StatefulWidget {
 class _NotificationSetupScreenState extends State<NotificationSetupScreen> {
   final PairingService _pairingService = PairingService();
   final NotificationService _notificationService = NotificationService();
+  final ServerRepositoryImpl _serverRepo = ServerRepositoryImpl();
 
   PairingStatus _status = PairingStatus.notSetup;
   bool _isDeploying = false;
@@ -31,7 +33,7 @@ class _NotificationSetupScreenState extends State<NotificationSetupScreen> {
   bool _isRemoving = false;
   String? _error;
   String? _logs;
-  String _deployStatus = '';
+  String _deployStep = '';
 
   @override
   void initState() {
@@ -71,75 +73,43 @@ class _NotificationSetupScreenState extends State<NotificationSetupScreen> {
     setState(() {
       _isDeploying = true;
       _error = null;
-      _deployStatus = 'Requesting permission...';
+      _deployStep = 'Requesting notification permission...';
     });
 
     // Request notification permission (only asked here, when user enables the feature)
     await _notificationService.requestPermissionAndToken();
 
-    setState(() => _deployStatus = 'Registering device...');
-    // Register FCM token with backend
+    if (mounted) setState(() => _deployStep = 'Registering device...');
     await _notificationService.registerTokenWithBackend();
 
-    final dockerPath = await _getDockerPath();
-
-    // First, check if dm-notifier is already running on this server
-    // (e.g. set up from another device or a previous install)
-    final currentStatus = await _pairingService.checkContainerStatus(
-      dockerCliPath: dockerPath,
-    );
-
-    if (currentStatus == PairingStatus.running) {
-      // Container already running — no need to redeploy
-      if (mounted) {
-        setState(() {
-          _isDeploying = false;
-          _status = PairingStatus.running;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Expanded(child: Text('notifications.already_active'.tr())),
-              ],
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-      return;
-    }
-
-    setState(() => _deployStatus = 'Generating pairing token...');
-    // Generate pairing token (only when we actually need to deploy)
+    if (mounted) setState(() => _deployStep = 'Generating security token...');
     final token = await _pairingService.generatePairingToken(widget.server.id);
     if (token == null) {
       if (mounted) {
         setState(() {
           _error = 'notifications.token_generation_failed'.tr();
           _isDeploying = false;
-          _deployStatus = '';
+          _deployStep = '';
         });
       }
       return;
     }
 
-    // Deploy via SSH with live progress
+    // Deploy via SSH with step-by-step progress
+    final dockerPath = await _getDockerPath();
     final result = await _pairingService.deployNotifier(
       serverId: widget.server.id,
       pairingToken: token,
       dockerCliPath: dockerPath,
-      onProgress: (status) {
-        if (mounted) setState(() => _deployStatus = status);
+      onProgress: (step) {
+        if (mounted) setState(() => _deployStep = step);
       },
     );
 
     if (mounted) {
       setState(() {
         _isDeploying = false;
-        _deployStatus = '';
+        _deployStep = '';
         if (result.success) {
           _status = PairingStatus.running;
         } else {
@@ -165,6 +135,9 @@ class _NotificationSetupScreenState extends State<NotificationSetupScreen> {
             backgroundColor: Colors.green,
           ),
         );
+        // Persist enabled flag
+        final updated = widget.server.copyWith(notificationsEnabled: true);
+        await _serverRepo.updateServer(updated);
       }
     }
   }
@@ -206,6 +179,11 @@ class _NotificationSetupScreenState extends State<NotificationSetupScreen> {
         _isRemoving = false;
         _status = success ? PairingStatus.notSetup : PairingStatus.error;
       });
+      if (success) {
+        // Persist disabled flag
+        final updated = widget.server.copyWith(notificationsEnabled: false);
+        await _serverRepo.updateServer(updated);
+      }
     }
   }
 
@@ -557,9 +535,10 @@ class _NotificationSetupScreenState extends State<NotificationSetupScreen> {
                 : const Icon(Icons.notifications_active, size: 20),
             label: Text(
               _isDeploying
-                  ? _deployStatus.isNotEmpty ? _deployStatus : 'notifications.deploying'.tr()
+                  ? (_deployStep.isNotEmpty ? _deployStep : 'notifications.deploying'.tr())
                   : 'notifications.enable'.tr(),
-              style: const TextStyle(fontSize: 15),
+              style: const TextStyle(fontSize: 14),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ),

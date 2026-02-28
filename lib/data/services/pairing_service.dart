@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../config/app_config.dart';
@@ -17,12 +18,21 @@ enum PairingStatus {
 /// Handles deployment and management of the dm-notifier container
 /// on the user's server via SSH.
 ///
-/// Since the app already has SSH access to the user's server,
-/// we auto-deploy the dm-notifier container — no manual steps needed!
+/// Each user gets their own container named `dm-notifier-<hash>` where
+/// hash is derived from their RevenueCat user ID. This ensures multiple
+/// users sharing the same server each get their own notification pipeline.
 class PairingService {
   static final PairingService _instance = PairingService._internal();
   factory PairingService() => _instance;
   PairingService._internal();
+
+  /// Generate a unique container name for this user.
+  /// Uses first 8 chars of SHA-256 hash of the RC user ID.
+  String _containerName() {
+    final rcId = SubscriptionService().appUserId ?? 'unknown';
+    final hash = sha256.convert(utf8.encode(rcId)).toString().substring(0, 8);
+    return '${AppConfig.notifierContainerName}-$hash';
+  }
 
   /// Generate a pairing token for a given server from the backend.
   Future<String?> generatePairingToken(String serverId) async {
@@ -56,19 +66,22 @@ class PairingService {
 
   /// Deploy the dm-notifier container on the user's server via SSH.
   ///
+  /// [onProgress] is called with a human-readable status message for each step.
+  ///
   /// Smart deployment:
-  /// 1. Check if dm-notifier is already running on this server
-  /// 2. If running and healthy → skip, return alreadyRunning
+  /// 1. Check if this user's container is already running
+  /// 2. If running → skip, return alreadyRunning
   /// 3. If stopped → remove and redeploy
   /// 4. If not found → fresh deploy
   Future<DeployResult> deployNotifier({
     required String serverId,
     required String pairingToken,
     String? dockerCliPath,
-    void Function(String status)? onProgress,
+    void Function(String step)? onProgress,
   }) async {
     final ssh = SSHConnectionService();
     final docker = dockerCliPath ?? 'docker';
+    final container = _containerName();
 
     if (!ssh.isConnected) {
       return DeployResult(
@@ -79,35 +92,35 @@ class PairingService {
 
     try {
       // Step 1: Check if container already exists and is running
-      onProgress?.call('Checking for existing notifier...');
+      onProgress?.call('Checking existing container...');
       final existingStatus = await checkContainerStatus(dockerCliPath: dockerCliPath);
 
       if (existingStatus == PairingStatus.running) {
-        debugPrint('PairingService: dm-notifier already running — skipping deploy');
+        debugPrint('PairingService: $container already running — skipping deploy');
         return DeployResult(success: true, alreadyRunning: true);
       }
 
       // Step 2: If stopped/exists, clean up first
       if (existingStatus == PairingStatus.stopped) {
         onProgress?.call('Removing stopped container...');
-        await ssh.executeCommand('$docker stop ${AppConfig.notifierContainerName} 2>/dev/null || true');
-        await ssh.executeCommand('$docker rm ${AppConfig.notifierContainerName} 2>/dev/null || true');
+        await ssh.executeCommand('$docker stop $container 2>/dev/null || true');
+        await ssh.executeCommand('$docker rm $container 2>/dev/null || true');
       }
 
       // Step 3: Pull the latest image
-      onProgress?.call('Pulling dm-notifier image...');
+      onProgress?.call('Pulling notification agent image...');
       final pullResult = await ssh.executeCommand('$docker pull ${AppConfig.notifierImage}') ?? '';
       if (pullResult.contains('Error') && !pullResult.contains('Pulling from')) {
         return DeployResult(
           success: false,
-          error: 'Failed to pull dm-notifier image: $pullResult',
+          error: 'Failed to pull image: $pullResult',
         );
       }
 
       // Step 4: Run the container with resilient settings
       onProgress?.call('Starting notification agent...');
       final runCommand = '$docker run -d '
-          '--name ${AppConfig.notifierContainerName} '
+          '--name $container '
           '--restart unless-stopped '
           '-v /var/run/docker.sock:/var/run/docker.sock:ro '
           '-e PAIRING_TOKEN=$pairingToken '
@@ -123,14 +136,14 @@ class PairingService {
       onProgress?.call('Verifying container is healthy...');
       await Future.delayed(const Duration(seconds: 2));
       final statusResult = await ssh.executeCommand(
-        '$docker inspect --format="{{.State.Running}}" ${AppConfig.notifierContainerName} 2>/dev/null',
+        '$docker inspect --format="{{.State.Running}}" $container 2>/dev/null',
       ) ?? '';
 
       if (statusResult.trim() == 'true') {
         return DeployResult(success: true);
       } else {
         final logs = await ssh.executeCommand(
-          '$docker logs --tail 20 ${AppConfig.notifierContainerName} 2>&1',
+          '$docker logs --tail 20 $container 2>&1',
         ) ?? 'No logs available';
         return DeployResult(
           success: false,
@@ -146,16 +159,17 @@ class PairingService {
     }
   }
 
-  /// Check the current status of the dm-notifier container via SSH.
+  /// Check the current status of this user's dm-notifier container via SSH.
   Future<PairingStatus> checkContainerStatus({String? dockerCliPath}) async {
     final ssh = SSHConnectionService();
     final docker = dockerCliPath ?? 'docker';
+    final container = _containerName();
 
     if (!ssh.isConnected) return PairingStatus.error;
 
     try {
       final result = await ssh.executeCommand(
-        '$docker inspect --format="{{.State.Status}}" ${AppConfig.notifierContainerName} 2>/dev/null',
+        '$docker inspect --format="{{.State.Status}}" $container 2>/dev/null',
       ) ?? '';
 
       final status = result.trim().toLowerCase();
@@ -171,16 +185,17 @@ class PairingService {
     }
   }
 
-  /// Remove the dm-notifier container from the server.
+  /// Remove this user's dm-notifier container from the server.
   Future<bool> removeNotifier({String? dockerCliPath}) async {
     final ssh = SSHConnectionService();
     final docker = dockerCliPath ?? 'docker';
+    final container = _containerName();
 
     if (!ssh.isConnected) return false;
 
     try {
-      await ssh.executeCommand('$docker stop ${AppConfig.notifierContainerName} 2>/dev/null || true');
-      await ssh.executeCommand('$docker rm ${AppConfig.notifierContainerName} 2>/dev/null || true');
+      await ssh.executeCommand('$docker stop $container 2>/dev/null || true');
+      await ssh.executeCommand('$docker rm $container 2>/dev/null || true');
       return true;
     } catch (e) {
       debugPrint('PairingService: Remove failed: $e');
@@ -188,16 +203,17 @@ class PairingService {
     }
   }
 
-  /// Get logs from the dm-notifier container.
+  /// Get logs from this user's dm-notifier container.
   Future<String> getNotifierLogs({String? dockerCliPath, int tailLines = 50}) async {
     final ssh = SSHConnectionService();
     final docker = dockerCliPath ?? 'docker';
+    final container = _containerName();
 
     if (!ssh.isConnected) return 'Not connected to server';
 
     try {
       return await ssh.executeCommand(
-        '$docker logs --tail $tailLines ${AppConfig.notifierContainerName} 2>&1',
+        '$docker logs --tail $tailLines $container 2>&1',
       ) ?? 'No logs available';
     } catch (e) {
       return 'Failed to get logs: $e';

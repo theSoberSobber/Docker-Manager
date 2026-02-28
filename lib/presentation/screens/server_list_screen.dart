@@ -212,6 +212,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
                                 : null,
                           ),
                           child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -219,7 +220,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
                               Icons.computer,
                               color: isSelected 
                                   ? Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.blue[300]  // Light blue for dark mode
+                                      ? Colors.blue[300]
                                       : Theme.of(context).primaryColor
                                   : null,
                             ),
@@ -231,10 +232,11 @@ class _ServerListScreenState extends State<ServerListScreen> {
                                     : FontWeight.normal,
                                 color: isSelected 
                                     ? Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.blue[300]  // Light blue for dark mode
+                                        ? Colors.blue[300]
                                         : Theme.of(context).primaryColor
                                     : null,
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                             subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,13 +244,18 @@ class _ServerListScreenState extends State<ServerListScreen> {
                               Text('${server.ip}:${server.port}'),
                               Row(
                                 children: [
-                                  Text('servers.user_label'.tr(args: [server.username])),
+                                  Flexible(
+                                    child: Text(
+                                      'servers.user_label'.tr(args: [server.username]),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
                                   if (isSelected) ...[
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 6),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, 
-                                        vertical: 2,
+                                        horizontal: 5, 
+                                        vertical: 1,
                                       ),
                                       decoration: BoxDecoration(
                                         color: Theme.of(context).brightness == Brightness.dark
@@ -262,7 +269,7 @@ class _ServerListScreenState extends State<ServerListScreen> {
                                           color: Theme.of(context).brightness == Brightness.dark
                                               ? Colors.black87
                                               : Colors.white,
-                                          fontSize: 10,
+                                          fontSize: 9,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -275,47 +282,36 @@ class _ServerListScreenState extends State<ServerListScreen> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              IconButton(
-                                icon: Icon(
-                                  server.notificationsEnabled
-                                      ? Icons.notifications_active
-                                      : Icons.notifications_none,
-                                  color: server.notificationsEnabled
-                                      ? Colors.green
-                                      : null,
-                                  size: 20,
-                                ),
-                                onPressed: () {
-                                  final subscriptionService = SubscriptionService();
-                                  if (!subscriptionService.isPro) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('notifications.pro_required'.tr()),
-                                        action: SnackBarAction(
-                                          label: 'pro.learn_more'.tr(),
-                                          onPressed: () {},
+                              if (SubscriptionService().isPro)
+                                InkWell(
+                                  borderRadius: BorderRadius.circular(16),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => NotificationSetupScreen(
+                                          server: server,
                                         ),
-                                        backgroundColor: Colors.orange,
                                       ),
                                     );
-                                    return;
-                                  }
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => NotificationSetupScreen(
-                                        server: server,
-                                      ),
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(6),
+                                    child: Icon(
+                                      server.notificationsEnabled
+                                          ? Icons.notifications_active
+                                          : Icons.notifications_off_outlined,
+                                      color: server.notificationsEnabled
+                                          ? Colors.green
+                                          : Colors.grey,
+                                      size: 20,
                                     ),
-                                  );
-                                },
-                                tooltip: 'notifications.setup_title'.tr(),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                              ),
+                                  ),
+                                ),
                               PopupMenuButton<String>(
-                                icon: const Icon(Icons.more_vert, size: 20),
                                 padding: EdgeInsets.zero,
+                                iconSize: 20,
+                                constraints: const BoxConstraints(minWidth: 32),
                                 onSelected: (value) {
                                   if (value == 'edit') {
                                     _navigateToEditServer(server);
@@ -324,23 +320,23 @@ class _ServerListScreenState extends State<ServerListScreen> {
                                   }
                                 },
                                 itemBuilder: (context) => [
-                                  PopupMenuItem(
+                                  const PopupMenuItem(
                                     value: 'edit',
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.edit, color: Colors.blue, size: 18),
-                                        const SizedBox(width: 8),
-                                        Text('servers.edit'.tr()),
+                                        Icon(Icons.edit, color: Colors.blue, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('Edit'),
                                       ],
                                     ),
                                   ),
-                                  PopupMenuItem(
+                                  const PopupMenuItem(
                                     value: 'delete',
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.delete, color: Colors.red, size: 18),
-                                        const SizedBox(width: 8),
-                                        Text('servers.delete'.tr()),
+                                        Icon(Icons.delete, color: Colors.red, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('Delete'),
                                       ],
                                     ),
                                   ),
