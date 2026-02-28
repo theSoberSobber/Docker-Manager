@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../data/services/subscription_service.dart';
 
-/// A card widget that displays the Pro subscription status and upsell.
+/// Unified card showing app info + Pro subscription status.
 ///
-/// Shows subscription benefits and launches the RevenueCat Paywall for
-/// free users, or shows Pro status + Customer Center access for subscribers.
-/// Includes a FOSS-friendly "can't afford it?" message.
+/// When Pro: gold gradient, "Docker Manager Pro", version, Rate, GitHub, Manage Sub.
+/// When free: normal card, benefits, Subscribe/Restore, FOSS message.
 class ProCard extends StatefulWidget {
-  const ProCard({super.key});
+  final String appVersion;
+  final String buildNumber;
+  final VoidCallback onOpenGitHub;
+  final VoidCallback onRatePlayStore;
+
+  const ProCard({
+    super.key,
+    required this.appVersion,
+    required this.buildNumber,
+    required this.onOpenGitHub,
+    required this.onRatePlayStore,
+  });
 
   @override
   State<ProCard> createState() => _ProCardState();
@@ -96,8 +107,12 @@ class _ProCardState extends State<ProCard> {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final versionText = (widget.appVersion.isNotEmpty && widget.buildNumber.isNotEmpty)
+        ? 'settings.version_label'.tr(args: [widget.appVersion, widget.buildNumber])
+        : 'settings.version_loading'.tr();
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Card(
         clipBehavior: Clip.antiAlias,
         elevation: isPro ? 2 : 4,
@@ -127,7 +142,7 @@ class _ProCardState extends State<ProCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
+                // Header row: icon + title + GitHub icon
                 Row(
                   children: [
                     Container(
@@ -152,21 +167,22 @@ class _ProCardState extends State<ProCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'pro.title'.tr(),
+                            isPro ? 'Docker Manager Pro' : 'Docker Manager',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          if (isPro)
-                            Text(
-                              'pro.active'.tr(),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? Colors.amber.shade300 : Colors.amber.shade700,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          const SizedBox(height: 2),
+                          Text(
+                            versionText,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isPro
+                                  ? (isDark ? Colors.amber.shade300 : Colors.amber.shade700)
+                                  : colorScheme.outline,
                             ),
+                          ),
                         ],
                       ),
                     ),
@@ -196,12 +212,49 @@ class _ProCardState extends State<ProCard> {
                           ],
                         ),
                       ),
+                    IconButton(
+                      icon: const FaIcon(FontAwesomeIcons.github, size: 20),
+                      tooltip: 'settings.github_repo'.tr(),
+                      onPressed: widget.onOpenGitHub,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
 
-                // Description + benefits for non-Pro users
+                // Rate on Play + Manage Subscription row
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.icon(
+                      icon: const Icon(Icons.play_circle, size: 18),
+                      label: Text('settings.rate_play'.tr()),
+                      onPressed: widget.onRatePlayStore,
+                      style: isPro
+                          ? FilledButton.styleFrom(
+                              backgroundColor: isDark ? Colors.amber.shade700 : Colors.amber.shade600,
+                              foregroundColor: Colors.white,
+                            )
+                          : null,
+                    ),
+                    if (isPro)
+                      OutlinedButton.icon(
+                        onPressed: _handleManage,
+                        icon: const Icon(Icons.manage_accounts, size: 18),
+                        label: Text('pro.manage'.tr()),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark ? Colors.amber.shade300 : Colors.amber.shade700,
+                          side: BorderSide(color: isDark ? Colors.amber.shade600 : Colors.amber.shade400),
+                        ),
+                      ),
+                  ],
+                ),
+
+                // Non-Pro: benefits + subscribe/restore + FOSS
                 if (!isPro) ...[
+                  const SizedBox(height: 12),
                   Text(
                     'pro.description'.tr(),
                     style: TextStyle(
@@ -216,23 +269,8 @@ class _ProCardState extends State<ProCard> {
                   const SizedBox(height: 6),
                   _buildBenefit(Icons.favorite, 'pro.benefit_support'.tr()),
                   const SizedBox(height: 16),
-                ],
 
-                // Action buttons
-                if (isPro) ...[
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: _handleManage,
-                      icon: const Icon(Icons.manage_accounts, size: 18),
-                      label: Text('pro.manage'.tr()),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: isDark ? Colors.amber.shade300 : Colors.amber.shade700,
-                        side: BorderSide(color: isDark ? Colors.amber.shade600 : Colors.amber.shade400),
-                      ),
-                    ),
-                  ),
-                ] else ...[
+                  // Subscribe + Restore
                   Row(
                     children: [
                       Expanded(
@@ -267,7 +305,7 @@ class _ProCardState extends State<ProCard> {
                   ),
                   const SizedBox(height: 12),
 
-                  // FOSS-friendly "can't afford it?" message
+                  // FOSS-friendly message
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(

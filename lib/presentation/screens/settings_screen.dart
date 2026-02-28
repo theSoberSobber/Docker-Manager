@@ -275,9 +275,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               children: [
-                _buildSupportCard(),
-                // Pro Subscription
-                const ProCard(),
+                // Unified app info + Pro card
+                ProCard(
+                  appVersion: _appVersion,
+                  buildNumber: _buildNumber,
+                  onOpenGitHub: () => _openExternalLink(_githubUri),
+                  onRatePlayStore: () => _openExternalLink(_playStoreUri),
+                ),
                 // Appearance Section
                 _buildSectionHeader('settings.appearance'.tr()),
                 _buildThemeOption(
@@ -498,66 +502,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSupportCard() {
-    final versionText = (_appVersion.isNotEmpty && _buildNumber.isNotEmpty)
-        ? 'settings.version_label'.tr(args: [_appVersion, _buildNumber])
-        : 'settings.version_loading'.tr();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Docker Manager',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          versionText,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const FaIcon(FontAwesomeIcons.github),
-                    tooltip: 'settings.github_repo'.tr(),
-                    onPressed: () => _openExternalLink(_githubUri),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  FilledButton.icon(
-                    icon: const Icon(Icons.play_circle),
-                    label: Text('settings.rate_play'.tr()),
-                    onPressed: () => _openExternalLink(_playStoreUri),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildSectionHeader(String title) {
     return Padding(

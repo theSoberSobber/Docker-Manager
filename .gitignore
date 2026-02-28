@@ -64,3 +64,6 @@ local.properties
 
 # Ignore all .env
 **/.env
+
+## Ignore refrence folder
+**/ref
