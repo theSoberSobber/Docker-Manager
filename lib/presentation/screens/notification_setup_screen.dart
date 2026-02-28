@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../data/services/pairing_service.dart';
-import '../../data/services/subscription_service.dart';
 import '../../data/services/notification_service.dart';
-import '../../data/services/ssh_connection_service.dart';
 import '../../data/services/docker_cli_path_service.dart';
 import '../../data/repositories/server_repository_impl.dart';
 import '../../domain/models/server.dart';
@@ -32,7 +30,6 @@ class _NotificationSetupScreenState extends State<NotificationSetupScreen> {
   bool _isChecking = false;
   bool _isRemoving = false;
   String? _error;
-  String? _logs;
   String _deployStep = '';
 
   @override
@@ -221,7 +218,6 @@ class _NotificationSetupScreenState extends State<NotificationSetupScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(

@@ -7,7 +7,7 @@ import '../../data/services/ssh_connection_service.dart';
 import '../../data/services/docker_cli_path_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});

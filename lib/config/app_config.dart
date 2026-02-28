@@ -7,7 +7,7 @@ class AppConfig {
 
   // ⚠️ DEBUG ONLY: Set to true to force Pro status for testing.
   // MUST be false before shipping!
-  static const bool debugForcePro = true;
+  static const bool debugForcePro = false;
 
   /// Backend API base URL.
   /// Change this to your production URL before shipping.
