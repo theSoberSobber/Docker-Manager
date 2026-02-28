@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../../domain/models/server.dart';
 import '../../domain/repositories/server_repository.dart';
 import '../../data/repositories/server_repository_impl.dart';
+import '../../data/services/subscription_service.dart';
 import 'add_server_screen.dart';
+import 'notification_setup_screen.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class ServerListScreen extends StatefulWidget {
@@ -273,19 +275,76 @@ class _ServerListScreenState extends State<ServerListScreen> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                server.password != null ? Icons.key : Icons.vpn_key,
-                                size: 16,
-                              ),
                               IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () => _navigateToEditServer(server),
-                                tooltip: 'Edit Server',
+                                icon: Icon(
+                                  server.notificationsEnabled
+                                      ? Icons.notifications_active
+                                      : Icons.notifications_none,
+                                  color: server.notificationsEnabled
+                                      ? Colors.green
+                                      : null,
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  final subscriptionService = SubscriptionService();
+                                  if (!subscriptionService.isPro) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('notifications.pro_required'.tr()),
+                                        action: SnackBarAction(
+                                          label: 'pro.learn_more'.tr(),
+                                          onPressed: () {},
+                                        ),
+                                        backgroundColor: Colors.orange,
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => NotificationSetupScreen(
+                                        server: server,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                tooltip: 'notifications.setup_title'.tr(),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _showDeleteConfirmation(server),
-                                tooltip: 'Delete Server',
+                              PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert, size: 20),
+                                padding: EdgeInsets.zero,
+                                onSelected: (value) {
+                                  if (value == 'edit') {
+                                    _navigateToEditServer(server);
+                                  } else if (value == 'delete') {
+                                    _showDeleteConfirmation(server);
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  PopupMenuItem(
+                                    value: 'edit',
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.edit, color: Colors.blue, size: 18),
+                                        const SizedBox(width: 8),
+                                        Text('servers.edit'.tr()),
+                                      ],
+                                    ),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.delete, color: Colors.red, size: 18),
+                                        const SizedBox(width: 8),
+                                        Text('servers.delete'.tr()),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),

@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'data/services/subscription_service.dart';
+import 'data/services/notification_service.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/widgets/theme_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
+  
+  // Initialize Firebase (required before FCM)
+  await Firebase.initializeApp();
+  
+  // Initialize subscription service (RevenueCat)
+  await SubscriptionService().init();
+  
+  // Initialize notification channels (does NOT request permission)
+  await NotificationService().init();
   
   runApp(
     EasyLocalization(

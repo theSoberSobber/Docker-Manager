@@ -54,3 +54,6 @@ ref*
 
 # Ignore local.properties
 local.properties
+
+# Ignore google services json
+**/google-services.json

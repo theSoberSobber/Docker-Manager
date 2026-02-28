@@ -8,6 +8,7 @@ class Server {
   final String? privateKey;
   final String? passphrase; // Passphrase for encrypted private keys
   final String? dockerCliPath; // Optional: if null, uses global setting
+  final bool notificationsEnabled; // Whether push notifications are set up for this server
 
   Server({
     required this.id,
@@ -19,6 +20,7 @@ class Server {
     this.privateKey,
     this.passphrase,
     this.dockerCliPath,
+    this.notificationsEnabled = false,
   });
 
   // Convert Server to JSON
@@ -33,6 +35,7 @@ class Server {
       'privateKey': privateKey,
       'passphrase': passphrase,
       'dockerCliPath': dockerCliPath,
+      'notificationsEnabled': notificationsEnabled,
     };
   }
 
@@ -48,6 +51,7 @@ class Server {
       privateKey: json['privateKey'] as String?,
       passphrase: json['passphrase'] as String?,
       dockerCliPath: json['dockerCliPath'] as String?,
+      notificationsEnabled: json['notificationsEnabled'] as bool? ?? false,
     );
   }
 
@@ -62,6 +66,7 @@ class Server {
     String? privateKey,
     String? passphrase,
     String? dockerCliPath,
+    bool? notificationsEnabled,
   }) {
     return Server(
       id: id ?? this.id,
@@ -73,12 +78,13 @@ class Server {
       privateKey: privateKey ?? this.privateKey,
       passphrase: passphrase ?? this.passphrase,
       dockerCliPath: dockerCliPath ?? this.dockerCliPath,
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     );
   }
 
   @override
   String toString() {
-    return 'Server(id: $id, name: $name, ip: $ip, port: $port, username: $username)';
+    return 'Server(id: $id, name: $name, ip: $ip, port: $port, username: $username, notifications: $notificationsEnabled)';
   }
 
   @override

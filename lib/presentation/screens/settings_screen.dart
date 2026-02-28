@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../widgets/theme_manager.dart';
+import '../widgets/pro_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/services/ssh_connection_service.dart';
 import '../../data/services/docker_cli_path_service.dart';
@@ -275,6 +276,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           : ListView(
               children: [
                 _buildSupportCard(),
+                // Pro Subscription
+                const ProCard(),
                 // Appearance Section
                 _buildSectionHeader('settings.appearance'.tr()),
                 _buildThemeOption(
