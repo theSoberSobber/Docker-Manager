@@ -11,7 +11,7 @@ set -euo pipefail
 : "${ENV_REPO_URL:?}"      # must be SSH form (git@github.com:owner/envs.git)
 : "${ENV_SUBPATH:=}"
 : "${ENV_FILE_NAME:=.env}"
-: "${COMPOSE_FILE:=docker-compose.yml}"
+: "${COMPOSE_FILE:=dm-backend/docker-compose.yml}"
 : "${BRANCH_NAME:=}"      # optional branch name to clone
 
 APP_DIR="${DEPLOYMENTS_DIR%/}/${APP_FOLDER}"
