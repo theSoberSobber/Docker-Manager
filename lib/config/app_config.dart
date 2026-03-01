@@ -11,7 +11,7 @@ class AppConfig {
 
   /// Backend API base URL.
   /// Change this to your production URL before shipping.
-  static const String backendBaseUrl = 'https://dm-testing.1110777.xyz/api';
+  static const String backendBaseUrl = 'https://dm-prod.1110777.xyz/api';
 
   /// Docker image for the dm-notifier container.
   static const String notifierImage = 'ghcr.io/thesobersobber/dm-notifier:latest';
