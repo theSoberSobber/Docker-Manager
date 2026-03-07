@@ -1,0 +1,15 @@
+# Docker Manager local configuration
+# Copy this file to local.properties and fill in your values
+# local.properties is gitignored and will NOT be committed
+#
+# Usage:
+#   flutter run --dart-define-from-file=local.properties
+#   flutter build apk --dart-define-from-file=local.properties
+#
+# Without this flag, production defaults from app_config.dart are used.
+
+# RevenueCat API key (use test key for development)
+REVENUECAT_API_KEY=test_SLzssVELfvHPiehzPsSCAPTHhfK
+
+# Backend API base URL (use testing URL for development)
+BACKEND_BASE_URL=https://dm-testing.1110777.xyz/api

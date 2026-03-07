@@ -67,3 +67,4 @@ local.properties
 
 ## Ignore refrence folder
 **/ref
+openspec.yaml
