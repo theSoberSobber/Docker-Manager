@@ -22,9 +22,12 @@ class NotificationService extends ChangeNotifier {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+
+  // Stream for letting the UI know when a notification is tapped
+  final _tapStreamController = StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get onNotificationTapped => _tapStreamController.stream;
 
   bool _isInitialized = false;
   String? _fcmToken;
@@ -213,8 +216,14 @@ class NotificationService extends ChangeNotifier {
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    debugPrint(
-        'NotificationService: Notification tapped: ${response.payload}');
-    // TODO: Navigate to the relevant container screen if desired
+    debugPrint('NotificationService: Notification tapped: ${response.payload}');
+    if (response.payload != null) {
+      try {
+        final payload = jsonDecode(response.payload!);
+        _tapStreamController.add(payload);
+      } catch (e) {
+        debugPrint('NotificationService: Failed to parse notification payload: $e');
+      }
+    }
   }
 }

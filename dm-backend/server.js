@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
 const admin = require('firebase-admin');
+const { Pool } = require('pg');
 
 const app = express();
 app.use(cors());
@@ -13,17 +14,14 @@ const RC_SECRET_KEY = process.env.REVENUECAT_SECRET_KEY || '';
 const RC_ENTITLEMENT_ID = 'Docker Manager Pro';
 const RC_API_BASE = 'https://api.revenuecat.com/v1';
 
-// Cache TTL for entitlement checks (5 minutes)
-const ENTITLEMENT_CACHE_TTL = 5 * 60 * 1000;
+const ENTITLEMENT_CACHE_TTL_SHORT = 5 * 60 * 1000;       // 5 min — /register-token, /pairing/generate
+const ENTITLEMENT_CACHE_TTL_LONG = 24 * 60 * 60 * 1000;  // 24h — /events
 
 if (!RC_SECRET_KEY) {
   console.warn('⚠️  REVENUECAT_SECRET_KEY not set — entitlement verification DISABLED');
-  console.warn('   All requests will be allowed through without Pro verification');
 }
 
 // --- Firebase Admin Init ---
-// Place your Firebase service account key as firebase-service-account.json
-// or set FIREBASE_SERVICE_ACCOUNT env var with the JSON content
 let firebaseInitialized = false;
 try {
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
@@ -37,42 +35,68 @@ try {
   console.log('✅ Firebase Admin initialized');
 } catch (e) {
   console.warn('⚠️  Firebase not initialized — FCM notifications will not work');
-  console.warn('   Place firebase-service-account.json in this directory or set FIREBASE_SERVICE_ACCOUNT env var');
 }
 
-// --- In-Memory Storage ---
-// In production, replace with a proper database (Redis, Postgres, etc.)
+// --- Postgres ---
+const pool = new Pool({
+  host: process.env.PGHOST || 'localhost',
+  port: parseInt(process.env.PGPORT || '5432'),
+  user: process.env.PGUSER || 'dm_backend',
+  password: process.env.PGPASSWORD || 'dm_backend',
+  database: process.env.PGDATABASE || 'dm_backend',
+  max: 10,
+});
 
-// Map: rc_user_id -> Set of FCM tokens
-const userTokens = new Map();
+async function initDB() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_tokens (
+        rc_user_id TEXT NOT NULL,
+        fcm_token TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (rc_user_id, fcm_token)
+      );
+    `);
 
-// Map: pairing_token -> { rc_user_id, server_id, created_at }
-const pairingTokens = new Map();
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pairing_tokens (
+        token TEXT PRIMARY KEY,
+        rc_user_id TEXT NOT NULL,
+        server_id TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
 
-// Map: server_id -> { rc_user_id, status, last_seen }
-const registeredServers = new Map();
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS registered_servers (
+        server_id TEXT PRIMARY KEY,
+        rc_user_id TEXT NOT NULL,
+        last_seen TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    console.log('✅ Postgres tables initialized');
+  } finally {
+    client.release();
+  }
+}
+
+// --- In-Memory Caches (OK to lose on restart) ---
 
 // Map: rc_user_id -> { isPro, checked_at }
 const entitlementCache = new Map();
 
+// Set: rc_user_id — users who've been sent the "expired" push
+const notifiedExpired = new Set();
+
 // --- RevenueCat Entitlement Verification ---
 
-/**
- * Verify that a RevenueCat user has an active Pro entitlement.
- * Uses the RC REST API with the secret key. Results are cached.
- * 
- * @param {string} rcUserId - The RevenueCat user ID
- * @returns {Promise<boolean>} - true if user has active Pro entitlement
- */
-async function verifyProEntitlement(rcUserId) {
-  // If no secret key configured, allow all (graceful degradation)
-  if (!RC_SECRET_KEY) {
-    return true;
-  }
+async function verifyProEntitlement(rcUserId, cacheTtl = ENTITLEMENT_CACHE_TTL_SHORT) {
+  if (!RC_SECRET_KEY) return true;
 
-  // Check cache first
   const cached = entitlementCache.get(rcUserId);
-  if (cached && (Date.now() - cached.checked_at < ENTITLEMENT_CACHE_TTL)) {
+  if (cached && (Date.now() - cached.checked_at < cacheTtl)) {
     return cached.isPro;
   }
 
@@ -86,9 +110,7 @@ async function verifyProEntitlement(rcUserId) {
 
     if (!response.ok) {
       console.error(`  ❌ RC API error: ${response.status} for user ${rcUserId.substring(0, 8)}...`);
-      // On API error, check cache (even expired) as fallback
       if (cached) return cached.isPro;
-      // If no cache at all, deny
       return false;
     }
 
@@ -96,39 +118,27 @@ async function verifyProEntitlement(rcUserId) {
     const entitlements = data?.subscriber?.entitlements || {};
     const proEntitlement = entitlements[RC_ENTITLEMENT_ID];
 
-    // Check if entitlement exists and hasn't expired
     const isPro = proEntitlement != null &&
       new Date(proEntitlement.expires_date) > new Date();
 
-    // Update cache
-    entitlementCache.set(rcUserId, {
-      isPro,
-      checked_at: Date.now(),
-    });
-
+    entitlementCache.set(rcUserId, { isPro, checked_at: Date.now() });
     return isPro;
   } catch (e) {
     console.error(`  ❌ RC verification failed: ${e.message}`);
-    // On network error, check cache (even expired) as fallback
     if (cached) return cached.isPro;
     return false;
   }
 }
 
-/**
- * Express middleware that verifies Pro entitlement for the rc_user_id in req.body.
- */
 async function requireProEntitlement(req, res, next) {
   const { rc_user_id } = req.body;
-
   if (!rc_user_id) {
     return res.status(400).json({ error: 'rc_user_id is required' });
   }
 
-  const isPro = await verifyProEntitlement(rc_user_id);
-
+  const isPro = await verifyProEntitlement(rc_user_id, ENTITLEMENT_CACHE_TTL_SHORT);
   if (!isPro) {
-    console.log(`🚫 Denied: user ${rc_user_id.substring(0, 8)}... does not have Pro entitlement`);
+    console.log(`🚫 Denied: user ${rc_user_id.substring(0, 8)}... — no Pro entitlement`);
     return res.status(403).json({ error: 'Active Pro subscription required' });
   }
 
@@ -137,129 +147,222 @@ async function requireProEntitlement(req, res, next) {
 
 // --- API Routes ---
 
-// Health check
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  let dbOk = false;
+  try {
+    await pool.query('SELECT 1');
+    dbOk = true;
+  } catch (e) { /* ignore */ }
+
   res.json({
     status: 'ok',
     firebase: firebaseInitialized,
     rc_verification: !!RC_SECRET_KEY,
+    database: dbOk,
   });
 });
 
 // POST /api/register-token
-// Register an FCM token for a RevenueCat user
 // Protected: requires active Pro entitlement
-app.post('/api/register-token', requireProEntitlement, (req, res) => {
+app.post('/api/register-token', requireProEntitlement, async (req, res) => {
   const { fcm_token, rc_user_id } = req.body;
 
   if (!fcm_token) {
     return res.status(400).json({ error: 'fcm_token is required' });
   }
 
-  if (!userTokens.has(rc_user_id)) {
-    userTokens.set(rc_user_id, new Set());
-  }
-  userTokens.get(rc_user_id).add(fcm_token);
+  await pool.query(
+    `INSERT INTO user_tokens (rc_user_id, fcm_token) VALUES ($1, $2)
+     ON CONFLICT (rc_user_id, fcm_token) DO NOTHING`,
+    [rc_user_id, fcm_token]
+  );
 
-  console.log(`📱 Token registered for user ${rc_user_id.substring(0, 8)}... (${userTokens.get(rc_user_id).size} total)`);
+  const { rows } = await pool.query(
+    'SELECT COUNT(*) as cnt FROM user_tokens WHERE rc_user_id = $1',
+    [rc_user_id]
+  );
+
+  console.log(`📱 Token registered for user ${rc_user_id.substring(0, 8)}... (${rows[0].cnt} total)`);
   res.json({ success: true });
 });
 
 // POST /api/pairing/generate
-// Generate a pairing token for a server
 // Protected: requires active Pro entitlement
-app.post('/api/pairing/generate', requireProEntitlement, (req, res) => {
+app.post('/api/pairing/generate', requireProEntitlement, async (req, res) => {
   const { rc_user_id, server_id } = req.body;
 
   if (!server_id) {
     return res.status(400).json({ error: 'server_id is required' });
   }
 
-  // Generate a random token
   const token = crypto.randomBytes(32).toString('hex');
 
-  pairingTokens.set(token, {
-    rc_user_id,
-    server_id,
-    created_at: Date.now(),
-  });
+  await pool.query(
+    `INSERT INTO pairing_tokens (token, rc_user_id, server_id) VALUES ($1, $2, $3)`,
+    [token, rc_user_id, server_id]
+  );
+
+  // Register/update server
+  await pool.query(
+    `INSERT INTO registered_servers (server_id, rc_user_id) VALUES ($1, $2)
+     ON CONFLICT (server_id) DO UPDATE SET rc_user_id = $2, last_seen = NOW()`,
+    [server_id, rc_user_id]
+  );
 
   // Clean up expired tokens (older than 1 hour)
-  for (const [t, data] of pairingTokens) {
-    if (Date.now() - data.created_at > 3600000) {
-      pairingTokens.delete(t);
-    }
-  }
+  await pool.query(
+    `DELETE FROM pairing_tokens WHERE created_at < NOW() - INTERVAL '1 hour'`
+  );
 
   console.log(`🔑 Pairing token generated for server ${server_id.substring(0, 8)}...`);
   res.json({ token });
 });
 
 // GET /api/pairing/status/:serverId
-// Check if a dm-notifier is registered for a server
-app.get('/api/pairing/status/:serverId', (req, res) => {
+app.get('/api/pairing/status/:serverId', async (req, res) => {
   const { serverId } = req.params;
-  const server = registeredServers.get(serverId);
 
-  if (!server) {
+  const { rows } = await pool.query(
+    'SELECT last_seen FROM registered_servers WHERE server_id = $1',
+    [serverId]
+  );
+
+  if (rows.length === 0) {
     return res.json({ status: 'not_paired' });
   }
 
-  // Check if it's been more than 5 minutes since last event
-  const isStale = Date.now() - server.last_seen > 300000;
+  const lastSeen = new Date(rows[0].last_seen).getTime();
+  const isStale = Date.now() - lastSeen > 300000;
 
   res.json({
     status: isStale ? 'stale' : 'paired',
-    last_seen: server.last_seen,
+    last_seen: rows[0].last_seen,
   });
 });
 
 // POST /api/events
-// Receive Docker events from dm-notifier and forward as FCM push
+// Auth: Bearer pairing token + cached RC entitlement re-check (24h)
 app.post('/api/events', async (req, res) => {
+  // --- Step 1: Verify pairing token ---
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing authorization' });
   }
 
   const token = authHeader.substring(7);
-  const pairingData = pairingTokens.get(token);
 
-  if (!pairingData) {
+  const { rows: tokenRows } = await pool.query(
+    'SELECT rc_user_id, server_id FROM pairing_tokens WHERE token = $1',
+    [token]
+  );
+
+  if (tokenRows.length === 0) {
     return res.status(401).json({ error: 'Invalid token' });
   }
 
-  const { server_id, event_type, action, container_name, image, timestamp } = req.body;
+  const { rc_user_id: rcUserId, server_id: tokenServerId } = tokenRows[0];
 
-  // Update last_seen
-  const serverData = registeredServers.get(server_id || pairingData.server_id);
-  if (serverData) {
-    serverData.last_seen = Date.now();
+  // --- Step 2: Cached entitlement re-check (24h TTL) ---
+  const isPro = await verifyProEntitlement(rcUserId, ENTITLEMENT_CACHE_TTL_LONG);
+
+  if (!isPro) {
+    if (!notifiedExpired.has(rcUserId)) {
+      notifiedExpired.add(rcUserId);
+      console.log(`💳 Subscription expired for user ${rcUserId.substring(0, 8)}... — sending expiry notification`);
+
+      // Send expiry notification
+      const { rows: fcmRows } = await pool.query(
+        'SELECT fcm_token FROM user_tokens WHERE rc_user_id = $1',
+        [rcUserId]
+      );
+
+      if (fcmRows.length > 0 && firebaseInitialized) {
+        for (const { fcm_token } of fcmRows) {
+          try {
+            await admin.messaging().send({
+              token: fcm_token,
+              notification: {
+                title: '⚠️ Pro Subscription Expired',
+                body: 'Docker notifications have been paused. To stop dm-notifier, run: docker stop dm-notifier-... on your server.',
+              },
+              data: { type: 'subscription_expired', action: 'subscription_expired' },
+              android: {
+                priority: 'high',
+                notification: { channelId: 'docker_events', priority: 'high' },
+              },
+            });
+          } catch (e) { /* ignore */ }
+        }
+      }
+    }
+
+    return res.status(403).json({ error: 'Pro subscription expired' });
   }
 
-  console.log(`🐳 Event: ${container_name} — ${action} (server: ${(server_id || pairingData.server_id).substring(0, 8)}...)`);
+  // User is Pro — auto-recover if previously expired
+  if (notifiedExpired.has(rcUserId)) {
+    notifiedExpired.delete(rcUserId);
+    console.log(`✅ User ${rcUserId.substring(0, 8)}... re-subscribed — notifications resumed`);
+  }
 
-  // Get human-readable action
-  const actionEmoji = {
-    start: '▶️',
-    stop: '⏹️',
-    die: '💀',
-    restart: '🔄',
-    oom: '⚠️',
-    kill: '🔴',
-    pause: '⏸️',
-    unpause: '▶️',
-  };
+  // --- Step 3: Process the event ---
+  const { server_id, event_type, action, container_name, image, timestamp,
+    current_version, latest_version, changelog_url } = req.body;
+  const effectiveServerId = server_id || tokenServerId;
 
-  const emoji = actionEmoji[action] || '🐳';
-  const title = `${emoji} ${container_name || 'Container'}`;
-  const body = `${action.charAt(0).toUpperCase() + action.slice(1)}${image ? ` (${image})` : ''}`;
+  // Update last_seen
+  await pool.query(
+    `UPDATE registered_servers SET last_seen = NOW() WHERE server_id = $1`,
+    [effectiveServerId]
+  );
 
-  // Send FCM notifications to all of this user's devices
-  const rcUserId = pairingData.rc_user_id;
-  const tokens = userTokens.get(rcUserId);
+  let title, body;
+  let customCommand;
 
-  if (!tokens || tokens.size === 0) {
+  if (event_type === 'system') {
+    // --- System events: extensible notification map ---
+    const systemNotifs = {
+      update_available: {
+        title: '🆕 dm-notifier Update Available',
+        body: `Version ${latest_version || 'new'} is available${current_version ? ` (current: ${current_version})` : ''}. Tap to update.`,
+      },
+    };
+
+    if (action === 'prompt_command') {
+      // Generic arbitrary command prompt from dm-notifier
+      title = req.body.title || '⚙️ Action Required';
+      body = req.body.body || 'Tap to review and execute this command.';
+      customCommand = req.body.command || '';
+    } else {
+      const notif = systemNotifs[action] || {
+        title: `🔔 System: ${action}`,
+        body: '',
+      };
+      title = notif.title;
+      body = notif.body;
+    }
+
+    console.log(`🔔 System event: ${action} (server: ${effectiveServerId.substring(0, 8)}...)`);
+  } else {
+    // --- Container events: existing logic ---
+    const actionEmoji = {
+      start: '▶️', stop: '⏹️', die: '💀', restart: '🔄',
+      oom: '⚠️', kill: '🔴', pause: '⏸️', unpause: '▶️',
+    };
+
+    const emoji = actionEmoji[action] || '🐳';
+    title = `${emoji} ${container_name || 'Container'}`;
+    body = `${action.charAt(0).toUpperCase() + action.slice(1)}${image ? ` (${image})` : ''}`;
+    console.log(`🐳 Event: ${container_name} — ${action} (server: ${effectiveServerId.substring(0, 8)}...)`);
+  }
+
+  // Get FCM tokens from DB
+  const { rows: fcmRows } = await pool.query(
+    'SELECT fcm_token FROM user_tokens WHERE rc_user_id = $1',
+    [rcUserId]
+  );
+
+  if (fcmRows.length === 0) {
     console.log(`  ⚠️  No FCM tokens for user ${rcUserId.substring(0, 8)}...`);
     return res.json({ success: true, notifications_sent: 0 });
   }
@@ -269,30 +372,30 @@ app.post('/api/events', async (req, res) => {
     return res.json({ success: true, notifications_sent: 0 });
   }
 
-  // Send to all tokens
-  const tokenArray = Array.from(tokens);
   let successCount = 0;
   const invalidTokens = [];
 
-  for (const fcmToken of tokenArray) {
+  for (const { fcm_token } of fcmRows) {
     try {
       await admin.messaging().send({
-        token: fcmToken,
+        token: fcm_token,
         notification: { title, body },
         data: {
-          server_id: server_id || pairingData.server_id,
+          server_id: effectiveServerId,
           event_type: event_type || 'container',
           action: action || '',
           container_name: container_name || '',
           image: image || '',
           timestamp: String(timestamp || Date.now()),
+          ...(changelog_url && { changelog_url }),
+          ...(current_version && { current_version }),
+          ...(latest_version && { latest_version }),
+          ...(customCommand && { command: customCommand }),
+          ...(action === 'prompt_command' && { title: title, body: body }),
         },
         android: {
           priority: 'high',
-          notification: {
-            channelId: 'docker_events',
-            priority: 'high',
-          },
+          notification: { channelId: 'docker_events', priority: 'high' },
         },
       });
       successCount++;
@@ -301,37 +404,32 @@ app.post('/api/events', async (req, res) => {
         e.code === 'messaging/registration-token-not-registered' ||
         e.code === 'messaging/invalid-registration-token'
       ) {
-        invalidTokens.push(fcmToken);
+        invalidTokens.push(fcm_token);
       } else {
         console.error(`  ❌ FCM send error: ${e.message}`);
       }
     }
   }
 
-  // Clean up invalid tokens
+  // Clean up invalid FCM tokens from DB
   for (const invalid of invalidTokens) {
-    tokens.delete(invalid);
+    await pool.query('DELETE FROM user_tokens WHERE fcm_token = $1', [invalid]);
     console.log(`  🗑️  Removed invalid FCM token`);
   }
 
-  console.log(`  📤 Sent ${successCount}/${tokenArray.length} notifications`);
+  console.log(`  📤 Sent ${successCount}/${fcmRows.length} notifications`);
   res.json({ success: true, notifications_sent: successCount });
 });
 
-// POST /api/webhook/revenuecat
-// RevenueCat webhook for subscription status changes
+// POST /api/webhook/revenuecat (optional)
 app.post('/api/webhook/revenuecat', (req, res) => {
-  // Optional: verify webhook authorization header
-  // RevenueCat sends an Authorization header you can configure in their dashboard
   const authHeader = req.headers.authorization;
   const expectedAuth = process.env.REVENUECAT_WEBHOOK_AUTH;
   if (expectedAuth && authHeader !== `Bearer ${expectedAuth}`) {
-    console.log('🚫 Rejected webhook: invalid authorization');
     return res.status(401).json({ error: 'Invalid webhook authorization' });
   }
 
   const event = req.body;
-
   if (!event || !event.event) {
     return res.status(400).json({ error: 'Invalid webhook payload' });
   }
@@ -341,33 +439,14 @@ app.post('/api/webhook/revenuecat', (req, res) => {
 
   console.log(`💳 RevenueCat webhook: ${type} for user ${appUserId?.substring(0, 8)}...`);
 
-  // Handle subscription expiry — clean up user data
   if (['EXPIRATION', 'CANCELLATION'].includes(type) && appUserId) {
-    // Invalidate entitlement cache so next request re-checks
     entitlementCache.delete(appUserId);
-
-    // Clean up FCM tokens
-    if (userTokens.has(appUserId)) {
-      const tokenCount = userTokens.get(appUserId).size;
-      userTokens.delete(appUserId);
-      console.log(`  🗑️  Removed ${tokenCount} FCM token(s) for expired user`);
-    }
-
-    // Invalidate pairing tokens for this user
-    for (const [token, data] of pairingTokens) {
-      if (data.rc_user_id === appUserId) {
-        pairingTokens.delete(token);
-        console.log(`  🗑️  Revoked pairing token for server ${data.server_id.substring(0, 8)}...`);
-      }
-    }
-
-    console.log(`  ✅ Cleaned up data for user ${appUserId.substring(0, 8)}... (subscription ${type.toLowerCase()})`);
+    console.log(`  🗑️  Cache invalidated for user ${appUserId.substring(0, 8)}...`);
   }
 
-  // Handle renewal — refresh cache
   if (['RENEWAL', 'INITIAL_PURCHASE', 'NON_RENEWING_PURCHASE'].includes(type) && appUserId) {
-    // Clear cache so next request fetches fresh entitlement status
     entitlementCache.delete(appUserId);
+    notifiedExpired.delete(appUserId);
     console.log(`  ✅ Cache cleared for user ${appUserId.substring(0, 8)}... (${type.toLowerCase()})`);
   }
 
@@ -376,11 +455,24 @@ app.post('/api/webhook/revenuecat', (req, res) => {
 
 // --- Start Server ---
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log('');
-  console.log('=== Docker Manager Backend ===');
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔒 RC entitlement verification: ${RC_SECRET_KEY ? 'ENABLED' : 'DISABLED'}`);
-  console.log('');
-});
+
+async function start() {
+  try {
+    await initDB();
+  } catch (e) {
+    console.error('❌ Failed to connect to Postgres:', e.message);
+    console.error('   Make sure Postgres is running and connection details are correct');
+    process.exit(1);
+  }
+
+  app.listen(PORT, () => {
+    console.log('');
+    console.log('=== Docker Manager Backend ===');
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📡 Health check: http://localhost:${PORT}/health`);
+    console.log(`🔒 RC verification: ${RC_SECRET_KEY ? 'ENABLED' : 'DISABLED'}`);
+    console.log('');
+  });
+}
+
+start();

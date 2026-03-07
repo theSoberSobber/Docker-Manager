@@ -2,9 +2,9 @@
 set -e
 
 echo "=== Docker Manager Notifier ==="
+echo "Version: ${NOTIFIER_VERSION:-unknown}"
 echo "Server ID: ${SERVER_ID}"
 echo "Backend: ${BACKEND_URL}"
-echo "Event types: ${EVENT_TYPES}"
 echo ""
 
 # Validate required env vars
@@ -18,45 +18,15 @@ if [ -z "$BACKEND_URL" ]; then
   exit 1
 fi
 
-echo ""
-echo "Watching Docker events..."
-echo "---"
-
-# Create a PID file so the healthcheck knows we're alive
+# Write PID for healthcheck
 echo $$ > /tmp/notifier.pid
 
-# Watch docker events and forward them to the backend
-# --format outputs JSON, we filter for relevant events
-docker events --format '{{json .}}' | while read -r event; do
-  # Parse event type
-  EVENT_TYPE=$(echo "$event" | jq -r '.Type // empty' 2>/dev/null)
-  EVENT_ACTION=$(echo "$event" | jq -r '.Action // empty' 2>/dev/null)
-  EVENT_ACTOR_NAME=$(echo "$event" | jq -r '.Actor.Attributes.name // empty' 2>/dev/null)
-  EVENT_ACTOR_IMAGE=$(echo "$event" | jq -r '.Actor.Attributes.image // empty' 2>/dev/null)
-  EVENT_TIME=$(echo "$event" | jq -r '.time // empty' 2>/dev/null)
+# Source shared helpers (makes send_system_event, send_container_event available)
+. /app/scripts/helpers.sh
 
-  # Filter: only forward container events that matter
-  if [ "$EVENT_TYPE" = "container" ]; then
-    case "$EVENT_ACTION" in
-      start|stop|die|restart|oom|kill|pause|unpause)
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Container '$EVENT_ACTOR_NAME' — $EVENT_ACTION"
+# Start background tasks
+/app/scripts/update_checker.sh &
+echo "✅ Update checker started (PID: $!)"
 
-        # Forward to backend
-        curl -s -o /dev/null -X POST "${BACKEND_URL}/events" \
-          -H "Content-Type: application/json" \
-          -H "Authorization: Bearer ${PAIRING_TOKEN}" \
-          -d "{
-            \"server_id\": \"${SERVER_ID}\",
-            \"event_type\": \"${EVENT_TYPE}\",
-            \"action\": \"${EVENT_ACTION}\",
-            \"container_name\": \"${EVENT_ACTOR_NAME}\",
-            \"image\": \"${EVENT_ACTOR_IMAGE}\",
-            \"timestamp\": ${EVENT_TIME}
-          }" 2>/dev/null || echo "  ⚠️  Failed to forward event (backend unreachable)"
-        ;;
-      *)
-        # Skip less important events like create, attach, detach, exec, etc.
-        ;;
-    esac
-  fi
-done
+# Start event watcher (foreground — keeps the container alive)
+exec /app/scripts/event_watcher.sh

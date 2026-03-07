@@ -7,15 +7,18 @@ WORKDIR /app
 
 COPY notifier.sh /app/notifier.sh
 COPY healthcheck.sh /app/healthcheck.sh
+COPY scripts/ /app/scripts/
+
 # Fix Windows CRLF -> Unix LF line endings
-RUN sed -i 's/\r$//' /app/notifier.sh /app/healthcheck.sh && \
-    chmod +x /app/notifier.sh /app/healthcheck.sh
+RUN sed -i 's/\r$//' /app/notifier.sh /app/healthcheck.sh /app/scripts/*.sh && \
+    chmod +x /app/notifier.sh /app/healthcheck.sh /app/scripts/*.sh
 
 # Environment variables (set by the app during deployment)
 ENV PAIRING_TOKEN=""
 ENV BACKEND_URL=""
 ENV SERVER_ID=""
 ENV EVENT_TYPES="container"
+ENV NOTIFIER_VERSION="1.0.0"
 
 # Health check — verifies the process is alive and backend is reachable
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=10s \

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/services/pairing_service.dart';
 import '../../data/services/notification_service.dart';
 import '../../data/services/docker_cli_path_service.dart';
@@ -12,8 +13,15 @@ import '../../domain/models/server.dart';
 /// container — no manual command copying needed!
 class NotificationSetupScreen extends StatefulWidget {
   final Server server;
+  final bool promptUpdate;
+  final String? changelogUrl;
 
-  const NotificationSetupScreen({super.key, required this.server});
+  const NotificationSetupScreen({
+    super.key, 
+    required this.server,
+    this.promptUpdate = false,
+    this.changelogUrl,
+  });
 
   @override
   State<NotificationSetupScreen> createState() =>
@@ -36,6 +44,51 @@ class _NotificationSetupScreenState extends State<NotificationSetupScreen> {
   void initState() {
     super.initState();
     _checkStatus();
+    
+    if (widget.promptUpdate) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showUpdateDialog();
+      });
+    }
+  }
+
+  void _showUpdateDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('notifications.update_available_title'.tr(fallback: 'Update Available')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('notifications.update_available_desc'.tr(fallback: 'A new version of dm-notifier is ready. Would you like to update now?')),
+              if (widget.changelogUrl != null) ...[
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () => launchUrl(Uri.parse(widget.changelogUrl!)),
+                  icon: const Icon(Icons.open_in_new, size: 16),
+                  label: Text('notifications.view_changelog'.tr(fallback: 'View Changelog')),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('common.cancel'.tr()),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _deployNotifier();
+              },
+              child: Text('notifications.update_now'.tr(fallback: 'Update Now')),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<String?> _getDockerPath() async {
