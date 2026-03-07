@@ -1,0 +1,176 @@
+name: Deploy dm-backend (workflow_dispatch; .github/deploy/remote_deploy.sh — SSH clones)
+
+on:
+  workflow_dispatch:
+    inputs:
+      compose_file:
+        description: "docker compose filename (relative to repo root)"
+        required: false
+        default: "dm-backend/docker-compose.yml"
+        type: string
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.ref }}
+
+      - name: Clone envs repository and setup environment variables
+        env:
+          PAT: ${{ secrets.PAT }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PAT:-}" ]; then
+            echo "ERROR: Set repository secret PAT for accessing envs repo." >&2
+            exit 1
+          fi
+          
+          # Clone envs repo using PAT
+          git clone https://${PAT}@github.com/theSoberSobber/envs.git envs-repo
+          echo "Successfully cloned envs repository"
+          
+          # Install PyYAML for the script
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pyyaml
+          
+          # Run the centralized env vars setup script
+          chmod +x envs-repo/init_env_vars.sh
+          envs-repo/init_env_vars.sh .github/CD-backend.yml
+
+      - name: Parse .github/CD-backend.yml and setup deployment config
+        id: parse_cd
+        run: |
+          python - <<'PY'
+          import os, yaml, subprocess, re, sys
+          cfgpath = ".github/CD-backend.yml"
+          cfg = {}
+          if os.path.exists(cfgpath):
+              with open(cfgpath,'r') as f:
+                  cfg = yaml.safe_load(f) or {}
+
+          defaults = {
+            "server_user":"pavit",
+            "server_host":"100.112.185.9",
+            "deployments_dir":"/home/pavit/deployments",
+            "app_folder":"",
+            "env_subpath":"",
+            "env_file_name":".env",
+            "app_repo_ssh_url":"",
+            "required_env_vars":["TAILSCALE_AUTHKEY", "SSH_PASSWORD"]
+          }
+
+          for k,v in defaults.items():
+              out = cfg.get(k, v) or v
+              print(f"{k}={out}")
+              print(f"{k}={out}", file=open(os.environ['GITHUB_OUTPUT'],'a'))
+
+          try:
+              origin = subprocess.check_output(["git","config","--get","remote.origin.url"]).decode().strip()
+          except Exception:
+              origin = ""
+          repo_name = os.environ.get("GITHUB_REPOSITORY","").split("/")[-1] or ""
+          print(f"app_repo_url={origin}", file=open(os.environ['GITHUB_OUTPUT'],'a'))
+          print(f"repo_name={repo_name}", file=open(os.environ['GITHUB_OUTPUT'],'a'))
+
+          app_override = cfg.get("app_repo_ssh_url","") or ""
+          def to_ssh(u):
+              m = re.match(r'https?://github\.com/([^/]+/[^/]+)(?:\.git)?$', u)
+              if m:
+                  return f"git@github.com:{m.group(1)}.git"
+              m2 = re.match(r'.*github\.com[:/](.+/.+?)(?:\.git)?$', u)
+              if m2:
+                  return f"git@github.com:{m2.group(1)}.git"
+              return u
+
+          if app_override:
+              ssh_app = app_override
+          elif origin:
+              if origin.startswith("git@github.com:"):
+                  ssh_app = origin
+              else:
+                  ssh_app = to_ssh(origin)
+          else:
+              ssh_app = ""
+
+          print(f"app_repo_ssh_url={ssh_app}", file=open(os.environ['GITHUB_OUTPUT'],'a'))
+
+          env_ssh = "git@github.com:theSoberSobber/envs.git"
+          print(f"env_repo_ssh_url={env_ssh}", file=open(os.environ['GITHUB_OUTPUT'],'a'))
+          PY
+
+      - name: Prepare runner and bring up Tailscale
+        run: |
+          set -euo pipefail
+          if [ -z "${TAILSCALE_AUTHKEY:-}" ]; then
+            echo "ERROR: TAILSCALE_AUTHKEY not found in environment variables." >&2
+            exit 1
+          fi
+          curl -fsSL https://tailscale.com/install.sh | sh
+          sudo tailscale up --authkey "${TAILSCALE_AUTHKEY}" || true
+          sleep 3
+          sudo tailscale status || true
+
+      - name: Install sshpass & git
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y sshpass git
+
+      - name: Ensure deploy script is present
+        run: |
+          if [ ! -f ".github/deploy/remote_deploy.sh" ]; then
+            echo "ERROR: .github/deploy/remote_deploy.sh not found" >&2
+            ls -la .github || true
+            exit 1
+          fi
+          chmod +x .github/deploy/remote_deploy.sh
+
+      - name: Stream & execute remote deploy script
+        env:
+          SERVER_USER: ${{ steps.parse_cd.outputs.server_user }}
+          SERVER_HOST: ${{ steps.parse_cd.outputs.server_host }}
+          DEPLOYMENTS_DIR: ${{ steps.parse_cd.outputs.deployments_dir }}
+          APP_FOLDER_INPUT: ${{ steps.parse_cd.outputs.app_folder }}
+          ENV_SUBPATH: ${{ steps.parse_cd.outputs.env_subpath }}
+          ENV_FILE_NAME: ${{ steps.parse_cd.outputs.env_file_name }}
+          APP_REPO_URL: ${{ steps.parse_cd.outputs.app_repo_ssh_url }}
+          REPO_NAME: ${{ steps.parse_cd.outputs.repo_name }}
+          COMPOSE_FILE: ${{ github.event.inputs.compose_file }}
+          ENV_REPO_SSH_URL: ${{ steps.parse_cd.outputs.env_repo_ssh_url }}
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          APP_FOLDER="${APP_FOLDER_INPUT:-}"
+          if [ -z "$APP_FOLDER" ]; then
+            APP_FOLDER="${REPO_NAME}"
+          fi
+
+          if [ -z "${APP_REPO_URL:-}" ]; then
+            echo "ERROR: app_repo ssh URL is empty." >&2
+            exit 1
+          fi
+
+          esc() { printf "%s" "$1" | sed "s/'/'\\\\''/g"; }
+          PE_APP_REPO_URL="$(esc "${APP_REPO_URL}")"
+          PE_DEPLOYMENTS_DIR="$(esc "${DEPLOYMENTS_DIR}")"
+          PE_APP_FOLDER="$(esc "${APP_FOLDER}")"
+          PE_ENV_REPO_URL="$(esc "${ENV_REPO_SSH_URL}")"
+          PE_ENV_SUBPATH="$(esc "${ENV_SUBPATH}")"
+          PE_ENV_FILE_NAME="$(esc "${ENV_FILE_NAME}")"
+          PE_COMPOSE_FILE="$(esc "${COMPOSE_FILE}")"
+          PE_BRANCH_NAME="$(esc "${BRANCH_NAME}")"
+
+          SSH_ENV="APP_REPO_URL='${PE_APP_REPO_URL}' DEPLOYMENTS_DIR='${PE_DEPLOYMENTS_DIR}' APP_FOLDER='${PE_APP_FOLDER}' ENV_REPO_URL='${PE_ENV_REPO_URL}' ENV_SUBPATH='${PE_ENV_SUBPATH}' ENV_FILE_NAME='${PE_ENV_FILE_NAME}' COMPOSE_FILE='${PE_COMPOSE_FILE}' BRANCH_NAME='${PE_BRANCH_NAME}'"
+
+          echo "==> Streaming .github/deploy/remote_deploy.sh to ${SERVER_USER}@${SERVER_HOST} and executing"
+          ssh_cmd="${SSH_ENV} bash -s"
+          sshpass -p "${SSH_PASSWORD}" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${SERVER_USER}@${SERVER_HOST}" "${ssh_cmd}" < .github/deploy/remote_deploy.sh

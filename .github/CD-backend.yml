@@ -1,0 +1,23 @@
+# .github/CD-backend.yml
+#
+# Used by .github/workflows/deploy-backend.yml
+# Configuration for dm-backend deployment
+#
+server_user: pavit
+server_host: 100.112.185.9
+deployments_dir: /home/pavit/deployments
+
+# Folder name on remote under deployments_dir
+app_folder: ""
+
+# Inside the envs repo, this folder's contents will be copied into the app root.
+env_subpath: dm_backend
+
+env_file_name: .env
+
+app_repo_ssh_url: "git@github.com:theSoberSobber/Docker-Manager.git"
+
+# Secret env vars needed from envs repo's env_vars/ directory
+required_env_vars:
+  - TAILSCALE_AUTHKEY
+  - SSH_PASSWORD

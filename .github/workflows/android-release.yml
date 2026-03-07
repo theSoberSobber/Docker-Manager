@@ -75,7 +75,7 @@ jobs:
       
       # --- Build APK ---
       - name: Build Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --dart-define-from-file=local.properties
       
       - name: Rename APK
         run: |
@@ -84,7 +84,7 @@ jobs:
       
       # --- Build AAB ---
       - name: Build Release AAB
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --dart-define-from-file=local.properties
       
       - name: Rename AAB
         run: |

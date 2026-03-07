@@ -1,11 +1,76 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'data/services/subscription_service.dart';
+import 'data/services/notification_service.dart';
+import 'data/repositories/server_repository_impl.dart';
 import 'presentation/screens/home_screen.dart';
+import 'presentation/screens/notification_setup_screen.dart';
+import 'presentation/screens/command_prompt_screen.dart';
 import 'presentation/widgets/theme_manager.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
+  
+  // Initialize Firebase (required before FCM)
+  await Firebase.initializeApp();
+  
+  // Initialize subscription service (RevenueCat)
+  await SubscriptionService().init();
+  
+  // Initialize notification channels (does NOT request permission)
+  await NotificationService().init();
+  
+  // Setup notification tap routing
+  NotificationService().onNotificationTapped.listen((payload) async {
+    final serverId = payload['server_id'];
+    final action = payload['action'];
+    final eventType = payload['event_type'];
+    
+    if (serverId != null && navigatorKey.currentContext != null) {
+      if (eventType == 'system' && action == 'update_available') {
+        final repo = ServerRepositoryImpl();
+        final server = (await repo.getServers()).where((s) => s.id == serverId).firstOrNull;
+        
+        if (server != null) {
+          final url = payload['changelog_url'];
+          Navigator.of(navigatorKey.currentContext!).push(
+            MaterialPageRoute(
+              builder: (_) => NotificationSetupScreen(
+                server: server,
+                promptUpdate: true,
+                changelogUrl: url,
+              ),
+            ),
+          );
+        }
+      } else if (eventType == 'system' && action == 'prompt_command') {
+        final repo = ServerRepositoryImpl();
+        final server = (await repo.getServers()).where((s) => s.id == serverId).firstOrNull;
+        
+        if (server != null) {
+          final title = payload['title'] ?? 'Action Required';
+          final body = payload['body'] ?? 'Review the command below.';
+          final command = payload['command'] ?? '';
+          
+          Navigator.of(navigatorKey.currentContext!).push(
+            MaterialPageRoute(
+              builder: (_) => CommandPromptScreen(
+                server: server,
+                title: title,
+                bodyText: body,
+                command: command,
+              ),
+            ),
+          );
+        }
+      }
+      // Future: route container events elsewhere
+    }
+  });
   
   runApp(
     EasyLocalization(
@@ -26,6 +91,7 @@ class MyApp extends StatelessWidget {
       listenable: ThemeManager(),
       builder: (context, child) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'Docker Manager',
           localizationsDelegates: context.localizationDelegates,
           supportedLocales: context.supportedLocales,

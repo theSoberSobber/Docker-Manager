@@ -1,0 +1,2 @@
+dm-notifier/notifier.sh text eol=lf
+dm-notifier/healthcheck.sh text eol=lf

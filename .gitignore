@@ -54,3 +54,17 @@ ref*
 
 # Ignore local.properties
 local.properties
+
+# Ignore firebase related stuff
+**/google-services.json
+**/firebase-service-account.json
+
+# node_modules
+**/node_modules/
+
+# Ignore all .env
+**/.env
+
+## Ignore refrence folder
+**/ref
+openspec.yaml
