@@ -33,7 +33,7 @@ void main() async {
     if (serverId != null && navigatorKey.currentContext != null) {
       if (eventType == 'system' && action == 'update_available') {
         final repo = ServerRepositoryImpl();
-        final server = await repo.getServer(serverId);
+        final server = (await repo.getServers()).where((s) => s.id == serverId).firstOrNull;
         
         if (server != null) {
           final url = payload['changelog_url'];
@@ -49,7 +49,7 @@ void main() async {
         }
       } else if (eventType == 'system' && action == 'prompt_command') {
         final repo = ServerRepositoryImpl();
-        final server = await repo.getServer(serverId);
+        final server = (await repo.getServers()).where((s) => s.id == serverId).firstOrNull;
         
         if (server != null) {
           final title = payload['title'] ?? 'Action Required';

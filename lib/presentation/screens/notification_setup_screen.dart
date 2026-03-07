@@ -57,18 +57,18 @@ class _NotificationSetupScreenState extends State<NotificationSetupScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('notifications.update_available_title'.tr(fallback: 'Update Available')),
+          title: Text('notifications.update_available_title'.tr()),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('notifications.update_available_desc'.tr(fallback: 'A new version of dm-notifier is ready. Would you like to update now?')),
+              Text('notifications.update_available_desc'.tr()),
               if (widget.changelogUrl != null) ...[
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: () => launchUrl(Uri.parse(widget.changelogUrl!)),
                   icon: const Icon(Icons.open_in_new, size: 16),
-                  label: Text('notifications.view_changelog'.tr(fallback: 'View Changelog')),
+                  label: Text('notifications.view_changelog'.tr()),
                 ),
               ],
             ],
@@ -83,7 +83,7 @@ class _NotificationSetupScreenState extends State<NotificationSetupScreen> {
                 Navigator.pop(context);
                 _deployNotifier();
               },
-              child: Text('notifications.update_now'.tr(fallback: 'Update Now')),
+              child: Text('notifications.update_now'.tr()),
             ),
           ],
         );
